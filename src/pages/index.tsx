@@ -1,6 +1,7 @@
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import Head from "next/head";
 import Image from "next/image";
+import { LoadingPage } from "~/components/loading";
 
 import { type RouterOutputs, api } from "~/utils/api";
 
@@ -55,15 +56,30 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
   );
 };
 
-export default function Home() {
-  const user = useUser();
+const ItemList = () => {
   const { data, isLoading } = api.items.getAll.useQuery();
-  if (!data || isLoading)
-    return (
-      <div className="flex h-screen flex-wrap content-center justify-center">
-        Loading...
-      </div>
-    );
+
+  if (isLoading) return <LoadingPage />;
+
+  if (!data) return <div>Something went wrong</div>;
+
+  return (
+    <div className="flex flex-col gap-3 px-3">
+      {data.map((itemWithCreator) => (
+        <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
+      ))}
+    </div>
+  );
+};
+
+export default function Home() {
+  const { user, isLoaded: userLoaded, isSignedIn } = useUser();
+
+  // user should load fast, just return empty until then
+  if (!userLoaded) return <div></div>;
+
+  // start fetching early
+  api.items.getAll.useQuery();
 
   return (
     <>
@@ -75,21 +91,17 @@ export default function Home() {
       <main className="flex h-screen justify-center">
         <div className="h-full w-full md:max-w-2xl">
           <div className="p-4">
-            {!!user.isSignedIn && (
+            {!!isSignedIn && (
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between font-semibold">
-                  <div className="capitalize">Hi, {user.user?.username}</div>
+                  <div className="capitalize">Hi, {user.username}</div>
                   <SignOutButton />
                 </div>
                 <CreateConcessionItemWizard />
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-3 px-3">
-            {data.map((itemWithCreator) => (
-              <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
-            ))}
-          </div>
+          <ItemList />
         </div>
       </main>
     </>
