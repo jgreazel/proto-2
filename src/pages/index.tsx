@@ -1,6 +1,6 @@
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import Head from "next/head";
-import Link from "next/link";
+import Image from "next/image";
 
 import { type RouterOutputs, api } from "~/utils/api";
 
@@ -9,10 +9,12 @@ const CreateConcessionItemWizard = () => {
   if (!user) return null;
   return (
     <div className="flex w-full gap-3">
-      <img
+      <Image
         src={user.imageUrl}
         alt="Profile image"
         className="h-10 w-10 rounded-full"
+        width={56}
+        height={56}
       />
       <div className="flex grow flex-col">
         <label className="text-xs font-medium">Label</label>
@@ -41,7 +43,7 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
       <div className="flex flex-row items-baseline gap-2">
         <div className="font-medium">{item.label}</div>
         <div className="text-xs capitalize italic text-slate-400">
-          Last edit: {createdBy?.username} - {item.createdAt.toLocaleString()}
+          Last edit: @{createdBy.username} - {item.createdAt.toLocaleString()}
         </div>
       </div>
       <div className="flex flex-row items-center justify-between">
