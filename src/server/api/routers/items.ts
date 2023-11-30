@@ -3,7 +3,11 @@ import type { User } from "@clerk/nextjs/dist/types/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  privateProcedure,
+} from "~/server/api/trpc";
 
 const filterUserForClient = (user: User) => {
   return { id: user.id, username: user.username, imageUrl: user.imageUrl };
@@ -11,7 +15,10 @@ const filterUserForClient = (user: User) => {
 
 export const itemsRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
-    const items = await ctx.db.concessionItem.findMany({ take: 100 });
+    const items = await ctx.db.concessionItem.findMany({
+      take: 100,
+      orderBy: [{ createdAt: "desc" }],
+    });
 
     const users = await clerkClient.users
       .getUserList({
@@ -19,8 +26,6 @@ export const itemsRouter = createTRPCRouter({
         limit: 100,
       })
       .then((res) => res.filter(filterUserForClient));
-
-    console.log(users);
 
     return items.map((i) => {
       const createdBy = users.find((u) => u.id === i.createdBy);
@@ -36,4 +41,26 @@ export const itemsRouter = createTRPCRouter({
       };
     });
   }),
+
+  create: privateProcedure
+    .input(
+      z.object({
+        label: z.string().min(1).max(280),
+        // sellingPrice: z.number().min(25).max(1500),
+        // purchasePrice: z.number().min(25).max(1500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+
+      const item = await ctx.db.concessionItem.create({
+        data: {
+          createdBy: createdById,
+          label: input.label,
+          // sellingPrice: input.sellingPrice,
+          // purchasePrice: input.purchasePrice,
+        },
+      });
+      return item;
+    }),
 });

@@ -1,12 +1,22 @@
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import Head from "next/head";
 import Image from "next/image";
+import { useState } from "react";
 import { LoadingPage } from "~/components/loading";
 
 import { type RouterOutputs, api } from "~/utils/api";
 
 const CreateConcessionItemWizard = () => {
   const { user } = useUser();
+  const [label, setLabel] = useState("");
+  const ctx = api.useUtils();
+  const { mutate, isLoading: isCreating } = api.items.create.useMutation({
+    onSuccess: () => {
+      setLabel("");
+      void ctx.items.getAll.invalidate();
+    },
+  });
+
   if (!user) return null;
   return (
     <div className="flex w-full gap-3">
@@ -23,7 +33,13 @@ const CreateConcessionItemWizard = () => {
           id="label"
           placeholder="Ex: Candy Bar"
           className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          disabled={isCreating}
         />
+        <button disabled={isCreating} onClick={() => mutate({ label })}>
+          Create
+        </button>
       </div>
     </div>
   );
