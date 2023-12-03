@@ -58,7 +58,7 @@ export const itemsRouter = createTRPCRouter({
   create: privateProcedure
     .input(
       z.object({
-        label: z.string().min(1).max(280),
+        label: z.string().min(1).max(20, "Too many characters"),
         // sellingPrice: z.number().min(25).max(1500),
         // purchasePrice: z.number().min(25).max(1500),
       }),

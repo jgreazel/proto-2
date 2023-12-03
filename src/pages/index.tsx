@@ -2,7 +2,8 @@ import { SignOutButton, useUser } from "@clerk/nextjs";
 import Head from "next/head";
 import Image from "next/image";
 import { useState } from "react";
-import { LoadingPage } from "~/components/loading";
+import { LoadingPage, LoadingSpinner } from "~/components/loading";
+import toast from "react-hot-toast";
 
 import { type RouterOutputs, api } from "~/utils/api";
 
@@ -14,6 +15,11 @@ const CreateConcessionItemWizard = () => {
     onSuccess: () => {
       setLabel("");
       void ctx.items.getAll.invalidate();
+    },
+    onError: (e) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const msg = JSON.parse(e.message)[0].message as string | undefined;
+      if (msg) toast.error(msg);
     },
   });
 
@@ -36,10 +42,25 @@ const CreateConcessionItemWizard = () => {
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           disabled={isCreating}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (label !== "") {
+                mutate({ label });
+              }
+            }
+          }}
         />
-        <button disabled={isCreating} onClick={() => mutate({ label })}>
-          Create
-        </button>
+        {label !== "" && !isCreating && (
+          <button disabled={isCreating} onClick={() => mutate({ label })}>
+            Create
+          </button>
+        )}
+        {isCreating && (
+          <div className="flex items-center justify-center">
+            <LoadingSpinner size={20} />
+          </div>
+        )}
       </div>
     </div>
   );
