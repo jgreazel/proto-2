@@ -6,6 +6,7 @@ import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import toast from "react-hot-toast";
 
 import { type RouterOutputs, api } from "~/utils/api";
+import Link from "next/link";
 
 const CreateConcessionItemWizard = () => {
   const { user } = useUser();
@@ -79,9 +80,18 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
   return (
     <div className="rounded-lg bg-slate-50 p-6 shadow-lg" key={item.id}>
       <div className="flex flex-row items-baseline gap-2">
-        <div className="font-medium">{item.label}</div>
+        <Link
+          href={`/items/${item.id}`}
+          className="font-medium hover:underline"
+        >
+          {item.label}
+        </Link>
         <div className="text-xs capitalize italic text-slate-400">
-          Last edit: @{createdBy.username} - {item.createdAt.toLocaleString()}
+          Last edit:{" "}
+          <Link className="hover:underline" href={`/@${createdBy.username}`}>
+            @{createdBy.username}
+          </Link>{" "}
+          - {item.createdAt.toLocaleString()}
         </div>
       </div>
       <div className="flex flex-row items-center justify-between">
