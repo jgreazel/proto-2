@@ -9,6 +9,16 @@ import {
   privateProcedure,
 } from "~/server/api/trpc";
 
+import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
+import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
+
+// Create a new ratelimiter, that allows 3 req per 1 min
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(3, "1 m"),
+  analytics: true,
+});
+
 const filterUserForClient = (user: User) => {
   return { id: user.id, username: user.username, imageUrl: user.imageUrl };
 };
@@ -20,6 +30,9 @@ export const itemsRouter = createTRPCRouter({
       orderBy: [{ createdAt: "desc" }],
     });
 
+    // likely remove later
+    // just example of intermediate request for supplementary data
+    // if need ALL req to have user data, middleware might be better place
     const users = await clerkClient.users
       .getUserList({
         userId: items.map((i) => i.createdBy),
@@ -52,6 +65,9 @@ export const itemsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
+
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
 
       const item = await ctx.db.concessionItem.create({
         data: {
