@@ -1,5 +1,4 @@
 import { SignOutButton, useUser } from "@clerk/nextjs";
-import Head from "next/head";
 import Image from "next/image";
 import { useState } from "react";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
@@ -7,6 +6,7 @@ import toast from "react-hot-toast";
 
 import { type RouterOutputs, api } from "~/utils/api";
 import Link from "next/link";
+import { PageLayout } from "~/components/layout";
 
 const CreateConcessionItemWizard = () => {
   const { user } = useUser();
@@ -129,23 +129,19 @@ export default function Home() {
   api.items.getAll.useQuery();
 
   return (
-    <>
-      <main className="flex h-screen justify-center">
-        <div className="h-full w-full md:max-w-2xl">
-          <div className="p-4">
-            {!!isSignedIn && (
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between font-semibold">
-                  <div className="capitalize">Hi, {user.username}</div>
-                  <SignOutButton />
-                </div>
-                <CreateConcessionItemWizard />
-              </div>
-            )}
+    <PageLayout>
+      <div className="p-4">
+        {!!isSignedIn && (
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between font-semibold">
+              <div className="capitalize">Hi, {user.username}</div>
+              <SignOutButton />
+            </div>
+            <CreateConcessionItemWizard />
           </div>
-          <ItemList />
-        </div>
-      </main>
-    </>
+        )}
+      </div>
+      <ItemList />
+    </PageLayout>
   );
 }
