@@ -5,10 +5,12 @@ import { appRouter } from "~/server/api/root";
 import { db } from "~/server/db";
 import SuperJSON from "superjson";
 import { type GetStaticProps } from "next";
+import { PageLayout } from "~/components/layout";
+import Image from "next/image";
 
 // find a better (more next) way to infer ssg props
 export default function ProfilePage({ username }: { username: string }) {
-  const { data, isLoading } = api.profile.getUserByUsername.useQuery({
+  const { data } = api.profile.getUserByUsername.useQuery({
     username: "test",
   });
 
@@ -18,11 +20,18 @@ export default function ProfilePage({ username }: { username: string }) {
       <Head>
         <title>{username}</title>
       </Head>
-      <main className="flex h-screen justify-center">
-        <div className="h-full w-full md:max-w-2xl">
-          <div className="p-4">slug fest</div>
+      <PageLayout>
+        <div className="flex items-center gap-2">
+          <Image
+            src={data.imageUrl}
+            alt="Profile Pic"
+            width="48"
+            height="48"
+            className="rounded-full"
+          />
+          <div className="font-semibold capitalize">{data.username}</div>
         </div>
-      </main>
+      </PageLayout>
     </>
   );
 }
