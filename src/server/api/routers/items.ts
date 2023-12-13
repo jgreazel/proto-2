@@ -55,8 +55,9 @@ export const itemsRouter = createTRPCRouter({
     .input(
       z.object({
         label: z.string().min(1).max(20, "Too many characters"),
-        // sellingPrice: z.number().min(25).max(1500),
-        // purchasePrice: z.number().min(25).max(1500),
+        sellingPrice: z.number().min(25).max(1500),
+        purchasePrice: z.number().min(25).max(1500),
+        inStock: z.number().min(0).max(1000),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -69,8 +70,9 @@ export const itemsRouter = createTRPCRouter({
         data: {
           createdBy: createdById,
           label: input.label,
-          // sellingPrice: input.sellingPrice,
-          // purchasePrice: input.purchasePrice,
+          sellingPrice: input.sellingPrice,
+          purchasePrice: input.purchasePrice,
+          inStock: input.inStock,
         },
       });
       return item;

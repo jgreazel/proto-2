@@ -7,65 +7,7 @@ import toast from "react-hot-toast";
 import { type RouterOutputs, api } from "~/utils/api";
 import Link from "next/link";
 import { PageLayout } from "~/components/layout";
-
-const CreateConcessionItemWizard = () => {
-  const { user } = useUser();
-  const [label, setLabel] = useState("");
-  const ctx = api.useUtils();
-  const { mutate, isLoading: isCreating } = api.items.create.useMutation({
-    onSuccess: () => {
-      setLabel("");
-      void ctx.items.getAll.invalidate();
-    },
-    onError: (e) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const msg = JSON.parse(e.message)[0].message as string | undefined;
-      if (msg) toast.error(msg);
-    },
-  });
-
-  if (!user) return null;
-  return (
-    <div className="flex w-full gap-3">
-      <Image
-        src={user.imageUrl}
-        alt="Profile image"
-        className="h-10 w-10 rounded-full"
-        width={56}
-        height={56}
-      />
-      <div className="flex grow flex-col">
-        <label className="text-xs font-medium">Label</label>
-        <input
-          id="label"
-          placeholder="Ex: Candy Bar"
-          className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          disabled={isCreating}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (label !== "") {
-                mutate({ label });
-              }
-            }
-          }}
-        />
-        {label !== "" && !isCreating && (
-          <button disabled={isCreating} onClick={() => mutate({ label })}>
-            Create
-          </button>
-        )}
-        {isCreating && (
-          <div className="flex items-center justify-center">
-            <LoadingSpinner size={20} />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+import { Button } from "~/components/button";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
@@ -103,7 +45,7 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
   );
 };
 
-const ItemList = () => {
+const ItemList = (props: { filter: string }) => {
   const { data, isLoading } = api.items.getAll.useQuery();
 
   if (isLoading) return <LoadingPage />;
@@ -111,16 +53,22 @@ const ItemList = () => {
   if (!data) return <div>Something went wrong</div>;
 
   return (
-    <div className="flex flex-col gap-3 px-3">
-      {data.map((itemWithCreator) => (
-        <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
-      ))}
+    <div className="flex h-full flex-col gap-3 overflow-y-scroll py-3">
+      {data
+        .filter((d) =>
+          d.item.label.toUpperCase().includes(props.filter.toUpperCase()),
+        )
+        .map((itemWithCreator) => (
+          <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
+        ))}
     </div>
   );
 };
 
 export default function Home() {
   const { user, isLoaded: userLoaded, isSignedIn } = useUser();
+
+  const [filter, setFilter] = useState("");
 
   // user should load fast, just return empty until then
   if (!userLoaded) return <div></div>;
@@ -130,18 +78,33 @@ export default function Home() {
 
   return (
     <PageLayout>
-      <div className="p-4">
-        {!!isSignedIn && (
-          <div className="flex flex-col gap-3">
-            <div className="flex justify-between font-semibold">
-              <div className="capitalize">Hi, {user.username}</div>
-              <SignOutButton />
+      <div className="gap grid-auto-rows grid h-screen overflow-y-clip">
+        <div className="p-4">
+          {!!isSignedIn && (
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between font-semibold">
+                <div className="capitalize">Hi, {user.username}</div>
+                <SignOutButton />
+              </div>
+              {/* <CreateConcessionItemWizard /> */}
             </div>
-            <CreateConcessionItemWizard />
-          </div>
-        )}
+          )}
+        </div>
+        <div className="flex items-center gap-2 p-2">
+          <label className="text-s font-medium">Filter:</label>
+          <input
+            className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+            placeholder=""
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
+        <ItemList filter={filter} />
+        <div className="flex justify-end gap-2 p-3">
+          <Button href="items/shipment">Shipment</Button>
+          <Button href="items/0">New Item</Button>
+        </div>
       </div>
-      <ItemList />
     </PageLayout>
   );
 }
