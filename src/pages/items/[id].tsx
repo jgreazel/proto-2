@@ -104,9 +104,6 @@ const CreateConcessionItemWizard = () => {
 };
 
 export default function SingleItemPage() {
-  // start fetching early
-  api.items.getAll.useQuery();
-
   return (
     <>
       <Head>

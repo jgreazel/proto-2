@@ -70,11 +70,10 @@ export default function Home() {
 
   const [filter, setFilter] = useState("");
 
+  api.items.getAll.useQuery();
+
   // user should load fast, just return empty until then
   if (!userLoaded) return <div></div>;
-
-  // start fetching early
-  api.items.getAll.useQuery();
 
   return (
     <PageLayout>
@@ -86,7 +85,6 @@ export default function Home() {
                 <div className="capitalize">Hi, {user.username}</div>
                 <SignOutButton />
               </div>
-              {/* <CreateConcessionItemWizard /> */}
             </div>
           )}
         </div>
