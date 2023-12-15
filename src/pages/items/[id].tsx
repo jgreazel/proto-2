@@ -1,7 +1,7 @@
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import Head from "next/head";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import toast from "react-hot-toast";
 import { useForm, SubmitHandler } from "react-hook-form";
@@ -22,8 +22,10 @@ const CreateFormComponent = (props: {
   onSubmit: (data: CreateForm) => void;
   isSubmitting: boolean;
   isLoading: boolean;
+  data?: CreateForm;
 }) => {
-  const { onSubmit, isSubmitting, isLoading } = props;
+  const { onSubmit, isSubmitting, isLoading, data } = props;
+
   const { register, handleSubmit, watch, formState, reset } =
     useForm<CreateForm>({
       defaultValues: {
@@ -35,12 +37,16 @@ const CreateFormComponent = (props: {
     });
   const watchForm = watch();
 
+  useEffect(() => {
+    if (data) reset(data);
+  }, [data, reset]);
+
   return (
     <form
       className="flex grow flex-col gap-2"
       onSubmit={handleSubmit(() => {
         onSubmit(watchForm);
-        reset();
+        !data && reset();
       })}
     >
       <label className="text-xs font-medium">Label</label>
@@ -58,7 +64,6 @@ const CreateFormComponent = (props: {
         id="purchase-price"
         type="number"
         placeholder="Ex: 50 ($0.50)"
-        step={25}
         className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
         {...register("purchasePrice", {
           required: true,
@@ -70,7 +75,6 @@ const CreateFormComponent = (props: {
       <input
         id="sell-price"
         type="number"
-        step={25}
         placeholder="Ex: 150 ($1.50)"
         className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
         {...register("sellingPrice", {
@@ -79,7 +83,7 @@ const CreateFormComponent = (props: {
           valueAsNumber: true,
         })}
       />
-      <label className="text-xs font-medium">Initial Stock</label>
+      <label className="text-xs font-medium">Quantity in Stock</label>
       <input
         id="init-stock"
         type="number"
@@ -93,7 +97,7 @@ const CreateFormComponent = (props: {
       />
       {formState.isValid && !isSubmitting && (
         <Button disabled={isSubmitting} type="submit">
-          Create
+          {data ? "Save" : "Create"}
         </Button>
       )}
       {isSubmitting && (
@@ -131,17 +135,38 @@ const CreateConcessionItemWizard = () => {
   );
 };
 
-/**
- * form component
- * 2 wizards, create - edit
- * render correct wizard by id
- */
-export default function SingleItemPage() {
-  // const { id }: { id: string } = useParams();
-  // const { data, isLoading } = api.items.getById.useQuery({ id });
+const EditConcessionItemWizard = (props: { id: string }) => {
+  const { data, isLoading } = api.items.getById.useQuery({ id: props.id });
 
-  // console.log({ data, isLoading });
-  // todo next: editconcessionItemWizard that fetches if param isn't 0
+  const ctx = api.useUtils();
+  const { mutate, isLoading: isUpdating } =
+    api.items.updateConcessionItem.useMutation({
+      onSuccess: () => {
+        void ctx.items.getById.invalidate();
+      },
+      onError: (e) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        const msg = JSON.parse(e.message)[0].message as string | undefined;
+        if (msg) toast.error(msg);
+      },
+    });
+
+  return (
+    <div className="flex w-full gap-3">
+      <CreateFormComponent
+        data={data?.item as CreateForm}
+        isLoading={isLoading}
+        isSubmitting={isUpdating}
+        onSubmit={(data) => mutate({ ...data, id: props.id })}
+      />
+    </div>
+  );
+};
+
+export default function SingleItemPage() {
+  const params = useParams();
+  const id = params?.id ?? "0";
+
   return (
     <>
       <Head>
@@ -150,7 +175,11 @@ export default function SingleItemPage() {
       <main className="flex h-screen justify-center">
         <div className="h-full w-full md:max-w-2xl">
           <div className="p-4">
-            <CreateConcessionItemWizard />
+            {id === "0" ? (
+              <CreateConcessionItemWizard />
+            ) : (
+              <EditConcessionItemWizard id={id as string} />
+            )}
           </div>
         </div>
       </main>

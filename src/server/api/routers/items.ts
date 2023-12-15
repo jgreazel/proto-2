@@ -109,4 +109,22 @@ export const itemsRouter = createTRPCRouter({
       });
       return item;
     }),
+
+  updateConcessionItem: privateProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        label: z.string().min(1).max(20, "Too many characters").optional(),
+        sellingPrice: z.number().min(25).max(1500).optional(),
+        purchasePrice: z.number().min(25).max(1500).optional(),
+        inStock: z.number().min(0).max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const item = await ctx.db.inventoryItem.update({
+        where: { id: input.id },
+        data: { ...input },
+      });
+      return item;
+    }),
 });
