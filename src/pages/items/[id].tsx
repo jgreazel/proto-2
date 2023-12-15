@@ -7,28 +7,40 @@ import toast from "react-hot-toast";
 
 import { type RouterOutputs, api } from "~/utils/api";
 import { Button } from "~/components/button";
+import { useParams } from "next/navigation";
+import type { InventoryItem } from "@prisma/client";
 
-const CreateConcessionItemWizard = () => {
-  const [label, setLabel] = useState("");
-  const [purchPrice, setPurchPrice] = useState("");
-  const [sellingPrice, setSellingPrice] = useState("");
-  const [initStock, setInitStock] = useState("");
+const CreateConcessionItemWizard = (props: {
+  item?: InventoryItem;
+  isLoading: boolean;
+}) => {
+  const { item, isLoading } = props;
+
+  const [label, setLabel] = useState<string>(item?.label ?? "");
+  const [purchPrice, setPurchPrice] = useState(
+    item?.purchasePrice?.toString() ?? "",
+  );
+  const [sellingPrice, setSellingPrice] = useState(
+    item?.sellingPrice.toString() ?? "",
+  );
+  const [initStock, setInitStock] = useState(item?.inStock?.toString() ?? "");
 
   const ctx = api.useUtils();
-  const { mutate, isLoading: isCreating } = api.items.create.useMutation({
-    onSuccess: () => {
-      setLabel("");
-      setPurchPrice("");
-      setSellingPrice("");
-      setInitStock("");
-      void ctx.items.getAll.invalidate();
-    },
-    onError: (e) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const msg = JSON.parse(e.message)[0].message as string | undefined;
-      if (msg) toast.error(msg);
-    },
-  });
+  const { mutate, isLoading: isCreating } =
+    api.items.createConcessionItem.useMutation({
+      onSuccess: () => {
+        setLabel("");
+        setPurchPrice("");
+        setSellingPrice("");
+        setInitStock("");
+        void ctx.items.getAll.invalidate();
+      },
+      onError: (e) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        const msg = JSON.parse(e.message)[0].message as string | undefined;
+        if (msg) toast.error(msg);
+      },
+    });
 
   return (
     <div className="flex w-full gap-3">
@@ -40,7 +52,7 @@ const CreateConcessionItemWizard = () => {
           className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          disabled={isCreating}
+          disabled={isCreating || isLoading}
         />
         <label className="text-xs font-medium">Purchase Price</label>
         <input
@@ -51,7 +63,7 @@ const CreateConcessionItemWizard = () => {
           className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
           value={purchPrice}
           onChange={(e) => setPurchPrice(e.target.value)}
-          disabled={isCreating}
+          disabled={isCreating || isLoading}
         />
         <label className="text-xs font-medium">Selling Price</label>
         <input
@@ -62,7 +74,7 @@ const CreateConcessionItemWizard = () => {
           className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
           value={sellingPrice}
           onChange={(e) => setSellingPrice(e.target.value)}
-          disabled={isCreating}
+          disabled={isCreating || isLoading}
         />
         <label className="text-xs font-medium">Initial Stock</label>
         <input
@@ -72,7 +84,7 @@ const CreateConcessionItemWizard = () => {
           className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
           value={initStock}
           onChange={(e) => setInitStock(e.target.value)}
-          disabled={isCreating}
+          disabled={isCreating || isLoading}
         />
         {label !== "" &&
           sellingPrice &&
@@ -103,7 +115,13 @@ const CreateConcessionItemWizard = () => {
   );
 };
 
+// todo: fails to load page when item doesn't exit (when creating new item)
+// create separation between new and edit. need form library to simplify
 export default function SingleItemPage() {
+  const { id }: { id: string } = useParams();
+  const { data, isLoading } = api.items.getById.useQuery({ id });
+
+  console.log({ data, isLoading });
   return (
     <>
       <Head>
@@ -112,7 +130,10 @@ export default function SingleItemPage() {
       <main className="flex h-screen justify-center">
         <div className="h-full w-full md:max-w-2xl">
           <div className="p-4">
-            <CreateConcessionItemWizard />
+            <CreateConcessionItemWizard
+              item={data?.item}
+              isLoading={isLoading}
+            />
           </div>
         </div>
       </main>

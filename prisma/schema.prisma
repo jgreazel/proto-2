@@ -1,6 +1,15 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// npx prisma studio
+
+// 1. Create migration
+// ex: npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/12132023/migration.sql
+// 2. Apply migration
+// ex: npx prisma migrate resolve --applied 12132023
+// 3. Push (skip to here if prototyping)
+// ex: npx prisma db push && npm i
+
 datasource db {
     provider     = "mysql"
     url          = env("DATABASE_URL")
@@ -11,13 +20,21 @@ generator client {
     provider = "prisma-client-js"
 }
 
-model ConcessionItem {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-    createdBy String
+model InventoryItem {
+    id           String   @id @default(cuid())
+    createdAt    DateTime @default(now())
+    createdBy    String
+    label        String   @default("unlabeled") @db.VarChar(255)
+    sellingPrice Int      @default(0)
 
-    label         String @default("unlabeled") @db.VarChar(255)
-    sellingPrice  Int    @default(0)
-    purchasePrice Int    @default(0)
-    inStock       Int    @default(0)
+    // concession items
+    isConcessionItem Boolean @default(false)
+    purchasePrice    Int?
+    inStock          Int?    @default(0)
+
+    // admisison items
+    isAdmissionItem Boolean  @default(false)
+    isSeasonal      Boolean?
+    isDay           Boolean?
+    patronLimit     Int?
 }

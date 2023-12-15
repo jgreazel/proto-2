@@ -21,7 +21,7 @@ const ratelimit = new Ratelimit({
 
 export const itemsRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
-    const items = await ctx.db.concessionItem.findMany({
+    const items = await ctx.db.inventoryItem.findMany({
       take: 100,
       orderBy: [{ createdAt: "desc" }],
     });
@@ -51,7 +51,38 @@ export const itemsRouter = createTRPCRouter({
     });
   }),
 
-  create: privateProcedure
+  getById: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const item = await ctx.db.inventoryItem.findUnique({
+        where: { id: input.id },
+      });
+
+      if (item === null) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Item doesn't exist",
+        });
+      }
+
+      // likely remove later
+      // just example of intermediate request for supplementary data
+      // if need ALL req to have user data, middleware might be better place
+      const user = await clerkClient.users
+        .getUser(item.createdBy)
+        .then((res) => filterUserForClient(res));
+
+      return {
+        item,
+        createdBy: user,
+      };
+    }),
+
+  createConcessionItem: privateProcedure
     .input(
       z.object({
         label: z.string().min(1).max(20, "Too many characters"),
@@ -66,11 +97,12 @@ export const itemsRouter = createTRPCRouter({
       const { success } = await ratelimit.limit(createdById);
       if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
 
-      const item = await ctx.db.concessionItem.create({
+      const item = await ctx.db.inventoryItem.create({
         data: {
           createdBy: createdById,
           label: input.label,
           sellingPrice: input.sellingPrice,
+          isConcessionItem: true,
           purchasePrice: input.purchasePrice,
           inStock: input.inStock,
         },

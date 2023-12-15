@@ -37,9 +37,15 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
         </div>
       </div>
       <div className="flex flex-row items-center justify-between">
-        <div>Category: Concession</div>
+        <div>
+          Category: {"purchasePrice" in item ? "Concession" : "Admission"}
+        </div>
         <div>Selling Price: {usDollar.format(item.sellingPrice / 100)}</div>
-        <div>In Stock: {item.inStock}</div>
+        {item.isConcessionItem ? (
+          <div>In Stock: {item.inStock}</div>
+        ) : (
+          <div>Type: {item.isDay ? "Day" : "Seasonal"}</div>
+        )}
       </div>
     </div>
   );
