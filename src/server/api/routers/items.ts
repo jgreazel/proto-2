@@ -110,6 +110,36 @@ export const itemsRouter = createTRPCRouter({
       return item;
     }),
 
+  createAdmissionItem: privateProcedure
+    .input(
+      z.object({
+        label: z.string().min(1).max(20, "Too many characters"),
+        sellingPrice: z.number().min(25).max(1500),
+        isSeasonal: z.boolean(),
+        isDay: z.boolean(),
+        patronLimit: z.number().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const item = await ctx.db.inventoryItem.create({
+        data: {
+          createdBy: createdById,
+          label: input.label,
+          sellingPrice: input.sellingPrice,
+          isAdmissionItem: true,
+          isSeasonal: input.isSeasonal,
+          isDay: input.isDay,
+          patronLimit: input.patronLimit,
+        },
+      });
+      return item;
+    }),
+
   updateConcessionItem: privateProcedure
     .input(
       z.object({
