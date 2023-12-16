@@ -114,7 +114,7 @@ export const itemsRouter = createTRPCRouter({
     .input(
       z.object({
         label: z.string().min(1).max(20, "Too many characters"),
-        sellingPrice: z.number().min(25).max(1500),
+        sellingPrice: z.number().min(100).max(20000),
         isSeasonal: z.boolean(),
         isDay: z.boolean(),
         patronLimit: z.number().min(1).optional(),

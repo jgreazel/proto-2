@@ -38,7 +38,7 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
       </div>
       <div className="flex flex-row items-center justify-between">
         <div>
-          Category: {"purchasePrice" in item ? "Concession" : "Admission"}
+          Category: {item.isConcessionItem ? "Concession" : "Admission"}
         </div>
         <div>Selling Price: {usDollar.format(item.sellingPrice / 100)}</div>
         {item.isConcessionItem ? (
