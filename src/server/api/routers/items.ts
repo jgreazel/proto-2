@@ -157,4 +157,23 @@ export const itemsRouter = createTRPCRouter({
       });
       return item;
     }),
+
+  updateAdmissionItem: privateProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        label: z.string().min(1).max(20, "Too many characters").optional(),
+        sellingPrice: z.number().min(25).max(20000).optional(),
+        isSeasonal: z.boolean().optional(),
+        isDay: z.boolean().optional(),
+        patronLimit: z.number().min(1).max(100).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const item = await ctx.db.inventoryItem.update({
+        where: { id: input.id },
+        data: { ...input },
+      });
+      return item;
+    }),
 });

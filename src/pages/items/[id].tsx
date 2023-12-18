@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { useEffect, useState } from "react";
-import { LoadingSpinner } from "~/components/loading";
+import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 
@@ -12,7 +12,7 @@ type AdmissionFormData = {
   label: string;
   sellingPrice: number;
   passType: "seasonal" | "day";
-  patronLimit?: number;
+  patronLimit: number | null;
 };
 
 const AdmissionItemForm = (props: {
@@ -25,7 +25,7 @@ const AdmissionItemForm = (props: {
 
   const [showPatronLimit, setShowPatronLimit] = useState(false);
 
-  const { register, handleSubmit, watch, formState, reset } =
+  const { register, handleSubmit, watch, formState, reset, getValues } =
     useForm<AdmissionFormData>({
       defaultValues: {
         label: "",
@@ -33,12 +33,12 @@ const AdmissionItemForm = (props: {
         passType: "day",
       },
     });
-  const watchForm = watch();
   const watchPassType = watch("passType");
 
   useEffect(() => {
-    if (data) reset(data);
-  }, [data, reset]);
+    console.log(data);
+    if (getValues().label === "" && data) reset(data);
+  }, [data, reset, getValues]);
 
   useEffect(() => {
     setShowPatronLimit(watchPassType === "seasonal");
@@ -48,7 +48,8 @@ const AdmissionItemForm = (props: {
     <form
       className="flex grow flex-col gap-2"
       onSubmit={handleSubmit(() => {
-        onSubmit(watchForm);
+        const values = getValues();
+        onSubmit(values);
         !data && reset();
       })}
     >
@@ -234,23 +235,26 @@ const ConcessionItemForm = (props: {
   );
 };
 
+const mutationOpts = (ctx: {
+  items: { getById: { invalidate: () => void } };
+}) => ({
+  onSuccess: () => {
+    void ctx.items.getById.invalidate();
+  },
+  onError: (e: { message: string }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const msg = JSON.parse(e.message)[0].message as string | undefined;
+    if (msg) toast.error(msg);
+  },
+});
+
 const CreateItemWizard = () => {
   // ctx v. api: ctx = server side OR as part of the request
   const ctx = api.useUtils();
-  const mutationOps = {
-    onSuccess: () => {
-      void ctx.items.getAll.invalidate();
-    },
-    onError: (e: { message: string }) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const msg = JSON.parse(e.message)[0].message as string | undefined;
-      if (msg) toast.error(msg);
-    },
-  };
   const { mutate: concessionMutation, isLoading: isCreating } =
-    api.items.createConcessionItem.useMutation(mutationOps);
+    api.items.createConcessionItem.useMutation(mutationOpts(ctx));
   const { mutate: admissionMutation, isLoading: isCreatingA } =
-    api.items.createAdmissionItem.useMutation(mutationOps);
+    api.items.createAdmissionItem.useMutation(mutationOpts(ctx));
 
   const [tab, setTab] = useState<"admission" | "concession">("admission");
 
@@ -305,30 +309,57 @@ const CreateItemWizard = () => {
   );
 };
 
-const EditConcessionItemWizard = (props: { id: string }) => {
+const EditItemWizard = (props: { id: string }) => {
   const { data, isLoading } = api.items.getById.useQuery({ id: props.id });
 
   const ctx = api.useUtils();
-  const { mutate, isLoading: isUpdating } =
-    api.items.updateConcessionItem.useMutation({
-      onSuccess: () => {
-        void ctx.items.getById.invalidate();
-      },
-      onError: (e) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        const msg = JSON.parse(e.message)[0].message as string | undefined;
-        if (msg) toast.error(msg);
-      },
-    });
+  const { mutate: concessionMutate, isLoading: isUpdating } =
+    api.items.updateConcessionItem.useMutation(mutationOpts(ctx));
+  const { mutate: admissionMutate, isLoading: isUpdatingA } =
+    api.items.updateAdmissionItem.useMutation(mutationOpts(ctx));
+
+  if (isLoading) {
+    return (
+      <div>
+        <LoadingPage />
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full gap-3">
-      <ConcessionItemForm
-        data={data?.item as ConcessionFormData}
-        isLoading={isLoading}
-        isSubmitting={isUpdating}
-        onSubmit={(data) => mutate({ ...data, id: props.id })}
-      />
+      {data?.item.isConcessionItem ? (
+        <ConcessionItemForm
+          data={data?.item as ConcessionFormData}
+          isLoading={isLoading}
+          isSubmitting={isUpdating}
+          onSubmit={(data) => concessionMutate({ ...data, id: props.id })}
+        />
+      ) : (
+        <AdmissionItemForm
+          data={{
+            label: "",
+            sellingPrice: 0,
+            patronLimit: null,
+            ...data?.item,
+            passType: data?.item.isSeasonal ? "seasonal" : "day",
+          }}
+          isLoading={isLoading}
+          isSubmitting={isUpdatingA}
+          onSubmit={(data) =>
+            admissionMutate({
+              ...data,
+              id: props.id,
+              isDay: data.passType === "day",
+              isSeasonal: data.passType === "seasonal",
+              patronLimit:
+                data.passType === "seasonal"
+                  ? data.patronLimit ?? 1
+                  : undefined,
+            })
+          }
+        />
+      )}
     </div>
   );
 };
@@ -348,7 +379,7 @@ export default function SingleItemPage() {
             {id === "0" ? (
               <CreateItemWizard />
             ) : (
-              <EditConcessionItemWizard id={id as string} />
+              <EditItemWizard id={id as string} />
             )}
           </div>
         </div>
