@@ -20,36 +20,53 @@ const ratelimit = new Ratelimit({
 });
 
 export const itemsRouter = createTRPCRouter({
-  getAll: publicProcedure.query(async ({ ctx }) => {
-    const items = await ctx.db.inventoryItem.findMany({
-      take: 100,
-      orderBy: [{ createdAt: "desc" }],
-    });
+  getAll: publicProcedure
+    .input(
+      z
+        .object({
+          category: z.enum(["concession", "admission"]).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      let items = await ctx.db.inventoryItem.findMany({
+        take: 100,
+        orderBy: [{ createdAt: "desc" }],
+      });
 
-    // likely remove later
-    // just example of intermediate request for supplementary data
-    // if need ALL req to have user data, middleware might be better place
-    const users = await clerkClient.users
-      .getUserList({
-        userId: items.map((i) => i.createdBy),
-        limit: 100,
-      })
-      .then((res) => res.filter(filterUserForClient));
+      // likely remove later
+      // just example of intermediate request for supplementary data
+      // if need ALL req to have user data, middleware might be better place
+      const users = await clerkClient.users
+        .getUserList({
+          userId: items.map((i) => i.createdBy),
+          limit: 100,
+        })
+        .then((res) => res.filter(filterUserForClient));
 
-    return items.map((i) => {
-      const createdBy = users.find((u) => u.id === i.createdBy);
-      if (!createdBy)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "User data not found",
+      if (input?.category) {
+        items = items.filter((i) => {
+          return (
+            (i.isAdmissionItem && input?.category === "admission") ||
+            (i.isConcessionItem && input?.category === "concession")
+          );
         });
+      }
 
-      return {
-        item: i,
-        createdBy,
-      };
-    });
-  }),
+      return items.map((i) => {
+        const createdBy = users.find((u) => u.id === i.createdBy);
+        if (!createdBy)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "User data not found",
+          });
+
+        return {
+          item: i,
+          createdBy,
+        };
+      });
+    }),
 
   getById: publicProcedure
     .input(

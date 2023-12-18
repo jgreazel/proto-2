@@ -124,7 +124,9 @@ export default function Home() {
         </div>
         <ItemList filter={filter} category={itemType} />
         <div className="flex justify-end gap-2 p-3">
-          <Button href="items/shipment">Shipment</Button>
+          {itemType === "concession" && (
+            <Button href="items/restock">Restock</Button>
+          )}
           <Button href="items/0">New Item</Button>
         </div>
       </div>

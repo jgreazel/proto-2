@@ -260,10 +260,12 @@ const CreateItemWizard = () => {
 
   return (
     <div className="flex w-full flex-col gap-3">
-      <div className="flex items-center justify-evenly rounded-xl border-2 border-solid border-sky-600 text-slate-800">
+      <div className="flex items-center justify-evenly rounded-xl border-2 border-solid border-sky-500 text-sky-700">
         <div
           className={
-            tab === "admission" ? "rounded-2xl bg-sky-600 p-2 text-sky-50" : ""
+            tab === "admission"
+              ? "rounded-2xl border-2 border-solid border-sky-500 p-2"
+              : ""
           }
           onClick={() => {
             setTab("admission");
@@ -273,7 +275,9 @@ const CreateItemWizard = () => {
         </div>
         <div
           className={
-            tab === "concession" ? "rounded-2xl bg-sky-600 p-2 text-sky-50" : ""
+            tab === "concession"
+              ? "rounded-2xl border-2 border-solid border-sky-500 p-2"
+              : ""
           }
           onClick={() => {
             setTab("concession");
