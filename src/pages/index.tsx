@@ -51,7 +51,10 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
   );
 };
 
-const ItemList = (props: { filter: string }) => {
+const ItemList = (props: {
+  filter: string;
+  category?: "concession" | "admission";
+}) => {
   const { data, isLoading } = api.items.getAll.useQuery();
 
   if (isLoading) return <LoadingPage />;
@@ -61,8 +64,11 @@ const ItemList = (props: { filter: string }) => {
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-scroll py-3">
       {data
-        .filter((d) =>
-          d.item.label.toUpperCase().includes(props.filter.toUpperCase()),
+        .filter(
+          (d) =>
+            d.item.label.toUpperCase().includes(props.filter.toUpperCase()) &&
+            ((d.item.isAdmissionItem && props.category === "admission") ||
+              (d.item.isConcessionItem && props.category === "concession")),
         )
         .map((itemWithCreator) => (
           <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
@@ -75,6 +81,9 @@ export default function Home() {
   const { user, isLoaded: userLoaded, isSignedIn } = useUser();
 
   const [filter, setFilter] = useState("");
+  const [itemType, setItemType] = useState<"concession" | "admission">(
+    "concession",
+  );
 
   api.items.getAll.useQuery();
 
@@ -95,6 +104,16 @@ export default function Home() {
           )}
         </div>
         <div className="flex items-center gap-2 p-2">
+          <Button
+            onClick={() =>
+              setItemType((prev) => {
+                if (prev === "concession") return "admission";
+                else return "concession";
+              })
+            }
+          >
+            Toggle (viewing {itemType})
+          </Button>
           <label className="text-s font-medium">Filter:</label>
           <input
             className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
@@ -103,7 +122,7 @@ export default function Home() {
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
-        <ItemList filter={filter} />
+        <ItemList filter={filter} category={itemType} />
         <div className="flex justify-end gap-2 p-3">
           <Button href="items/shipment">Shipment</Button>
           <Button href="items/0">New Item</Button>
