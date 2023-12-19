@@ -193,4 +193,32 @@ export const itemsRouter = createTRPCRouter({
       });
       return item;
     }),
+
+  restockItems: privateProcedure
+    .input(
+      z.array(
+        z.object({
+          id: z.string(),
+          restockAmount: z.number().min(1).max(200),
+        }),
+      ),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const items = await ctx.db.inventoryItem.findMany({
+        where: { id: { in: input.map((i) => i.id) } },
+      });
+
+      await Promise.all(
+        items.map(
+          async (i, idx) =>
+            await ctx.db.inventoryItem.update({
+              where: { id: i.id },
+              data: { ...i, inStock: i.inStock! + input[idx]!.restockAmount },
+            }),
+        ),
+      ).catch((e: { message: string }) => {
+        throw new TRPCError({ message: e.message, code: "BAD_REQUEST" });
+      });
+      return { message: "Inventory successfully updated!", success: true };
+    }),
 });

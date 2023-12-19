@@ -36,7 +36,6 @@ const AdmissionItemForm = (props: {
   const watchPassType = watch("passType");
 
   useEffect(() => {
-    console.log(data);
     if (getValues().label === "" && data) reset(data);
   }, [data, reset, getValues]);
 
