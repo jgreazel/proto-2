@@ -24,7 +24,7 @@ model InventoryItem {
     id           String   @id @default(cuid())
     createdAt    DateTime @default(now())
     createdBy    String
-    label        String   @default("unlabeled") @db.VarChar(255)
+    label        String   @default("Unlabeled Inventory Item") @db.VarChar(255)
     sellingPrice Int      @default(0)
 
     // concession items
@@ -37,4 +37,28 @@ model InventoryItem {
     isSeasonal      Boolean?
     isDay           Boolean?
     patronLimit     Int?
+}
+
+model Patron {
+    id        String     @id @default(cuid())
+    createdAt DateTime   @default(now())
+    createdBy String
+    passId    String     @unique
+    pass      SeasonPass @relation(fields: [passId], references: [id])
+
+    firstName      String
+    lastName       String
+    birthDate      DateTime?
+    banReEntryDate DateTime?
+}
+
+model SeasonPass {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    createdBy String
+    patrons   Patron[]
+
+    label              String    @default("Unlabeled Season Pass") @db.VarChar(255)
+    effectiveStartDate DateTime  @default(now())
+    effectiveEndDate   DateTime?
 }
