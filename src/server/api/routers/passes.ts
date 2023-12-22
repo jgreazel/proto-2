@@ -65,7 +65,6 @@ export const passesRouter = createTRPCRouter({
         patrons: z
           .array(
             z.object({
-              label: z.string().min(1).max(50, "Too many characters"),
               firstName: z.string().min(1).max(50),
               lastName: z.string().min(1).max(50),
               birthDate: z.date().optional(),
@@ -88,7 +87,18 @@ export const passesRouter = createTRPCRouter({
           effectiveEndDate: addOneYear(
             input.seasonPass.effectiveStartDate ?? new Date(),
           ),
+          ...(input.patrons && {
+            patrons: {
+              createMany: {
+                data: input.patrons.map((p) => ({
+                  ...p,
+                  createdBy: createdById,
+                })),
+              },
+            },
+          }),
         },
+        include: { patrons: true },
       });
       if (!pass)
         throw new TRPCError({
@@ -96,26 +106,7 @@ export const passesRouter = createTRPCRouter({
           message: "Failed to create season pass object",
         });
 
-      if (!input.patrons) {
-        return { seasonPass: pass, patrons: undefined };
-      }
-      const patrons = await ctx.db.patron.createMany({
-        data: input.patrons.map((p) => ({
-          ...p,
-          createdBy: createdById,
-          passId: pass.id,
-        })),
-      });
-      if (!patrons)
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Failed to create patron objects",
-        });
-
-      return {
-        seasonPass: pass,
-        patrons,
-      };
+      return pass;
     }),
 
   updateSeasonPass: privateProcedure

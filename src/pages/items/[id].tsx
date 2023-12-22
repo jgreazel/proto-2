@@ -46,8 +46,7 @@ const AdmissionItemForm = (props: {
   return (
     <form
       className="flex grow flex-col gap-2"
-      onSubmit={handleSubmit(() => {
-        const values = getValues();
+      onSubmit={handleSubmit((values) => {
         onSubmit(values);
         !data && reset();
       })}
@@ -55,6 +54,7 @@ const AdmissionItemForm = (props: {
       <label className="text-xs font-medium">Label</label>
       <input
         id="label"
+        type="text"
         placeholder="Ex: Adult Day Pass"
         className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
         {...register("label", {

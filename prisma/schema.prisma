@@ -39,19 +39,6 @@ model InventoryItem {
     patronLimit     Int?
 }
 
-model Patron {
-    id        String     @id @default(cuid())
-    createdAt DateTime   @default(now())
-    createdBy String
-    passId    String     @unique
-    pass      SeasonPass @relation(fields: [passId], references: [id])
-
-    firstName      String
-    lastName       String
-    birthDate      DateTime?
-    banReEntryDate DateTime?
-}
-
 model SeasonPass {
     id        String   @id @default(cuid())
     createdAt DateTime @default(now())
@@ -61,4 +48,19 @@ model SeasonPass {
     label              String    @default("Unlabeled Season Pass") @db.VarChar(255)
     effectiveStartDate DateTime  @default(now())
     effectiveEndDate   DateTime?
+}
+
+model Patron {
+    id        String     @id @default(cuid())
+    createdAt DateTime   @default(now())
+    createdBy String
+    pass      SeasonPass @relation(fields: [passId], references: [id])
+    passId    String
+
+    firstName      String
+    lastName       String
+    birthDate      DateTime?
+    banReEntryDate DateTime?
+
+    @@index([passId])
 }

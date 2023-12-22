@@ -21,7 +21,7 @@ export const Button = (
       disabled={props.disabled}
       onClick={props.onClick}
       type={props.type}
-      className="rounded-lg border-2 border-solid border-sky-600 p-2 text-sky-700 hover:opacity-70"
+      className="rounded-lg border-2 border-solid border-sky-600 p-2 text-sky-700 hover:opacity-70 disabled:opacity-50"
     >
       {props.children}
     </button>
