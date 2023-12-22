@@ -62,9 +62,15 @@ export default function ItemsPage() {
                   {p.patrons.map((x) => (
                     <div
                       key={x.passId + x.id}
-                      className="rounded-xl bg-slate-100 p-1 px-3 shadow-lg"
+                      className="flex flex-row items-baseline justify-between rounded-xl bg-slate-100 p-1 px-3 shadow-lg"
                     >
                       {x.firstName}
+                      {!!x.birthDate && (
+                        <div className="text-sm text-slate-400">
+                          {new Date().getFullYear() - x.birthDate.getFullYear()}{" "}
+                          y/o
+                        </div>
+                      )}
                       <Link
                         className="ml-2 text-xs text-slate-400"
                         href={`passes/patrons/${p.id}`}

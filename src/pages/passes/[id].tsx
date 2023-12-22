@@ -2,11 +2,12 @@ import { type Dispatch, type SetStateAction, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Button } from "~/components/button";
-import { LoadingSpinner } from "~/components/loading";
+import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import { api } from "~/utils/api";
 import DatePicker from "react-datepicker";
 
 import "react-datepicker/dist/react-datepicker.css";
+import { useParams } from "next/navigation";
 
 type PatronFormData = {
   firstName: string;
@@ -15,7 +16,7 @@ type PatronFormData = {
 };
 
 const PatronFormSection = (props: {
-  isSubmitting?: boolean;
+  isLoading?: boolean;
   value: PatronFormData[];
   onChange: Dispatch<SetStateAction<PatronFormData[]>>;
 }) => {
@@ -34,7 +35,7 @@ const PatronFormSection = (props: {
         {props.value.map((p) => (
           <div
             className={`rounded-xl ${
-              props.isSubmitting ? "bg-slate-300" : "bg-slate-50"
+              props.isLoading ? "bg-slate-300" : "bg-slate-50"
             } p-2 px-4 shadow-lg`}
             key={p.firstName + p.lastName}
           >
@@ -52,7 +53,7 @@ const PatronFormSection = (props: {
             className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
             {...register("firstName", {
               required: true,
-              disabled: props.isSubmitting,
+              disabled: props.isLoading,
             })}
           />
           <label className="text-xs font-medium">Last Name</label>
@@ -63,7 +64,7 @@ const PatronFormSection = (props: {
             className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
             {...register("lastName", {
               required: true,
-              disabled: props.isSubmitting,
+              disabled: props.isLoading,
             })}
           />
           <label className="text-xs font-medium">Birth Date</label>
@@ -73,7 +74,7 @@ const PatronFormSection = (props: {
             render={({ field }) => (
               <DatePicker
                 className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
-                placeholderText="Optional Birthday"
+                placeholderText="Birthday (Optional)"
                 selected={field.value}
                 onChange={(date: Date) => field.onChange(date)}
               />
@@ -107,22 +108,35 @@ type SeasonPassFormData = {
 };
 
 export default function SinglePassPage() {
+  const params = useParams();
+  const id = (id: string | string[] | undefined) => id?.toString() ?? "0";
+
+  // todo use data as default form values and state value
+  const { data, isLoading } = api.passes.getById.useQuery(
+    { id: id(params.id) },
+    { enabled: id(params.id) !== "0" },
+  );
+  const isReallyLoading = isLoading && id(params.id) !== "0";
+
   const [patrons, setPatrons] = useState<PatronFormData[]>([]);
+
   const { register, handleSubmit, reset, formState } =
     useForm<SeasonPassFormData>();
+
   const ctx = api.useUtils();
-  const { mutate, isLoading } = api.passes.createSeasonPass.useMutation({
-    onSuccess: () => {
-      reset();
-      setPatrons([]);
-      void ctx.passes.getAll.invalidate();
-    },
-    onError: (e: { message: string }) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const msg = JSON.parse(e.message)[0].message as string | undefined;
-      if (msg) toast.error(msg);
-    },
-  });
+  const { mutate, isLoading: isCreating } =
+    api.passes.createSeasonPass.useMutation({
+      onSuccess: () => {
+        reset();
+        setPatrons([]);
+        void ctx.passes.getAll.invalidate();
+      },
+      onError: (e: { message: string }) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        const msg = JSON.parse(e.message)[0].message as string | undefined;
+        if (msg) toast.error(msg);
+      },
+    });
 
   const onSubmit = (data: SeasonPassFormData) => {
     mutate({
@@ -134,33 +148,42 @@ export default function SinglePassPage() {
   return (
     <div className="mx-auto flex w-1/2 flex-col gap-3">
       <h2 className="font-semibold underline">Patron Details</h2>
-      <PatronFormSection
-        value={patrons}
-        onChange={setPatrons}
-        isSubmitting={isLoading}
-      />
-      <h2 className="font-semibold underline">Pass Details</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
-        <label className="text-xs font-medium">Label</label>
-        <input
-          id="label"
-          placeholder="Ex: Johnson, Anderson, etc..."
-          className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
-          {...register("label", {
-            required: true,
-            disabled: isLoading,
-          })}
-        />
-        {isLoading ? (
-          <div className="flex justify-center">
-            <LoadingSpinner />
-          </div>
-        ) : (
-          <Button disabled={!formState.isValid} type="submit">
-            Create
-          </Button>
-        )}
-      </form>
+      {isReallyLoading ? (
+        <LoadingPage />
+      ) : (
+        <>
+          <PatronFormSection
+            value={patrons}
+            onChange={setPatrons}
+            isLoading={isCreating}
+          />
+          <h2 className="font-semibold underline">Pass Details</h2>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-3"
+          >
+            <label className="text-xs font-medium">Label</label>
+            <input
+              id="label"
+              placeholder="Ex: Johnson, Anderson, etc..."
+              className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+              {...register("label", {
+                required: true,
+                disabled: isCreating,
+              })}
+            />
+            {isCreating ? (
+              <div className="flex justify-center">
+                <LoadingSpinner />
+              </div>
+            ) : (
+              <Button disabled={!formState.isValid} type="submit">
+                Create
+              </Button>
+            )}
+          </form>
+        </>
+      )}
     </div>
   );
 }

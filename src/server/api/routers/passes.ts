@@ -43,6 +43,7 @@ export const passesRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const pass = await ctx.db.seasonPass.findUnique({
         where: { id: input.id },
+        include: { patrons: true },
       });
 
       if (pass === null) {
