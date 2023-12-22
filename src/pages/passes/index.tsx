@@ -11,7 +11,13 @@ export default function ItemsPage() {
   if (!data) return <div>Something went wrong</div>;
 
   return (
-    <PageLayout>
+    <PageLayout
+      actionRow={
+        <div>
+          <Button href="passes/0">Add Pass</Button>
+        </div>
+      }
+    >
       <h1 className="p-3 font-bold underline">Season Passes</h1>
       {data.map((p) => (
         <div key={p.id + "-pass-card"}>
