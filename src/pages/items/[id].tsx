@@ -248,7 +248,7 @@ const mutationOpts = (ctx: {
 });
 
 const CreateItemWizard = () => {
-  // ctx v. api: ctx = server side OR as part of the request
+  // ctx v. api: ctx = server side OR as part of the request... or is it just the react context?
   const ctx = api.useUtils();
   const { mutate: concessionMutation, isLoading: isCreating } =
     api.items.createConcessionItem.useMutation(mutationOpts(ctx));

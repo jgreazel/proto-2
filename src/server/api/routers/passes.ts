@@ -60,7 +60,7 @@ export const passesRouter = createTRPCRouter({
       z.object({
         seasonPass: z.object({
           label: z.string().min(1).max(30, "Too many characters"),
-          effectiveStartDate: z.date(),
+          effectiveStartDate: z.date().optional(),
         }),
         patrons: z
           .array(
@@ -85,7 +85,9 @@ export const passesRouter = createTRPCRouter({
         data: {
           ...input.seasonPass,
           createdBy: createdById,
-          effectiveEndDate: addOneYear(input.seasonPass.effectiveStartDate),
+          effectiveEndDate: addOneYear(
+            input.seasonPass.effectiveStartDate ?? new Date(),
+          ),
         },
       });
       if (!pass)
