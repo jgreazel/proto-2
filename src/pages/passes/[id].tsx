@@ -112,10 +112,10 @@ export default function SinglePassPage() {
   const id = (id: string | string[] | undefined) => id?.toString() ?? "0";
 
   const { data, isLoading } = api.passes.getById.useQuery(
-    { id: id(params.id) },
-    { enabled: id(params.id) !== "0" },
+    { id: id(params?.id) },
+    { enabled: id(params?.id) !== "0" },
   );
-  const isReallyLoading = isLoading && id(params.id) !== "0";
+  const isReallyLoading = isLoading && id(params?.id) !== "0";
 
   const [patrons, setPatrons] = useState<PatronFormData[]>([]);
 
