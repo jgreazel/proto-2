@@ -1,4 +1,4 @@
-import { type Dispatch, type SetStateAction, useState } from "react";
+import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Button } from "~/components/button";
@@ -111,7 +111,6 @@ export default function SinglePassPage() {
   const params = useParams();
   const id = (id: string | string[] | undefined) => id?.toString() ?? "0";
 
-  // todo use data as default form values and state value
   const { data, isLoading } = api.passes.getById.useQuery(
     { id: id(params.id) },
     { enabled: id(params.id) !== "0" },
@@ -122,6 +121,18 @@ export default function SinglePassPage() {
 
   const { register, handleSubmit, reset, formState } =
     useForm<SeasonPassFormData>();
+  useEffect(() => {
+    if (data && !isReallyLoading) {
+      reset({ label: data.label });
+      setPatrons(
+        data.patrons.map((p) => ({
+          firstName: p.firstName,
+          lastName: p.lastName,
+          birthDate: p.birthDate ?? undefined,
+        })),
+      );
+    }
+  }, [isReallyLoading, data, reset]);
 
   const ctx = api.useUtils();
   const { mutate, isLoading: isCreating } =
