@@ -68,8 +68,8 @@ export const passesRouter = createTRPCRouter({
             z.object({
               firstName: z.string().min(1).max(50),
               lastName: z.string().min(1).max(50),
-              birthDate: z.date().optional(),
-              banReEntryDate: z.date().optional(),
+              birthDate: z.date().optional().nullable(),
+              banReEntryDate: z.date().optional().nullable(),
             }),
           )
           .optional(),
@@ -127,15 +127,33 @@ export const passesRouter = createTRPCRouter({
       return pass;
     }),
 
+  createPatron: privateProcedure
+    .input(
+      z.object({
+        passId: z.string(),
+        firstName: z.string().min(1).max(50),
+        lastName: z.string().min(1).max(50),
+        birthDate: z.date().nullable().optional(),
+        banReEntryDate: z.date().nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const createdBy = ctx.userId;
+
+      const patron = await ctx.db.patron.create({
+        data: { ...input, createdBy },
+      });
+      return patron;
+    }),
+
   updatePatron: privateProcedure
     .input(
       z.object({
         id: z.string(),
-        label: z.string().min(1).max(50, "Too many characters"),
         firstName: z.string().min(1).max(50).optional(),
         lastName: z.string().min(1).max(50).optional(),
-        birthDate: z.date().optional().optional(),
-        banReEntryDate: z.date().optional().optional(),
+        birthDate: z.date().optional(),
+        banReEntryDate: z.date().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

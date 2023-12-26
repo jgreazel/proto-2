@@ -15,22 +15,41 @@ import { AppRouter } from "~/server/api/root";
 type PatronFormData = {
   firstName: string;
   lastName: string;
-  birthDate?: Date;
+  birthDate: Date | null;
 };
 
 const PatronFormSection = (props: {
   isLoading?: boolean;
   value: PatronFormData[];
   onChange: Dispatch<SetStateAction<PatronFormData[]>>;
+  isEditing?: boolean;
+  passId?: string;
 }) => {
   const [showForm, setShowForm] = useState(false);
   const { register, handleSubmit, control, reset } = useForm<PatronFormData>();
 
-  const onSubmit = (data: PatronFormData) => {
+  const onAdd = (data: PatronFormData) => {
     props.onChange([...props.value, data]);
     setShowForm(false);
     reset();
   };
+
+  const { mutate, isLoading: isCreating } = api.passes.createPatron.useMutation(
+    {
+      onSuccess: onAdd,
+      onError: handleApiError,
+    },
+  );
+
+  const onSubmit = (data: PatronFormData) => {
+    if (props.isEditing) {
+      mutate({ ...data, passId: props.passId! });
+    } else {
+      onAdd(data);
+    }
+  };
+
+  const isGray = props.isLoading ?? isCreating;
 
   return (
     <div className="flex flex-col gap-3">
@@ -38,7 +57,7 @@ const PatronFormSection = (props: {
         {props.value.map((p) => (
           <div
             className={`rounded-xl ${
-              props.isLoading ? "bg-slate-300" : "bg-slate-50"
+              isGray ? "bg-slate-300" : "bg-slate-50"
             } p-2 px-4 shadow-lg`}
             key={p.firstName + p.lastName}
           >
@@ -56,7 +75,7 @@ const PatronFormSection = (props: {
             className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
             {...register("firstName", {
               required: true,
-              disabled: props.isLoading,
+              disabled: isGray,
             })}
           />
           <label className="text-xs font-medium">Last Name</label>
@@ -67,7 +86,7 @@ const PatronFormSection = (props: {
             className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
             {...register("lastName", {
               required: true,
-              disabled: props.isLoading,
+              disabled: isGray,
             })}
           />
           <label className="text-xs font-medium">Birth Date</label>
@@ -133,7 +152,7 @@ export default function SinglePassPage() {
         data.patrons.map((p) => ({
           firstName: p.firstName,
           lastName: p.lastName,
-          birthDate: p.birthDate ?? undefined,
+          birthDate: p.birthDate,
         })),
       );
     }
@@ -186,6 +205,8 @@ export default function SinglePassPage() {
             value={patrons}
             onChange={setPatrons}
             isLoading={isMutating}
+            isEditing={isEditing}
+            passId={id()}
           />
           <h2 className="font-semibold underline">Pass Details</h2>
           <form
