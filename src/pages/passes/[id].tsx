@@ -1,4 +1,10 @@
-import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useState,
+  useEffect,
+  ReactElement,
+} from "react";
 import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Button } from "~/components/button";
@@ -14,6 +20,23 @@ import { AppRouter } from "~/server/api/root";
 
 // todo need componenet to manage state between trash icon and "Reasign to which season pass?: <Select> <Button>Submit"
 // and also handle updatePatron(newPassId) & getAllseasonpasses for their Ids for options
+const ReassignNode = () => {
+  const [showSelect, setShowSelect] = useState(false);
+
+  return (
+    <div>
+      <div
+        onClick={() => {
+          // todo
+          // if isEditing: needs to be reassinged, if notediting can just be dropped
+        }}
+        className="text-sm text-slate-400 hover:underline"
+      >
+        Remove
+      </div>
+    </div>
+  );
+};
 
 type PatronFormData = {
   firstName: string;
@@ -27,6 +50,7 @@ const PatronFormSection = (props: {
   onChange: Dispatch<SetStateAction<PatronFormData[]>>;
   isEditing?: boolean;
   passId?: string;
+  children?: ReactElement;
 }) => {
   const [showForm, setShowForm] = useState(false);
   const { register, handleSubmit, control, reset } = useForm<PatronFormData>();
@@ -57,16 +81,24 @@ const PatronFormSection = (props: {
   return (
     <div className="flex flex-col gap-3">
       <>
-        {props.value.map((p) => (
-          <div
-            className={`rounded-xl ${
-              isGray ? "bg-slate-300" : "bg-slate-50"
-            } p-2 px-4 shadow-lg`}
-            key={p.firstName + p.lastName}
-          >
-            {p.firstName}
+        {!!props.value.length ? (
+          props.value.map((p) => (
+            <div
+              className={`rounded-xl ${
+                isGray ? "bg-slate-300" : "bg-slate-50"
+              } flex flex-row p-2 px-4 shadow-lg`}
+              key={p.firstName + p.lastName}
+            >
+              {p.firstName}
+              <div className="grow" />
+              {props.children}
+            </div>
+          ))
+        ) : (
+          <div className="text-md text-sky-950">
+            You haven&apos;t added any swimmers to your pass yet!
           </div>
-        ))}
+        )}
       </>
       {showForm ? (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-2">
@@ -119,8 +151,11 @@ const PatronFormSection = (props: {
         </form>
       ) : (
         <div>
-          <Button onClick={() => setShowForm((prev) => !prev)}>
-            Add Patron
+          <Button
+            onClick={() => setShowForm((prev) => !prev)}
+            disabled={isGray}
+          >
+            + Add Patron
           </Button>
         </div>
       )}
@@ -210,13 +245,16 @@ export default function SinglePassPage() {
             isLoading={isMutating}
             isEditing={isEditing}
             passId={id()}
-          />
+          >
+           {isEditing ?<ReassignNode /> :<div         className="text-sm text-slate-400 hover:underline"
+onClick={()=>}>Delete</div>}
+          </PatronFormSection>
           <h2 className="font-semibold underline">Pass Details</h2>
           <form
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col gap-3"
           >
-            <label className="text-xs font-medium">Label</label>
+            <label className="text-xs font-medium">Label / Family Name</label>
             <input
               id="label"
               placeholder="Ex: Johnson, Anderson, etc..."
