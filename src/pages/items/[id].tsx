@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { api } from "~/utils/api";
 import { Button } from "~/components/button";
 import { useParams } from "next/navigation";
+import handleApiError from "~/helpers/handleApiError";
 
 type AdmissionFormData = {
   label: string;
@@ -240,11 +241,7 @@ const mutationOpts = (ctx: {
   onSuccess: () => {
     void ctx.items.getById.invalidate();
   },
-  onError: (e: { message: string }) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const msg = JSON.parse(e.message)[0].message as string | undefined;
-    if (msg) toast.error(msg);
-  },
+  onError: handleApiError,
 });
 
 const CreateItemWizard = () => {

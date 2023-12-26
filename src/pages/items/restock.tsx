@@ -7,6 +7,7 @@ import { api } from "~/utils/api";
 import { useForm } from "react-hook-form";
 import { Button } from "~/components/button";
 import type { InventoryItem } from "@prisma/client";
+import handleApiError from "~/helpers/handleApiError";
 
 const SelectionHeader = (props: {
   value: string[];
@@ -136,11 +137,7 @@ export default function RestockPage() {
       setSelected([]);
       toast(x.message);
     },
-    onError: (e: { message: string }) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const msg = JSON.parse(e.message)[0].message as string | undefined;
-      if (msg) toast.error(msg);
-    },
+    onError: handleApiError,
   });
 
   return (

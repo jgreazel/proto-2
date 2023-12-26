@@ -5,9 +5,12 @@ import { Button } from "~/components/button";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import { api } from "~/utils/api";
 import DatePicker from "react-datepicker";
+import handleApiError from "~/helpers/handleApiError";
 
 import "react-datepicker/dist/react-datepicker.css";
 import { useParams } from "next/navigation";
+import { TRPCClientError, TRPCClientErrorLike } from "@trpc/client";
+import { AppRouter } from "~/server/api/root";
 
 type PatronFormData = {
   firstName: string;
@@ -109,13 +112,15 @@ type SeasonPassFormData = {
 
 export default function SinglePassPage() {
   const params = useParams();
-  const id = (id: string | string[] | undefined) => id?.toString() ?? "0";
+  const id = (id: string | string[] | undefined = params?.id) =>
+    id?.toString() ?? "0";
+  const isEditing = id() !== "0";
 
   const { data, isLoading } = api.passes.getById.useQuery(
-    { id: id(params?.id) },
-    { enabled: id(params?.id) !== "0" },
+    { id: id() },
+    { enabled: isEditing },
   );
-  const isReallyLoading = isLoading && id(params?.id) !== "0";
+  const isReallyLoading = isLoading && isEditing;
 
   const [patrons, setPatrons] = useState<PatronFormData[]>([]);
 
@@ -135,26 +140,40 @@ export default function SinglePassPage() {
   }, [isReallyLoading, data, reset]);
 
   const ctx = api.useUtils();
-  const { mutate, isLoading: isCreating } =
+  const { mutate: editMutate, isLoading: isUpdating } =
+    api.passes.updateSeasonPass.useMutation({
+      onSuccess: (data) => {
+        void ctx.passes.getById.invalidate({
+          id: data.id,
+        });
+      },
+      onError: handleApiError,
+    });
+  const { mutate: createMutate, isLoading: isCreating } =
     api.passes.createSeasonPass.useMutation({
       onSuccess: () => {
         reset();
         setPatrons([]);
         void ctx.passes.getAll.invalidate();
       },
-      onError: (e: { message: string }) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        const msg = JSON.parse(e.message)[0].message as string | undefined;
-        if (msg) toast.error(msg);
-      },
+      onError: handleApiError,
     });
 
   const onSubmit = (data: SeasonPassFormData) => {
-    mutate({
-      seasonPass: data,
-      patrons,
-    });
+    if (isEditing) {
+      editMutate({
+        id: id(),
+        label: data.label,
+      });
+    } else {
+      createMutate({
+        seasonPass: data,
+        patrons,
+      });
+    }
   };
+
+  const isMutating = isCreating || isUpdating;
 
   return (
     <div className="mx-auto flex w-1/2 flex-col gap-3">
@@ -166,7 +185,7 @@ export default function SinglePassPage() {
           <PatronFormSection
             value={patrons}
             onChange={setPatrons}
-            isLoading={isCreating}
+            isLoading={isMutating}
           />
           <h2 className="font-semibold underline">Pass Details</h2>
           <form
@@ -180,16 +199,16 @@ export default function SinglePassPage() {
               className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
               {...register("label", {
                 required: true,
-                disabled: isCreating,
+                disabled: isMutating,
               })}
             />
-            {isCreating ? (
+            {isMutating ? (
               <div className="flex justify-center">
                 <LoadingSpinner />
               </div>
             ) : (
               <Button disabled={!formState.isValid} type="submit">
-                Create
+                {isEditing ? "Update" : "Create"}
               </Button>
             )}
           </form>
