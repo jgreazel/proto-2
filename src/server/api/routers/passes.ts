@@ -150,6 +150,7 @@ export const passesRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
+        passId: z.string().optional(),
         firstName: z.string().min(1).max(50).optional(),
         lastName: z.string().min(1).max(50).optional(),
         birthDate: z.date().optional(),

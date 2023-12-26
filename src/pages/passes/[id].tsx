@@ -12,6 +12,9 @@ import { useParams } from "next/navigation";
 import { TRPCClientError, TRPCClientErrorLike } from "@trpc/client";
 import { AppRouter } from "~/server/api/root";
 
+// todo need componenet to manage state between trash icon and "Reasign to which season pass?: <Select> <Button>Submit"
+// and also handle updatePatron(newPassId) & getAllseasonpasses for their Ids for options
+
 type PatronFormData = {
   firstName: string;
   lastName: string;
