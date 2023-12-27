@@ -4,6 +4,7 @@ import { Button } from "./button";
 
 type LayoutProps = {
   actionRow?: ReactNode;
+  hideHeader?: boolean;
 };
 
 export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
@@ -14,21 +15,25 @@ export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
 
   return (
     <main className="mx-auto flex h-screen w-full flex-col justify-start md:max-w-2xl">
-      <div className="p-4">
-        {!!isSignedIn && (
-          <div className="flex flex-col gap-3">
-            <div className="flex justify-between font-semibold">
-              <div className="capitalize">Hi, {user.username}</div>
-              <SignOutButton />
+      {!props.hideHeader && (
+        <>
+          <div className="p-4">
+            {!!isSignedIn && (
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between font-semibold">
+                  <div className="capitalize">Hi, {user.username}</div>
+                  <SignOutButton />
+                </div>
+              </div>
+            )}
+            <div className="flex flex-row gap-3 pt-2">
+              <Button href="/">Home</Button>
+              <Button href="items">Items</Button>
+              <Button href="passes">Passes</Button>
             </div>
           </div>
-        )}
-        <div className="flex flex-row gap-3 pt-2">
-          <Button href="/">Home</Button>
-          <Button href="items">Items</Button>
-          <Button href="passes">Passes</Button>
-        </div>
-      </div>
+        </>
+      )}
       <div className="grow overflow-auto">{props.children}</div>
       {props.actionRow && <div className="p-4">{props.actionRow}</div>}
     </main>

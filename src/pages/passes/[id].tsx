@@ -10,6 +10,7 @@ import Select from "react-select";
 import "react-datepicker/dist/react-datepicker.css";
 import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
+import { PageLayout } from "~/components/layout";
 
 const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
   const [showRemove, setShowRemove] = useState(true);
@@ -298,49 +299,51 @@ export default function SinglePassPage() {
   const isMutating = isCreating || isUpdating;
 
   return (
-    <div className="mx-auto flex flex-col gap-3 md:w-1/2">
-      <h2 className="font-semibold underline">Patron Details</h2>
-      {isReallyLoading ? (
-        <LoadingPage />
-      ) : (
-        <>
-          <PatronFormSection
-            value={patrons}
-            onChange={setPatrons}
-            isLoading={isMutating}
-            isEditing={isEditing}
-            passId={id()}
-          />
-          <h2 className="font-semibold underline">Pass Details</h2>
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="flex flex-col gap-3"
-          >
-            <label className="text-xs font-medium">Label / Family Name</label>
-            <input
-              id="label"
-              placeholder="Ex: Johnson, Anderson, etc..."
-              className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
-              {...register("label", {
-                required: true,
-                disabled: isMutating,
-              })}
+    <PageLayout hideHeader>
+      <div className="flex flex-col gap-3">
+        <h2 className="font-semibold underline">Patron Details</h2>
+        {isReallyLoading ? (
+          <LoadingPage />
+        ) : (
+          <>
+            <PatronFormSection
+              value={patrons}
+              onChange={setPatrons}
+              isLoading={isMutating}
+              isEditing={isEditing}
+              passId={id()}
             />
-            {isMutating ? (
-              <div className="flex justify-center">
-                <LoadingSpinner />
-              </div>
-            ) : (
-              <Button
-                disabled={!formState.isValid || !formState.isDirty}
-                type="submit"
-              >
-                {isEditing ? "Update" : "Create"}
-              </Button>
-            )}
-          </form>
-        </>
-      )}
-    </div>
+            <h2 className="font-semibold underline">Pass Details</h2>
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="flex flex-col gap-3"
+            >
+              <label className="text-xs font-medium">Label / Family Name</label>
+              <input
+                id="label"
+                placeholder="Ex: Johnson, Anderson, etc..."
+                className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+                {...register("label", {
+                  required: true,
+                  disabled: isMutating,
+                })}
+              />
+              {isMutating ? (
+                <div className="flex justify-center">
+                  <LoadingSpinner />
+                </div>
+              ) : (
+                <Button
+                  disabled={!formState.isValid || !formState.isDirty}
+                  type="submit"
+                >
+                  {isEditing ? "Update" : "Create"}
+                </Button>
+              )}
+            </form>
+          </>
+        )}
+      </div>
+    </PageLayout>
   );
 }
