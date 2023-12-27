@@ -9,6 +9,7 @@ import Select from "react-select";
 
 import "react-datepicker/dist/react-datepicker.css";
 import { useParams } from "next/navigation";
+import toast from "react-hot-toast";
 
 const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
   const [showRemove, setShowRemove] = useState(true);
@@ -115,6 +116,7 @@ const PatronFormSection = (props: {
   const onSubmit = (data: PatronFormData) => {
     if (props.isEditing) {
       mutate({ ...data, passId: props.passId! });
+      toast.success(`Success!`);
     } else {
       onAdd(data);
     }
@@ -329,7 +331,10 @@ export default function SinglePassPage() {
                 <LoadingSpinner />
               </div>
             ) : (
-              <Button disabled={!formState.isValid} type="submit">
+              <Button
+                disabled={!formState.isValid || !formState.isDirty}
+                type="submit"
+              >
                 {isEditing ? "Update" : "Create"}
               </Button>
             )}

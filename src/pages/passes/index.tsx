@@ -20,68 +20,76 @@ export default function ItemsPage() {
       {isLoading ? (
         <LoadingPage />
       ) : (
-        <div className="flex flex-col gap-2 p-1">
+        <div className="flex h-full flex-col gap-3 p-1">
           <h1 className="p-3 font-bold underline">Season Passes</h1>
-          <label className="font-semibold text-slate-800" htmlFor="pass-filter">
-            Filter:
-          </label>
-          <input
-            id="pass-filter"
-            value={filter}
-            placeholder="Ex: Anderson, John, etc..."
-            onChange={(e) => setFilter(e.target.value)}
-            className="rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl"
-          />
-          {data
-            ?.filter((d) => {
-              if (!filter) return true;
+          <div className="flex flex-row items-center gap-2">
+            <label
+              className="font-semibold text-slate-800"
+              htmlFor="pass-filter"
+            >
+              Filter:
+            </label>
+            <input
+              id="pass-filter"
+              value={filter}
+              placeholder="Ex: Anderson, John, etc..."
+              onChange={(e) => setFilter(e.target.value)}
+              className="w-full rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl"
+            />
+          </div>
+          <div className="flex h-full flex-col gap-2 overflow-auto">
+            {data
+              ?.filter((d) => {
+                if (!filter) return true;
 
-              const passMatches = d.label
-                .toLowerCase()
-                .includes(filter.toLowerCase());
-              const patronsMatch = d.patrons.some((p) =>
-                p.firstName.toLowerCase().includes(filter.toLowerCase()),
-              );
-              return passMatches || patronsMatch;
-            })
-            .map((p) => (
-              <div
-                className="rounded-lg bg-slate-50 p-3 font-medium text-slate-700 shadow-lg"
-                key={p.id + "-pass-card"}
-              >
-                <div className="flex flex-row items-baseline gap-2">
-                  <div>{p.label}</div>
-                  <Link
-                    className="text-xs text-slate-400"
-                    href={`passes/${p.id}`}
-                  >
-                    Edit
-                  </Link>
-                </div>
-                <div className="flex flex-col gap-1 p-4">
-                  {p.patrons.map((x) => (
-                    <div
-                      key={x.passId + x.id}
-                      className="flex flex-row items-baseline justify-between rounded-xl bg-slate-100 p-1 px-3 shadow-lg"
+                const passMatches = d.label
+                  .toLowerCase()
+                  .includes(filter.toLowerCase());
+                const patronsMatch = d.patrons.some((p) =>
+                  p.firstName.toLowerCase().includes(filter.toLowerCase()),
+                );
+                return passMatches || patronsMatch;
+              })
+              .map((p) => (
+                <div
+                  className="rounded-lg bg-slate-50 p-3 font-medium text-slate-700 shadow-lg"
+                  key={p.id + "-pass-card"}
+                >
+                  <div className="flex flex-row items-baseline gap-2">
+                    <div>{p.label}</div>
+                    <Link
+                      className="text-xs text-slate-400"
+                      href={`passes/${p.id}`}
                     >
-                      {x.firstName}
-                      {!!x.birthDate && (
-                        <div className="text-sm text-slate-400">
-                          {new Date().getFullYear() - x.birthDate.getFullYear()}{" "}
-                          y/o
-                        </div>
-                      )}
-                      <Link
-                        className="ml-2 text-xs text-slate-400"
-                        href={`passes/patrons/${p.id}`}
+                      Edit
+                    </Link>
+                  </div>
+                  <div className="flex flex-col gap-1 p-4">
+                    {p.patrons.map((x) => (
+                      <div
+                        key={x.passId + x.id}
+                        className="flex flex-row items-baseline justify-between rounded-xl bg-slate-100 p-1 px-3 shadow-lg"
                       >
-                        Edit
-                      </Link>
-                    </div>
-                  ))}
+                        {x.firstName}
+                        {!!x.birthDate && (
+                          <div className="text-sm text-slate-400">
+                            {new Date().getFullYear() -
+                              x.birthDate.getFullYear()}{" "}
+                            y/o
+                          </div>
+                        )}
+                        <Link
+                          className="ml-2 text-xs text-slate-400"
+                          href={`passes/patrons/${p.id}`}
+                        >
+                          Edit
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+          </div>
         </div>
       )}
     </PageLayout>
