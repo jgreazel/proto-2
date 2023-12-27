@@ -127,6 +127,27 @@ export const passesRouter = createTRPCRouter({
       return pass;
     }),
 
+  getPatronById: privateProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const patron = await ctx.db.patron.findUnique({
+        where: { id: input.id },
+      });
+
+      if (patron === null) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Patron doesn't exist",
+        });
+      }
+
+      return patron;
+    }),
+
   createPatron: privateProcedure
     .input(
       z.object({
