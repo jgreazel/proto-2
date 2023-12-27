@@ -3,7 +3,8 @@ import { PageLayout } from "~/components/layout";
 import { api } from "~/utils/api";
 
 export default function SinglePatronPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
   const { data, isLoading } = api.passes.getPatronById.useQuery({ id });
 
   return (
