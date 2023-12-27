@@ -1,44 +1,89 @@
-import {
-  type Dispatch,
-  type SetStateAction,
-  useState,
-  useEffect,
-  ReactElement,
-} from "react";
+import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
-import toast from "react-hot-toast";
 import { Button } from "~/components/button";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import { api } from "~/utils/api";
 import DatePicker from "react-datepicker";
 import handleApiError from "~/helpers/handleApiError";
+import Select from "react-select";
 
 import "react-datepicker/dist/react-datepicker.css";
 import { useParams } from "next/navigation";
-import { TRPCClientError, TRPCClientErrorLike } from "@trpc/client";
-import { AppRouter } from "~/server/api/root";
 
-// todo need componenet to manage state between trash icon and "Reasign to which season pass?: <Select> <Button>Submit"
-// and also handle updatePatron(newPassId) & getAllseasonpasses for their Ids for options
-const ReassignNode = () => {
-  const [showSelect, setShowSelect] = useState(false);
+const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
+  const [showRemove, setShowRemove] = useState(true);
+  const [select, setSelect] = useState<{ label: string; value: string }>();
+  const { data, isLoading: isFetching } = api.passes.getAll.useQuery();
+  const { mutate, isLoading: isUpdating } = api.passes.updatePatron.useMutation(
+    {
+      onError: handleApiError,
+      onSuccess: () => {
+        setShowRemove(true);
+        props.onSubmit();
+      },
+    },
+  );
+
+  const options =
+    data
+      ?.filter((pass) => !pass.patrons.some((p) => p.id === props.patronId))
+      .map((o) => ({ label: o.label, value: o.id })) ?? [];
 
   return (
     <div>
-      <div
-        onClick={() => {
-          // todo
-          // if isEditing: needs to be reassinged, if notediting can just be dropped
-        }}
-        className="text-sm text-slate-400 hover:underline"
-      >
-        Remove
-      </div>
+      {showRemove ? (
+        <div
+          onClick={() => {
+            setShowRemove(false);
+          }}
+          className="text-sm text-slate-400 hover:underline"
+        >
+          Remove
+        </div>
+      ) : (
+        <div className="flex flex-row gap-2">
+          <div className="flex flex-col">
+            <label className="self-end text-sm text-slate-500">Move to:</label>
+            <Select
+              placeholder="- Must be reassigned to a new pass -"
+              autoFocus
+              isSearchable
+              isDisabled={isFetching}
+              options={options}
+              value={select}
+              onChange={(newValue) => {
+                setSelect(newValue!);
+              }}
+            />
+          </div>
+          <div className="flex flex-row gap-1 self-end">
+            {!isUpdating ? (
+              <Button
+                onClick={() => {
+                  mutate({ id: props.patronId, passId: select?.value });
+                }}
+              >
+                Save
+              </Button>
+            ) : (
+              <LoadingSpinner />
+            )}
+            <Button
+              onClick={() => {
+                setShowRemove(true);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 type PatronFormData = {
+  id?: string;
   firstName: string;
   lastName: string;
   birthDate: Date | null;
@@ -50,7 +95,6 @@ const PatronFormSection = (props: {
   onChange: Dispatch<SetStateAction<PatronFormData[]>>;
   isEditing?: boolean;
   passId?: string;
-  children?: ReactElement;
 }) => {
   const [showForm, setShowForm] = useState(false);
   const { register, handleSubmit, control, reset } = useForm<PatronFormData>();
@@ -78,11 +122,17 @@ const PatronFormSection = (props: {
 
   const isGray = props.isLoading ?? isCreating;
 
+  const removeFromState = (id: number) => {
+    const copy = [...props.value];
+    copy.splice(id, 1);
+    props.onChange(copy);
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <>
         {!!props.value.length ? (
-          props.value.map((p) => (
+          props.value.map((p, idx) => (
             <div
               className={`rounded-xl ${
                 isGray ? "bg-slate-300" : "bg-slate-50"
@@ -91,7 +141,19 @@ const PatronFormSection = (props: {
             >
               {p.firstName}
               <div className="grow" />
-              {props.children}
+              {props.isEditing ? (
+                <ReassignNode
+                  patronId={p.id!}
+                  onSubmit={() => removeFromState(idx)}
+                />
+              ) : (
+                <div
+                  className="text-sm text-slate-400 hover:underline"
+                  onClick={() => removeFromState(idx)}
+                >
+                  Delete
+                </div>
+              )}
             </div>
           ))
         ) : (
@@ -188,6 +250,7 @@ export default function SinglePassPage() {
       reset({ label: data.label });
       setPatrons(
         data.patrons.map((p) => ({
+          id: p.id,
           firstName: p.firstName,
           lastName: p.lastName,
           birthDate: p.birthDate,
@@ -233,7 +296,7 @@ export default function SinglePassPage() {
   const isMutating = isCreating || isUpdating;
 
   return (
-    <div className="mx-auto flex w-1/2 flex-col gap-3">
+    <div className="mx-auto flex flex-col gap-3 md:w-1/2">
       <h2 className="font-semibold underline">Patron Details</h2>
       {isReallyLoading ? (
         <LoadingPage />
@@ -245,10 +308,7 @@ export default function SinglePassPage() {
             isLoading={isMutating}
             isEditing={isEditing}
             passId={id()}
-          >
-           {isEditing ?<ReassignNode /> :<div         className="text-sm text-slate-400 hover:underline"
-onClick={()=>}>Delete</div>}
-          </PatronFormSection>
+          />
           <h2 className="font-semibold underline">Pass Details</h2>
           <form
             onSubmit={handleSubmit(onSubmit)}
