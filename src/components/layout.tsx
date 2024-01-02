@@ -14,7 +14,7 @@ export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
   if (!userLoaded) return <div></div>;
 
   return (
-    <main className="mx-auto flex h-screen w-full flex-col justify-start md:max-w-2xl">
+    <main className="mx-auto flex h-screen w-full flex-col justify-start md:max-w-3xl">
       {!props.hideHeader && (
         <>
           <div className="p-4">
@@ -30,6 +30,7 @@ export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
               <Button href="/">Home</Button>
               <Button href="items">Items</Button>
               <Button href="passes">Passes</Button>
+              <Button href="checkout">Checkout</Button>
             </div>
           </div>
         </>

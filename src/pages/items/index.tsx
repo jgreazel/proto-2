@@ -5,16 +5,12 @@ import { type RouterOutputs, api } from "~/utils/api";
 import Link from "next/link";
 import { PageLayout } from "~/components/layout";
 import { Button } from "~/components/button";
+import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
 const ItemView = (props: { item: ItemWithCreatedBy }) => {
   const { item, createdBy } = props.item;
-
-  const usDollar = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
 
   return (
     <div className="rounded-lg bg-slate-50 p-6 shadow-lg" key={item.id}>
@@ -37,7 +33,7 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
         <div>
           Category: {item.isConcessionItem ? "Concession" : "Admission"}
         </div>
-        <div>Selling Price: {usDollar.format(item.sellingPrice / 100)}</div>
+        <div>Selling Price: {dbUnitToDollars(item.sellingPrice)}</div>
         {item.isConcessionItem ? (
           <div>In Stock: {item.inStock}</div>
         ) : (
