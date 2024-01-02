@@ -1,25 +1,44 @@
 import { useParams } from "next/navigation";
+import { useRouter } from "next/router";
+import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import PatronForm from "~/components/patronForm";
+import handleApiError from "~/helpers/handleApiError";
 import { api } from "~/utils/api";
 
 export default function SinglePatronPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
-  // ? somehow were redirecting to a /:id url but that id is bunk
-  // where is that link getting its value from? how is it not related to an existing patron?
   const { data, isLoading } = api.passes.getPatronById.useQuery({ id });
+
+  const router = useRouter();
+
+  const ctx = api.useUtils();
+  const { mutate, isLoading: isUpdating } = api.passes.updatePatron.useMutation(
+    {
+      onError: handleApiError,
+      onSuccess: () => {
+        toast("Update Successful!");
+        void ctx.passes.getPatronById.invalidate();
+      },
+    },
+  );
 
   return (
     <PageLayout hideHeader>
       <PatronForm
-        disabled={isLoading}
+        data={data}
+        disabled={isLoading || isUpdating}
         onCancel={() => {
-          return;
+          router.back();
         }}
         submitText="Update"
-        onSubmit={() => {
-          return;
+        onSubmit={(data) => {
+          if (!data.id) {
+            toast.error("Missing patron id. Cannot update database");
+          } else {
+            mutate({ id: data.id, ...data });
+          }
         }}
       />
     </PageLayout>

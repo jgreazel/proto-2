@@ -80,7 +80,7 @@ export default function ItemsPage() {
                         )}
                         <Link
                           className="ml-2 text-xs text-slate-400"
-                          href={`passes/patrons/${p.id}`}
+                          href={`passes/patrons/${x.id}`}
                         >
                           Edit
                         </Link>

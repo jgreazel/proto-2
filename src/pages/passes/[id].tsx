@@ -6,7 +6,6 @@ import { api } from "~/utils/api";
 import handleApiError from "~/helpers/handleApiError";
 import Select from "react-select";
 
-import "react-datepicker/dist/react-datepicker.css";
 import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";

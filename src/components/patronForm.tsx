@@ -1,6 +1,8 @@
 import { Controller, useForm } from "react-hook-form";
 import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { Button } from "./button";
+import { useEffect } from "react";
 
 export type PatronFormData = {
   id?: string;
@@ -10,6 +12,7 @@ export type PatronFormData = {
 };
 
 type Props = {
+  data?: PatronFormData;
   onSubmit: (data: PatronFormData) => void;
   submitText?: string;
   disabled: boolean;
@@ -17,12 +20,20 @@ type Props = {
 };
 
 const PatronForm = (props: Props) => {
-  const { register, handleSubmit, control, reset } = useForm<PatronFormData>();
+  const { register, handleSubmit, control, reset } = useForm<PatronFormData>({
+    defaultValues: { ...props.data },
+  });
 
   const submitAndReset = (data: PatronFormData) => {
     props.onSubmit(data);
     reset();
   };
+
+  useEffect(() => {
+    if (props.data) {
+      reset(props.data);
+    }
+  }, [props.data, reset]);
 
   return (
     <form
@@ -34,7 +45,7 @@ const PatronForm = (props: Props) => {
         id="firstName"
         type="text"
         placeholder="Ex: John"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
         {...register("firstName", {
           required: true,
           disabled: props.disabled,
@@ -45,7 +56,7 @@ const PatronForm = (props: Props) => {
         id="lastName"
         type="text"
         placeholder="Ex: Doe"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
         {...register("lastName", {
           required: true,
           disabled: props.disabled,
@@ -57,7 +68,8 @@ const PatronForm = (props: Props) => {
         name="birthDate"
         render={({ field }) => (
           <DatePicker
-            className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+            disabled={props.disabled}
+            className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
             placeholderText="Birthday (Optional)"
             selected={field.value}
             onChange={(date: Date) => field.onChange(date)}
