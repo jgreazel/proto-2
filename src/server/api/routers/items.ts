@@ -221,4 +221,45 @@ export const itemsRouter = createTRPCRouter({
       });
       return { message: "Inventory successfully updated!", success: true };
     }),
+
+  checkout: privateProcedure
+    .input(
+      z.array(
+        z.object({
+          id: z.string(),
+          amountSold: z.number().min(1).max(200),
+        }),
+      ),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // todo: modify this function later for admission items & events
+      // .. because it errors if try to use an admission item
+      const items = await ctx.db.inventoryItem.findMany({
+        where: { id: { in: input.map((i) => i.id) }, isConcessionItem: true },
+      });
+
+      if (items.length !== input.length) {
+        throw new TRPCError({
+          message: "Simplify your request..",
+          code: "BAD_REQUEST",
+        });
+      }
+
+      await Promise.all(
+        items.map(
+          async (i, idx) =>
+            await ctx.db.inventoryItem.update({
+              where: { id: i.id },
+              data: { ...i, inStock: i.inStock! - input[idx]!.amountSold },
+            }),
+        ),
+      ).catch((e: { message: string }) => {
+        throw new TRPCError({ message: e.message, code: "BAD_REQUEST" });
+      });
+      return {
+        message: "Inventory successfully updated!",
+        success: true,
+        itemsUpdated: items.length,
+      };
+    }),
 });
