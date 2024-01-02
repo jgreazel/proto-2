@@ -1,9 +1,8 @@
 import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { Button } from "~/components/button";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import { api } from "~/utils/api";
-import DatePicker from "react-datepicker";
 import handleApiError from "~/helpers/handleApiError";
 import Select from "react-select";
 
@@ -11,6 +10,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
+import PatronForm, { type PatronFormData } from "~/components/patronForm";
 
 const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
   const [showRemove, setShowRemove] = useState(true);
@@ -84,13 +84,6 @@ const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
   );
 };
 
-type PatronFormData = {
-  id?: string;
-  firstName: string;
-  lastName: string;
-  birthDate: Date | null;
-};
-
 const PatronFormSection = (props: {
   isLoading?: boolean;
   value: PatronFormData[];
@@ -99,12 +92,10 @@ const PatronFormSection = (props: {
   passId?: string;
 }) => {
   const [showForm, setShowForm] = useState(false);
-  const { register, handleSubmit, control, reset } = useForm<PatronFormData>();
 
   const onAdd = (data: PatronFormData) => {
     props.onChange([...props.value, data]);
     setShowForm(false);
-    reset();
   };
 
   const { mutate, isLoading: isCreating } = api.passes.createPatron.useMutation(
@@ -166,54 +157,14 @@ const PatronFormSection = (props: {
         )}
       </>
       {showForm ? (
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-2">
-          <label className="text-xs font-medium">First Name</label>
-          <input
-            id="firstName"
-            type="text"
-            placeholder="Ex: John"
-            className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
-            {...register("firstName", {
-              required: true,
-              disabled: isGray,
-            })}
-          />
-          <label className="text-xs font-medium">Last Name</label>
-          <input
-            id="lastName"
-            type="text"
-            placeholder="Ex: Doe"
-            className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
-            {...register("lastName", {
-              required: true,
-              disabled: isGray,
-            })}
-          />
-          <label className="text-xs font-medium">Birth Date</label>
-          <Controller
-            control={control}
-            name="birthDate"
-            render={({ field }) => (
-              <DatePicker
-                className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
-                placeholderText="Birthday (Optional)"
-                selected={field.value}
-                onChange={(date: Date) => field.onChange(date)}
-              />
-            )}
-          />
-          <div>
-            <Button type="submit">Add</Button>
-            <Button
-              onClick={() => {
-                setShowForm(false);
-                reset();
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
+        <PatronForm
+          onCancel={() => {
+            setShowForm(false);
+          }}
+          disabled={isGray}
+          onSubmit={onSubmit}
+          submitText="Add"
+        />
       ) : (
         <div>
           <Button
