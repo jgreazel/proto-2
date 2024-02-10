@@ -31,6 +31,7 @@ export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
               <Button href="items">Items</Button>
               <Button href="passes">Passes</Button>
               <Button href="checkout">Checkout</Button>
+              <Button href="reports">Reports</Button>
             </div>
           </div>
         </>
