@@ -54,8 +54,7 @@ export default function CheckoutPage() {
     },
     onSuccess: (r) => {
       setCart([]);
-      const isMulti = r.itemsUpdated > 1;
-      toast.success(`Item${isMulti ? "s" : ""} stock updated successfully!`);
+      toast.success(r.message);
     },
   });
 

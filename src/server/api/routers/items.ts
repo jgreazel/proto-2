@@ -232,10 +232,8 @@ export const itemsRouter = createTRPCRouter({
       ),
     )
     .mutation(async ({ ctx, input }) => {
-      // todo: modify this function later for admission items & events
-      // .. because it errors if try to use an admission item
       const items = await ctx.db.inventoryItem.findMany({
-        where: { id: { in: input.map((i) => i.id) }, isConcessionItem: true },
+        where: { id: { in: input.map((i) => i.id) } },
       });
 
       if (items.length !== input.length) {
@@ -245,21 +243,55 @@ export const itemsRouter = createTRPCRouter({
         });
       }
 
+      // Decrease stock of items as needed
+      const concessionItemsToUpdate = items.filter((i) => i.isConcessionItem);
       await Promise.all(
-        items.map(
-          async (i, idx) =>
+        concessionItemsToUpdate.map(
+          async (i) =>
             await ctx.db.inventoryItem.update({
               where: { id: i.id },
-              data: { ...i, inStock: i.inStock! - input[idx]!.amountSold },
+              data: {
+                ...i,
+                inStock:
+                  i.inStock! -
+                  (input.find((x) => x.id == i.id)?.amountSold ?? 0),
+              },
             }),
         ),
       ).catch((e: { message: string }) => {
         throw new TRPCError({ message: e.message, code: "BAD_REQUEST" });
       });
+
+      const transaction = await ctx.db.transaction.create({
+        data: {
+          createdBy: ctx.userId,
+          items: {
+            createMany: {
+              data: input.map((i) => ({
+                itemId: i.id,
+                createdBy: ctx.userId,
+                amountSold: i.amountSold,
+              })),
+            },
+          },
+        },
+        include: { items: { select: { item: true, amountSold: true } } },
+      });
+
+      const receiptItems = transaction.items.map((i) => ({
+        id: i.item.id,
+        label: i.item.label,
+        amountSold: i.amountSold,
+        total: i.amountSold * i.item.sellingPrice,
+      }));
+
       return {
-        message: "Inventory successfully updated!",
+        message: "Transaction successful!",
         success: true,
-        itemsUpdated: items.length,
+        receipt: {
+          ...transaction,
+          items: receiptItems,
+        },
       };
     }),
 });
