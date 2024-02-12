@@ -15,6 +15,7 @@ const ratelimit = new Ratelimit({
   analytics: true,
 });
 
+// todo: concession item checkouts arent getting reported as transactions
 export const reportsRouter = createTRPCRouter({
   // Just for purchase report, edit later to add admission reports
   getNew: privateProcedure
