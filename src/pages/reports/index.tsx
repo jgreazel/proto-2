@@ -2,7 +2,6 @@ import { PageLayout } from "~/components/layout";
 import { Button } from "~/components/button";
 import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/loading";
-import Link from "next/link";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import DatePicker from "react-datepicker";
@@ -19,15 +18,15 @@ export default function ReportsPage() {
   const { register, handleSubmit, control, formState, watch } =
     useForm<PurchaseReportData>();
   const formVals = watch();
+  const endEOD = new Date(formVals.endDate);
+  endEOD.setHours(23, 59, 59, 999);
+  const purchaseReport = { ...formVals, endDate: endEOD };
   const { data, refetch, isLoading } = api.reports.getNew.useQuery(
-    { purchaseReport: formVals },
+    { purchaseReport },
     { enabled: false },
   );
 
-  const submit = async (data: PurchaseReportData) => {
-    // make api call with refetch?
-
-    console.log(formVals, data);
+  const submit = async () => {
     await refetch();
   };
 
