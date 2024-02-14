@@ -118,15 +118,15 @@ export default function ReportsPage() {
               <div></div>
               <div>Quantity Sold</div>
               <div>Total ($)</div>
-              <div>Concessions</div>
-              <div>{data.purchaseReport.summary.concessionCount}</div>
-              <div>
-                {dbUnitToDollars(data.purchaseReport.summary.concessionTotal)}
-              </div>
               <div>Admissions</div>
               <div>{data.purchaseReport.summary.admissionCount}</div>
               <div>
                 {dbUnitToDollars(data.purchaseReport.summary.admissionTotal)}
+              </div>
+              <div>Concessions</div>
+              <div>{data.purchaseReport.summary.concessionCount}</div>
+              <div>
+                {dbUnitToDollars(data.purchaseReport.summary.concessionTotal)}
               </div>
             </div>
             <h3 className="underline">Transactions</h3>

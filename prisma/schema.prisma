@@ -52,11 +52,12 @@ model SeasonPass {
 }
 
 model Patron {
-    id        String     @id @default(cuid())
-    createdAt DateTime   @default(now())
-    createdBy String
-    pass      SeasonPass @relation(fields: [passId], references: [id])
-    passId    String
+    id         String           @id @default(cuid())
+    createdAt  DateTime         @default(now())
+    createdBy  String
+    pass       SeasonPass       @relation(fields: [passId], references: [id])
+    passId     String
+    admissions AdmissionEvent[]
 
     firstName      String
     lastName       String
@@ -85,4 +86,14 @@ model TransactionItems {
     @@id([transactionId, itemId])
     @@index([transactionId])
     @@index([itemId])
+}
+
+model AdmissionEvent {
+    id        String   @id @default(cuid())
+    patronId  String
+    patron    Patron   @relation(fields: [patronId], references: [id])
+    createdAt DateTime @default(now())
+    createdBy String
+
+    @@index([patronId])
 }

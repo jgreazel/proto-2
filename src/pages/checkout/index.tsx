@@ -4,6 +4,7 @@ import { Button } from "~/components/button";
 import { PageLayout } from "~/components/layout";
 import { LoadingSpinner } from "~/components/loading";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
+import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 
 // might still use this w/ tooltip
@@ -45,6 +46,68 @@ const ItemFeed = (props: {
   );
 };
 
+type Patron = RouterOutputs["passes"]["getAll"][number]["patrons"][number];
+
+// todo filter
+// todo query for include: isAdmittedToday
+const AdmissionFeed = () => {
+  const { data, isLoading } = api.passes.getAll.useQuery();
+  const { mutate, isLoading: isCreating } = api.passes.admitPatron.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.patron.firstName} successfully admitted!`);
+    },
+    onError: handleApiError,
+  });
+
+  const onClick = (data: Patron) => {
+    if (isCreating) return;
+    mutate({ patronId: data.id });
+  };
+
+  if (isLoading)
+    return (
+      <div className="my-4 flex justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  return (
+    <>
+      <h2 className="font-semibold">Admit Season Pass Holders:</h2>
+      <div className="grid h-full grid-cols-1 gap-2 overflow-y-scroll">
+        {data?.map(({ label, patrons, id }) => (
+          <div
+            className="flex flex-col justify-between rounded-xl bg-slate-50 p-2 shadow-lg"
+            key={id}
+          >
+            <div className="text-sm font-medium text-sky-900">
+              {label}
+              <div className="flex flex-col gap-1">
+                {patrons.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex justify-between rounded-xl bg-slate-50 p-2 shadow-md"
+                  >
+                    <div className="font-normal">
+                      {`${p.firstName} ${p.lastName}`}
+                    </div>
+
+                    <span
+                      onClick={() => onClick(p)}
+                      className="text-sm font-thin hover:cursor-pointer hover:underline"
+                    >
+                      Admit
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+};
+
 export default function CheckoutPage() {
   const [feed, setFeed] = useState<"concession" | "admission">("admission");
   const [cart, setCart] = useState<Item[]>([]);
@@ -79,8 +142,8 @@ export default function CheckoutPage() {
             category={feed}
           />
         </div>
-        <div className="border-lg col-span-1 row-span-1 rounded-lg bg-slate-50 shadow-lg">
-          sec 2
+        <div className="border-lg col-span-1 row-span-1 overflow-hidden rounded-lg bg-slate-50 p-1 shadow-lg">
+          <AdmissionFeed />
         </div>
         <div className="col-span-1 row-span-1 flex h-full flex-col gap-2 rounded-lg bg-slate-50 p-2 shadow-lg">
           <div className="font-semibold">Cart</div>

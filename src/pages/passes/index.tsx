@@ -5,7 +5,7 @@ import { LoadingPage } from "~/components/loading";
 import Link from "next/link";
 import { useState } from "react";
 
-export default function ItemsPage() {
+export default function PassesPage() {
   const { data, isLoading } = api.passes.getAll.useQuery();
   const [filter, setFilter] = useState("");
 

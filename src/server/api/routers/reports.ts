@@ -66,10 +66,10 @@ export const reportsRouter = createTRPCRouter({
       tranItemLinks.forEach((l) => {
         if (l.item.isAdmissionItem) {
           admissionTotal += l.amountSold * l.item.sellingPrice;
-          admissionCount += 1;
+          admissionCount += l.amountSold;
         } else if (l.item.isConcessionItem) {
           concessionTotal += l.amountSold * l.item.sellingPrice;
-          concessionCount += 1;
+          concessionCount += l.amountSold;
         }
         // Warning: improper use of field
         l.createdBy =

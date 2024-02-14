@@ -185,4 +185,23 @@ export const passesRouter = createTRPCRouter({
       });
       return patron;
     }),
+
+  admitPatron: privateProcedure
+    .input(
+      z.object({
+        patronId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const admission = await ctx.db.admissionEvent.create({
+        data: {
+          patronId: input.patronId, // ? make sure patron is populated
+          createdBy: ctx.userId,
+        },
+        include: {
+          patron: true,
+        },
+      });
+      return admission;
+    }),
 });
