@@ -28,7 +28,6 @@ export const passesRouter = createTRPCRouter({
   getAll: publicProcedure.query(
     async ({ ctx }) =>
       await ctx.db.seasonPass.findMany({
-        take: 100,
         orderBy: [{ label: "asc" }],
         include: { patrons: true },
       }),
@@ -204,4 +203,22 @@ export const passesRouter = createTRPCRouter({
       });
       return admission;
     }),
+
+  getAdmissions: privateProcedure
+    .input(
+      z.object({
+        range: z.array(z.date()).refine((data) => data.length === 2),
+      }),
+    )
+    .query(
+      async ({ ctx, input }) =>
+        await ctx.db.admissionEvent.findMany({
+          where: {
+            createdAt: {
+              lte: input.range[1],
+              gte: input.range[0],
+            },
+          },
+        }),
+    ),
 });

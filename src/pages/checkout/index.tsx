@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { Button } from "~/components/button";
 import { PageLayout } from "~/components/layout";
 import { LoadingSpinner } from "~/components/loading";
+import { getStartOfDay, getEndOfDay } from "~/helpers/dateHelpers";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
@@ -48,13 +49,21 @@ const ItemFeed = (props: {
 
 type Patron = RouterOutputs["passes"]["getAll"][number]["patrons"][number];
 
-// todo filter
-// todo query for include: isAdmittedToday
 const AdmissionFeed = () => {
-  const { data, isLoading } = api.passes.getAll.useQuery();
+  const { data: passesData, isLoading: isFetchingPasses } =
+    api.passes.getAll.useQuery();
+  const today = new Date();
+  const {
+    data: eventData,
+    isLoading: isFetchingEvents,
+    refetch,
+  } = api.passes.getAdmissions.useQuery({
+    range: [getStartOfDay(today), getEndOfDay(today)],
+  });
   const { mutate, isLoading: isCreating } = api.passes.admitPatron.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success(`${data.patron.firstName} successfully admitted!`);
+      await refetch();
     },
     onError: handleApiError,
   });
@@ -64,7 +73,7 @@ const AdmissionFeed = () => {
     mutate({ patronId: data.id });
   };
 
-  if (isLoading)
+  if (isFetchingPasses || isFetchingEvents)
     return (
       <div className="my-4 flex justify-center">
         <LoadingSpinner />
@@ -74,7 +83,7 @@ const AdmissionFeed = () => {
     <>
       <h2 className="font-semibold">Admit Season Pass Holders:</h2>
       <div className="grid h-full grid-cols-1 gap-2 overflow-y-scroll">
-        {data?.map(({ label, patrons, id }) => (
+        {passesData?.map(({ label, patrons, id }) => (
           <div
             className="flex flex-col justify-between rounded-xl bg-slate-50 p-2 shadow-lg"
             key={id}
@@ -91,12 +100,16 @@ const AdmissionFeed = () => {
                       {`${p.firstName} ${p.lastName}`}
                     </div>
 
-                    <span
-                      onClick={() => onClick(p)}
-                      className="text-sm font-thin hover:cursor-pointer hover:underline"
-                    >
-                      Admit
-                    </span>
+                    {eventData?.find((e) => e.patronId === p.id) ? (
+                      <></>
+                    ) : (
+                      <span
+                        onClick={() => onClick(p)}
+                        className="text-sm font-thin hover:cursor-pointer hover:underline"
+                      >
+                        Admit
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
