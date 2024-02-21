@@ -82,38 +82,50 @@ export const reportsRouter = createTRPCRouter({
           concessionTotal += l.amountSold * l.item.sellingPrice;
           concessionCount += l.amountSold;
         }
-        // Warning: improper use of field
+        // Warning: improper use of field for UI
         l.createdBy =
           users.find((u) => u.id === l.createdBy)?.username ?? l.createdBy;
       });
 
       // Admission Report
-      const adEvents = ctx.db.admissionEvent.findMany({
+      const adEvents = await ctx.db.admissionEvent.findMany({
         where: {
           createdAt: {
             gte: input.admissionReport?.startDate,
             lte: input.admissionReport?.endDate,
           },
         },
+        include: {
+          patron: true,
+        },
+      });
+      adEvents.forEach((e) => {
+        // Warning: improper use of field for UI
+        e.createdBy =
+          users.find((u) => u.id === e.createdBy)?.username ?? e.createdBy;
       });
 
       return {
-        purchaseReport: !!input.purchaseReport && {
-          startDate: input.purchaseReport?.startDate,
-          endDate: input.purchaseReport?.endDate,
-          transactions: tranItemLinks,
-          summary: {
-            admissionTotal,
-            admissionCount,
-            concessionTotal,
-            concessionCount,
-          },
-        },
-        admissionReport: !!input.admissionReport && {
-          startDate: input.admissionReport?.startDate,
-          endDate: input.admissionReport?.endDate,
-          admissionEvents: adEvents,
-        },
+        purchaseReport: !!input.purchaseReport
+          ? {
+              startDate: input.purchaseReport?.startDate,
+              endDate: input.purchaseReport?.endDate,
+              transactions: tranItemLinks,
+              summary: {
+                admissionTotal,
+                admissionCount,
+                concessionTotal,
+                concessionCount,
+              },
+            }
+          : null,
+        admissionReport: !!input.admissionReport
+          ? {
+              startDate: input.admissionReport?.startDate,
+              endDate: input.admissionReport?.endDate,
+              admissionEvents: adEvents,
+            }
+          : null,
       };
     }),
 });

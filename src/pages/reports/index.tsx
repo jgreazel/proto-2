@@ -1,29 +1,131 @@
 import { PageLayout } from "~/components/layout";
 import { Button } from "~/components/button";
-import { api } from "~/utils/api";
+import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import { LoadingSpinner } from "~/components/loading";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
+import { getEndOfDay } from "~/helpers/dateHelpers";
 
-type PurchaseReportData = {
-  startDate: Date;
-  endDate: Date;
-  includeAdmissions: boolean;
-  includeConcessions: boolean;
+const PurchaseReportTable = (props: {
+  data: RouterOutputs["reports"]["getNew"]["purchaseReport"];
+}) => {
+  const { data } = props;
+
+  return (
+    <div className="flex w-full flex-col gap-3 rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl">
+      <h2 className="font-semibold">Purchase Report</h2>
+      <div className="text-sm">
+        {data?.startDate.toLocaleString() +
+          " - " +
+          data?.endDate.toLocaleString()}
+      </div>
+      <h3 className="underline">Summary</h3>
+      <div className="grid grid-cols-3 grid-rows-3">
+        <div></div>
+        <div>Quantity Sold</div>
+        <div>Total ($)</div>
+        <div>Admissions</div>
+        <div>{data?.summary.admissionCount}</div>
+        <div>{dbUnitToDollars(data?.summary.admissionTotal ?? 0)}</div>
+        <div>Concessions</div>
+        <div>{data?.summary.concessionCount}</div>
+        <div>{dbUnitToDollars(data?.summary.concessionTotal ?? 0)}</div>
+      </div>
+      <h3 className="underline">Transactions</h3>
+      <table>
+        <tr>
+          <th>Label</th>
+          <th># Sold</th>
+          <th>Total ($)</th>
+          <th>Time</th>
+          <th>Cashier</th>
+          <th>Type</th>
+        </tr>
+        {data?.transactions.map((t) => (
+          <tr key={t.transactionId}>
+            <td>{t.item.label}</td>
+            <td>{t.amountSold}</td>
+            <td>{dbUnitToDollars(t.amountSold * t.item.sellingPrice)}</td>
+            <td>{t.createdAt.toLocaleString()}</td>
+            <td>{t.createdBy}</td>
+            <td>{t.item.isAdmissionItem ? "Admission" : "Concession"}</td>
+          </tr>
+        ))}
+      </table>
+    </div>
+  );
+};
+
+const AdmissionReportTable = (props: {
+  data: RouterOutputs["reports"]["getNew"]["admissionReport"];
+}) => {
+  const { data } = props;
+
+  return (
+    <div className="flex w-full flex-col gap-3 rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl">
+      <h2 className="font-semibold">Admission Report</h2>
+      <div className="text-sm">
+        {data?.startDate.toLocaleString() +
+          " - " +
+          data?.endDate.toLocaleString()}
+      </div>
+
+      <h3 className="underline">Admissions</h3>
+      <h3>Total: {data?.admissionEvents.length}</h3>
+      <table>
+        <tr>
+          <th>Patron</th>
+          <th>Time</th>
+          <th>Cashier</th>
+        </tr>
+        {data?.admissionEvents.map((e) => (
+          <tr key={e.id}>
+            <td>{`${e.patron.firstName} ${e.patron.lastName}`}</td>
+            <td>{e.createdAt.toLocaleString()}</td>
+            <td>{e.createdBy}</td>
+          </tr>
+        ))}
+      </table>
+    </div>
+  );
+};
+
+type ReportData = {
+  // p = purchase report
+  p: boolean;
+  pStartDate: Date;
+  pEndDate: Date;
+  pIncludeAdmissions: boolean;
+  pIncludeConcessions: boolean;
+  // a = admission report
+  a: boolean;
+  aStartDate: Date;
+  aEndDate: Date;
 };
 
 export default function ReportsPage() {
   const { register, handleSubmit, control, formState, watch } =
-    useForm<PurchaseReportData>();
+    useForm<ReportData>();
   const formVals = watch();
-  const endEOD = new Date(formVals.endDate);
-  endEOD.setHours(23, 59, 59, 999);
-  const purchaseReport = { ...formVals, endDate: endEOD };
+  const purchaseReport: RouterInputs["reports"]["getNew"]["purchaseReport"] = {
+    startDate: formVals.pStartDate,
+    endDate: getEndOfDay(formVals.pEndDate ?? new Date()),
+    includeAdmissions: formVals.pIncludeAdmissions,
+    includeConcessions: formVals.pIncludeConcessions,
+  };
+  const admissionReport: RouterInputs["reports"]["getNew"]["admissionReport"] =
+    {
+      startDate: formVals.aStartDate,
+      endDate: getEndOfDay(formVals.aEndDate ?? new Date()),
+    };
   const { data, refetch } = api.reports.getNew.useQuery(
-    { purchaseReport },
+    {
+      purchaseReport: formVals.p ? purchaseReport : null,
+      admissionReport: formVals.a ? admissionReport : null,
+    },
     {
       enabled: false,
       onSuccess: () => {
@@ -45,21 +147,24 @@ export default function ReportsPage() {
   return (
     <PageLayout>
       <div className="flex flex-col gap-3">
-        <div className="flex w-full flex-col gap-2 rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl">
+        <div className="flex w-full flex-col gap-3 rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl">
           <h2 className="font-semibold">Select Report Criteria:</h2>
-          <h3 className="underline">Purchase Report</h3>
-          <form className="flex flex-col" onSubmit={handleSubmit(submit)}>
+          <form className="flex flex-col gap-1" onSubmit={handleSubmit(submit)}>
+            <div className="flex gap-1 align-middle">
+              <input type="checkbox" {...register("p")} />
+              <label className="font-semibold">Purchase Report</label>
+            </div>
             <div className="flex gap-2">
               <label className="self-center text-xs font-medium">
                 Start Date
               </label>
               <Controller
                 control={control}
-                rules={{ required: true }}
-                name="startDate"
+                rules={{ required: formVals.p }}
+                name="pStartDate"
                 render={({ field }) => (
                   <DatePicker
-                    // disabled={props.disabled} // watch
+                    disabled={!formVals.p}
                     className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
                     placeholderText="Start Date"
                     selected={field.value}
@@ -72,11 +177,11 @@ export default function ReportsPage() {
               </label>
               <Controller
                 control={control}
-                rules={{ required: true }}
-                name="endDate"
+                rules={{ required: formVals.p }}
+                name="pEndDate"
                 render={({ field }) => (
                   <DatePicker
-                    // disabled={props.disabled} // watch
+                    disabled={!formVals.p}
                     className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
                     placeholderText="End Date"
                     selected={field.value}
@@ -86,12 +191,61 @@ export default function ReportsPage() {
               />
             </div>
             <div className="flex gap-1 align-middle">
-              <input type="checkbox" {...register("includeAdmissions")} />
+              <input
+                type="checkbox"
+                {...register("pIncludeAdmissions")}
+                disabled={!formVals.p}
+              />
               <label>Admissions</label>
             </div>
             <div className="flex gap-1 align-middle">
-              <input type="checkbox" {...register("includeConcessions")} />
+              <input
+                type="checkbox"
+                {...register("pIncludeConcessions")}
+                disabled={!formVals.p}
+              />
               <label>Concessions</label>
+            </div>
+            <div className="my-4 rounded-lg border-2 border-solid border-sky-700" />
+            <div className="flex gap-1 align-middle">
+              <input type="checkbox" {...register("a")} />
+              <label className="font-semibold">Admission Report</label>
+            </div>
+            <div className="flex gap-2">
+              <label className="self-center text-xs font-medium">
+                Start Date
+              </label>
+              <Controller
+                control={control}
+                rules={{ required: formVals.a }}
+                name="aStartDate"
+                render={({ field }) => (
+                  <DatePicker
+                    disabled={!formVals.a}
+                    className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
+                    placeholderText="Start Date"
+                    selected={field.value}
+                    onChange={(date: Date) => field.onChange(date)}
+                  />
+                )}
+              />
+              <label className="self-center text-xs font-medium">
+                End Date
+              </label>
+              <Controller
+                control={control}
+                rules={{ required: formVals.a }}
+                name="aEndDate"
+                render={({ field }) => (
+                  <DatePicker
+                    disabled={!formVals.a}
+                    className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
+                    placeholderText="End Date"
+                    selected={field.value}
+                    onChange={(date: Date) => field.onChange(date)}
+                  />
+                )}
+              />
             </div>
             <div className="flex justify-end">
               <Button type="submit" disabled={!formState.isValid}>
@@ -105,52 +259,11 @@ export default function ReportsPage() {
             <LoadingSpinner size={36} />
           </div>
         )}
-        {showReport && data && (
-          <div className="flex w-full flex-col gap-3 rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl">
-            <h2 className="font-semibold">Purchase Report</h2>
-            <div className="text-sm">
-              {data.purchaseReport.startDate.toLocaleString() +
-                " - " +
-                data.purchaseReport.endDate.toLocaleString()}
-            </div>
-            <h3 className="underline">Summary</h3>
-            <div className="grid grid-cols-3 grid-rows-3">
-              <div></div>
-              <div>Quantity Sold</div>
-              <div>Total ($)</div>
-              <div>Admissions</div>
-              <div>{data.purchaseReport.summary.admissionCount}</div>
-              <div>
-                {dbUnitToDollars(data.purchaseReport.summary.admissionTotal)}
-              </div>
-              <div>Concessions</div>
-              <div>{data.purchaseReport.summary.concessionCount}</div>
-              <div>
-                {dbUnitToDollars(data.purchaseReport.summary.concessionTotal)}
-              </div>
-            </div>
-            <h3 className="underline">Transactions</h3>
-            <table>
-              <tr>
-                <th>Label</th>
-                <th># Sold</th>
-                <th>Total ($)</th>
-                <th>Time</th>
-                <th>Cashier</th>
-                <th>Type</th>
-              </tr>
-              {data.purchaseReport.transactions.map((t) => (
-                <tr key={t.transactionId}>
-                  <td>{t.item.label}</td>
-                  <td>{t.amountSold}</td>
-                  <td>{dbUnitToDollars(t.amountSold * t.item.sellingPrice)}</td>
-                  <td>{t.createdAt.toLocaleString()}</td>
-                  <td>{t.createdBy}</td>
-                  <td>{t.item.isAdmissionItem ? "Admission" : "Concession"}</td>
-                </tr>
-              ))}
-            </table>
-          </div>
+        {showReport && data?.purchaseReport && (
+          <PurchaseReportTable data={data.purchaseReport} />
+        )}
+        {showReport && data?.admissionReport && (
+          <AdmissionReportTable data={data.admissionReport} />
         )}
       </div>
     </PageLayout>
