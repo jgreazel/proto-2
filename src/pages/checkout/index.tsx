@@ -5,6 +5,7 @@ import { PageLayout } from "~/components/layout";
 import { LoadingSpinner } from "~/components/loading";
 import { getStartOfDay, getEndOfDay } from "~/helpers/dateHelpers";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
+import filterPasses from "~/helpers/filterPasses";
 import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 
@@ -67,6 +68,7 @@ const AdmissionFeed = () => {
     },
     onError: handleApiError,
   });
+  const [filter, setFilter] = useState("");
 
   const onClick = (data: Patron) => {
     if (isCreating) return;
@@ -81,41 +83,53 @@ const AdmissionFeed = () => {
     );
   return (
     <>
-      <h2 className="font-semibold">Admit Season Pass Holders:</h2>
+      <h2 className="pb-2 font-semibold">Admit Season Pass Holders:</h2>
+      <div className="flex flex-row items-center gap-2 px-3">
+        <label htmlFor="pass-filter">Filter:</label>
+        <input
+          id="pass-filter"
+          value={filter}
+          placeholder="Ex: Anderson, John, etc..."
+          onChange={(e) => setFilter(e.target.value)}
+          className="w-full rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl"
+        />
+      </div>
       <div className="grid h-full grid-cols-1 gap-2 overflow-y-scroll">
-        {passesData?.map(({ label, patrons, id }) => (
-          <div
-            className="flex flex-col justify-between rounded-xl bg-slate-50 p-2 shadow-lg"
-            key={id}
-          >
-            <div className="text-sm font-medium text-sky-900">
-              {label}
-              <div className="flex flex-col gap-1">
-                {patrons.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex justify-between rounded-xl bg-slate-50 p-2 shadow-md"
-                  >
-                    <div className="font-normal">
-                      {`${p.firstName} ${p.lastName}`}
-                    </div>
+        {passesData
+          ?.filter((p) => filterPasses(p, filter))
+          .map(({ label, patrons, id }) => (
+            <div
+              className="flex flex-col justify-between rounded-lg p-2"
+              key={id}
+            >
+              <div className="flex flex-col gap-2 text-sm font-medium text-sky-900">
+                {label}
+                <div className="flex flex-col gap-1">
+                  {patrons.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex justify-between rounded-2xl bg-slate-50 px-4 py-2 shadow-md"
+                    >
+                      <div className="font-normal">
+                        {`${p.firstName} ${p.lastName}`}
+                      </div>
 
-                    {eventData?.find((e) => e.patronId === p.id) ? (
-                      <></>
-                    ) : (
-                      <span
-                        onClick={() => onClick(p)}
-                        className="text-sm font-thin hover:cursor-pointer hover:underline"
-                      >
-                        Admit
-                      </span>
-                    )}
-                  </div>
-                ))}
+                      {eventData?.find((e) => e.patronId === p.id) ? (
+                        <></>
+                      ) : (
+                        <span
+                          onClick={() => onClick(p)}
+                          className="text-sm font-thin hover:cursor-pointer hover:underline"
+                        >
+                          Admit
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </>
   );

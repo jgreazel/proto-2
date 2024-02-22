@@ -4,6 +4,7 @@ import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/loading";
 import Link from "next/link";
 import { useState } from "react";
+import filterPasses from "~/helpers/filterPasses";
 
 export default function PassesPage() {
   const { data, isLoading } = api.passes.getAll.useQuery();
@@ -39,17 +40,7 @@ export default function PassesPage() {
           </div>
           <div className="flex h-full flex-col gap-2 overflow-auto">
             {data
-              ?.filter((d) => {
-                if (!filter) return true;
-
-                const passMatches = d.label
-                  .toLowerCase()
-                  .includes(filter.toLowerCase());
-                const patronsMatch = d.patrons.some((p) =>
-                  p.firstName.toLowerCase().includes(filter.toLowerCase()),
-                );
-                return passMatches || patronsMatch;
-              })
+              ?.filter((d) => filterPasses(d, filter))
               .map((p) => (
                 <div
                   className="rounded-lg bg-slate-50 p-3 font-medium text-slate-700 shadow-lg"
