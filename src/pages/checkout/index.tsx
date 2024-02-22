@@ -29,7 +29,7 @@ const ItemFeed = (props: {
       </div>
     );
   return (
-    <div className="grid grid-cols-2 gap-3 p-3">
+    <div className="grid grid-cols-3 gap-3 p-3">
       {data?.map(({ item }) => (
         <div
           onClick={() => props.onClick(item)}
@@ -164,7 +164,7 @@ export default function CheckoutPage() {
   return (
     <PageLayout>
       <div className="grid h-full grid-cols-2 grid-rows-2 gap-4 overflow-hidden">
-        <div className="col-span-1 row-span-2 rounded-lg bg-slate-50 p-2 shadow-lg">
+        <div className="col-span-1 row-span-2 p-2">
           <Button
             onClick={() => {
               setFeed((prev) => {

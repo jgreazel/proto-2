@@ -14,29 +14,25 @@ export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
   if (!userLoaded) return <div></div>;
 
   return (
-    <main className="mx-auto flex h-screen w-full flex-col justify-start md:max-w-3xl">
+    <main className="mx-auto flex h-screen w-full flex-col justify-start md:max-w-4xl">
       {!props.hideHeader && (
-        <>
-          <div className="p-4">
-            {!!isSignedIn && (
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between font-semibold">
-                  <div className="capitalize">Hi, {user.username}</div>
-                  <SignOutButton />
-                </div>
+        <div className="rounded-xl bg-slate-50 p-4 shadow-xl">
+          {!!isSignedIn && (
+            <div className="flex flex-row justify-between align-middle font-semibold">
+              <div className="self-center capitalize">Hi, {user.username}</div>
+              <div className="flex flex-row gap-3">
+                <Button href="/">Home</Button>
+                <Button href="items">Items</Button>
+                <Button href="passes">Passes</Button>
+                <Button href="checkout">Checkout</Button>
+                <Button href="reports">Reports</Button>
               </div>
-            )}
-            <div className="flex flex-row gap-3 pt-2">
-              <Button href="/">Home</Button>
-              <Button href="items">Items</Button>
-              <Button href="passes">Passes</Button>
-              <Button href="checkout">Checkout</Button>
-              <Button href="reports">Reports</Button>
+              <SignOutButton />
             </div>
-          </div>
-        </>
+          )}
+        </div>
       )}
-      <div className="grow overflow-auto">{props.children}</div>
+      <div className="grow overflow-auto pt-2">{props.children}</div>
       {props.actionRow && <div className="p-4">{props.actionRow}</div>}
     </main>
   );

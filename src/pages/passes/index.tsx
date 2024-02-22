@@ -43,7 +43,7 @@ export default function PassesPage() {
               ?.filter((d) => filterPasses(d, filter))
               .map((p) => (
                 <div
-                  className="rounded-lg bg-slate-50 p-3 font-medium text-slate-700 shadow-lg"
+                  className="rounded-md bg-slate-50 p-3 font-medium text-slate-700 shadow-lg"
                   key={p.id + "-pass-card"}
                 >
                   <div className="flex flex-row items-baseline gap-2">
@@ -55,11 +55,11 @@ export default function PassesPage() {
                       Edit
                     </Link>
                   </div>
-                  <div className="flex flex-col gap-1 p-4">
+                  <div className="flex flex-col gap-2 p-4">
                     {p.patrons.map((x) => (
                       <div
                         key={x.passId + x.id}
-                        className="flex flex-row items-baseline justify-between rounded-xl bg-slate-100 p-1 px-3 shadow-lg"
+                        className="flex flex-row items-baseline justify-between rounded-2xl bg-slate-50 p-1 px-4 shadow-lg"
                       >
                         {x.firstName}
                         {!!x.birthDate && (
