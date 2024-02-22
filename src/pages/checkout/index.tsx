@@ -145,6 +145,19 @@ export default function CheckoutPage() {
     onSuccess: (r) => {
       setCart([]);
       toast.success(r.message);
+      if (r.action) {
+        toast(
+          (t) => (
+            <span className="flex flex-row justify-between">
+              Action Required: {r.action}
+              <Button onClick={() => toast.dismiss(t.id)}>X</Button>
+            </span>
+          ),
+          {
+            duration: Infinity,
+          },
+        );
+      }
     },
   });
 

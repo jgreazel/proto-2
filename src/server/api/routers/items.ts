@@ -235,6 +235,7 @@ export const itemsRouter = createTRPCRouter({
       const items = await ctx.db.inventoryItem.findMany({
         where: { id: { in: input.map((i) => i.id) } },
       });
+      const includedSeasonPass = items.some((i) => i.isSeasonal);
 
       if (items.length !== input.length) {
         throw new TRPCError({
@@ -287,6 +288,9 @@ export const itemsRouter = createTRPCRouter({
 
       return {
         message: "Transaction successful!",
+        action: includedSeasonPass
+          ? "Create necessary season passes on the Passes tab."
+          : null,
         success: true,
         receipt: {
           ...transaction,
