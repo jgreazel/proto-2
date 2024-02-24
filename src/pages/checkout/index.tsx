@@ -88,10 +88,10 @@ const AdmissionFeed = () => {
         <label htmlFor="pass-filter">Filter:</label>
         <input
           id="pass-filter"
+          className="input input-bordered w-full"
           value={filter}
           placeholder="Ex: Anderson, John, etc..."
           onChange={(e) => setFilter(e.target.value)}
-          className="w-full rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl"
         />
       </div>
       <div className="grid h-full grid-cols-1 gap-2 overflow-y-scroll">

@@ -57,7 +57,7 @@ const AdmissionItemForm = (props: {
         id="label"
         type="text"
         placeholder="Ex: Adult Day Pass"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+        className="input input-bordered grow"
         {...register("label", {
           required: true,
           disabled: isSubmitting || isLoading,
@@ -68,7 +68,7 @@ const AdmissionItemForm = (props: {
         id="sell-price"
         type="number"
         placeholder="Ex: 400 ($4.00)"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+        className="input input-bordered grow"
         {...register("sellingPrice", {
           required: true,
           disabled: isSubmitting || isLoading,
@@ -114,7 +114,7 @@ const AdmissionItemForm = (props: {
             id="patronLimit"
             type="number"
             placeholder="Ex: 4"
-            className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+            className="input input-bordered grow"
             {...register("patronLimit", {
               required: false,
               disabled: isSubmitting || isLoading,
@@ -179,7 +179,7 @@ const ConcessionItemForm = (props: {
       <input
         id="label"
         placeholder="Ex: Candy Bar"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+        className="input input-bordered grow"
         {...register("label", {
           required: true,
           disabled: isSubmitting || isLoading,
@@ -190,7 +190,7 @@ const ConcessionItemForm = (props: {
         id="purchase-price"
         type="number"
         placeholder="Ex: 50 ($0.50)"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+        className="input input-bordered grow"
         {...register("purchasePrice", {
           required: true,
           disabled: isSubmitting || isLoading,
@@ -202,7 +202,7 @@ const ConcessionItemForm = (props: {
         id="sell-price"
         type="number"
         placeholder="Ex: 150 ($1.50)"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+        className="input input-bordered grow"
         {...register("sellingPrice", {
           required: true,
           disabled: isSubmitting || isLoading,
@@ -214,7 +214,7 @@ const ConcessionItemForm = (props: {
         id="init-stock"
         type="number"
         placeholder="Ex: 0"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+        className="input input-bordered grow"
         {...register("inStock", {
           required: true,
           disabled: isSubmitting || isLoading,

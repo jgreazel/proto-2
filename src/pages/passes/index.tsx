@@ -35,7 +35,7 @@ export default function PassesPage() {
               value={filter}
               placeholder="Ex: Anderson, John, etc..."
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full rounded-xl bg-slate-50 p-3 text-slate-700 shadow-xl"
+              className="input input-bordered w-full"
             />
           </div>
           <div className="flex h-full flex-col gap-2 overflow-auto">

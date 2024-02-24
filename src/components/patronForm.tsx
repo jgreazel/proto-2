@@ -45,7 +45,7 @@ const PatronForm = (props: Props) => {
         id="firstName"
         type="text"
         placeholder="Ex: John"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
+        className="input input-bordered"
         {...register("firstName", {
           required: true,
           disabled: props.disabled,
@@ -56,7 +56,7 @@ const PatronForm = (props: Props) => {
         id="lastName"
         type="text"
         placeholder="Ex: Doe"
-        className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
+        className="input input-bordered grow"
         {...register("lastName", {
           required: true,
           disabled: props.disabled,

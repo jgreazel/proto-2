@@ -10,10 +10,7 @@ export const Button = (
   },
 ) => {
   return props.href ? (
-    <Link
-      href={props.href}
-      className="rounded-lg border-2 border-solid border-sky-600 p-2 text-sky-700 hover:opacity-70"
-    >
+    <Link href={props.href} className="btn">
       {props.children}
     </Link>
   ) : (
@@ -21,7 +18,7 @@ export const Button = (
       disabled={props.disabled}
       onClick={props.onClick}
       type={props.type ?? "button"}
-      className="rounded-lg border-2 border-solid border-sky-600 p-2 text-sky-700 hover:opacity-70 disabled:opacity-50"
+      className="btn disabled:opacity-50"
     >
       {props.children}
     </button>

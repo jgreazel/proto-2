@@ -272,7 +272,7 @@ export default function SinglePassPage() {
               <input
                 id="label"
                 placeholder="Ex: Johnson, Anderson, etc..."
-                className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+                className="input input-bordered grow"
                 {...register("label", {
                   required: true,
                   disabled: isMutating,

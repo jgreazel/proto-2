@@ -103,7 +103,7 @@ export default function ItemsPage() {
           </Button>
           <label className="text-s font-medium">Filter:</label>
           <input
-            className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none"
+            className="input input-bordered grow"
             placeholder=""
             value={filter}
             onChange={(e) => setFilter(e.target.value)}

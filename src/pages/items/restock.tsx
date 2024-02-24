@@ -109,6 +109,7 @@ const RestockForm = (props: {
               Amount restocking:{" "}
               <input
                 id={i.item.id}
+                className="input input-bordered"
                 type="number"
                 {...register(i.item.id, {
                   required: true,
