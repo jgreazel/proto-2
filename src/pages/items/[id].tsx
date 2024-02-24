@@ -256,31 +256,21 @@ const CreateItemWizard = () => {
 
   return (
     <div className="flex w-full flex-col gap-3">
-      <div className="flex items-center justify-evenly rounded-xl border-2 border-solid border-sky-500 text-sky-700">
-        <div
-          className={
-            tab === "admission"
-              ? "rounded-2xl border-2 border-solid border-sky-500 p-2"
-              : ""
-          }
-          onClick={() => {
-            setTab("admission");
-          }}
+      <div role="tablist" className="tabs-boxed tabs">
+        <a
+          role="tab"
+          className={`tab ${tab === "concession" && "tab-active"}`}
+          onClick={() => setTab("concession")}
         >
-          Admission Item
-        </div>
-        <div
-          className={
-            tab === "concession"
-              ? "rounded-2xl border-2 border-solid border-sky-500 p-2"
-              : ""
-          }
-          onClick={() => {
-            setTab("concession");
-          }}
+          Concession
+        </a>
+        <a
+          role="tab"
+          className={`tab ${tab === "admission" && "tab-active"}`}
+          onClick={() => setTab("admission")}
         >
-          Concession Item
-        </div>
+          Admission
+        </a>
       </div>
       {tab === "admission" ? (
         <AdmissionItemForm

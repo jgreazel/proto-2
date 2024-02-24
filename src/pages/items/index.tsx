@@ -91,16 +91,22 @@ export default function ItemsPage() {
     >
       <div className="gap flex h-full w-full flex-col items-start">
         <div className="flex w-full items-center gap-2 p-2">
-          <Button
-            onClick={() =>
-              setItemType((prev) => {
-                if (prev === "concession") return "admission";
-                else return "concession";
-              })
-            }
-          >
-            Toggle (viewing {itemType})
-          </Button>
+          <div role="tablist" className="tabs-boxed tabs">
+            <a
+              role="tab"
+              className={`tab ${itemType === "concession" && "tab-active"}`}
+              onClick={() => setItemType("concession")}
+            >
+              Concession
+            </a>
+            <a
+              role="tab"
+              className={`tab ${itemType === "admission" && "tab-active"}`}
+              onClick={() => setItemType("admission")}
+            >
+              Admission
+            </a>
+          </div>
           <label className="text-s font-medium">Filter:</label>
           <input
             className="input input-bordered grow"

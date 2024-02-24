@@ -23,37 +23,51 @@ const PurchaseReportTable = (props: {
           data?.endDate.toLocaleString()}
       </div>
       <h3 className="underline">Summary</h3>
-      <div className="grid grid-cols-3 grid-rows-3">
-        <div></div>
-        <div>Quantity Sold</div>
-        <div>Total ($)</div>
-        <div>Admissions</div>
-        <div>{data?.summary.admissionCount}</div>
-        <div>{dbUnitToDollars(data?.summary.admissionTotal ?? 0)}</div>
-        <div>Concessions</div>
-        <div>{data?.summary.concessionCount}</div>
-        <div>{dbUnitToDollars(data?.summary.concessionTotal ?? 0)}</div>
-      </div>
-      <h3 className="underline">Transactions</h3>
-      <table>
-        <tr>
-          <th>Label</th>
-          <th># Sold</th>
-          <th>Total ($)</th>
-          <th>Time</th>
-          <th>Cashier</th>
-          <th>Type</th>
-        </tr>
-        {data?.transactions.map((t) => (
-          <tr key={t.transactionId}>
-            <td>{t.item.label}</td>
-            <td>{t.amountSold}</td>
-            <td>{dbUnitToDollars(t.amountSold * t.item.sellingPrice)}</td>
-            <td>{t.createdAt.toLocaleString()}</td>
-            <td>{t.createdBy}</td>
-            <td>{t.item.isAdmissionItem ? "Admission" : "Concession"}</td>
+      <table className="table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Quantity Sold</th>
+            <th>Total ($)</th>
           </tr>
-        ))}
+        </thead>
+        <tbody>
+          <tr>
+            <th>Admissions</th>
+            <td>{data?.summary.admissionCount}</td>
+            <td>{dbUnitToDollars(data?.summary.admissionTotal ?? 0)}</td>
+          </tr>
+          <tr>
+            <th>Concessions</th>
+            <td>{data?.summary.concessionCount}</td>
+            <td>{dbUnitToDollars(data?.summary.concessionTotal ?? 0)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3 className="underline">Transactions</h3>
+      <table className="table table-zebra">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th># Sold</th>
+            <th>Total ($)</th>
+            <th>Time</th>
+            <th>Cashier</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data?.transactions.map((t) => (
+            <tr key={t.transactionId}>
+              <td>{t.item.label}</td>
+              <td>{t.amountSold}</td>
+              <td>{dbUnitToDollars(t.amountSold * t.item.sellingPrice)}</td>
+              <td>{t.createdAt.toLocaleString()}</td>
+              <td>{t.createdBy}</td>
+              <td>{t.item.isAdmissionItem ? "Admission" : "Concession"}</td>
+            </tr>
+          ))}
+        </tbody>
       </table>
     </div>
   );
@@ -75,19 +89,23 @@ const AdmissionReportTable = (props: {
 
       <h3 className="underline">Admissions</h3>
       <h3>Total: {data?.admissionEvents.length}</h3>
-      <table>
-        <tr>
-          <th>Patron</th>
-          <th>Time</th>
-          <th>Cashier</th>
-        </tr>
-        {data?.admissionEvents.map((e) => (
-          <tr key={e.id}>
-            <td>{`${e.patron.firstName} ${e.patron.lastName}`}</td>
-            <td>{e.createdAt.toLocaleString()}</td>
-            <td>{e.createdBy}</td>
+      <table className="table table-zebra">
+        <thead>
+          <tr>
+            <th>Patron</th>
+            <th>Time</th>
+            <th>Cashier</th>
           </tr>
-        ))}
+        </thead>
+        <tbody>
+          {data?.admissionEvents.map((e) => (
+            <tr key={e.id}>
+              <td>{`${e.patron.firstName} ${e.patron.lastName}`}</td>
+              <td>{e.createdAt.toLocaleString()}</td>
+              <td>{e.createdBy}</td>
+            </tr>
+          ))}
+        </tbody>
       </table>
     </div>
   );
@@ -151,7 +169,7 @@ export default function ReportsPage() {
           <h2 className="font-semibold">Select Report Criteria:</h2>
           <form className="flex flex-col gap-1" onSubmit={handleSubmit(submit)}>
             <div className="flex gap-1 align-middle">
-              <input type="checkbox" {...register("p")} />
+              <input type="checkbox" className="checkbox" {...register("p")} />
               <label className="font-semibold">Purchase Report</label>
             </div>
             <div className="flex gap-2">
@@ -165,7 +183,7 @@ export default function ReportsPage() {
                 render={({ field }) => (
                   <DatePicker
                     disabled={!formVals.p}
-                    className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
+                    className="input input-bordered grow"
                     placeholderText="Start Date"
                     selected={field.value}
                     onChange={(date: Date) => field.onChange(date)}
@@ -182,7 +200,7 @@ export default function ReportsPage() {
                 render={({ field }) => (
                   <DatePicker
                     disabled={!formVals.p}
-                    className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
+                    className="input input-bordered grow"
                     placeholderText="End Date"
                     selected={field.value}
                     onChange={(date: Date) => field.onChange(date)}
@@ -193,6 +211,7 @@ export default function ReportsPage() {
             <div className="flex gap-1 align-middle">
               <input
                 type="checkbox"
+                className="checkbox"
                 {...register("pIncludeAdmissions")}
                 disabled={!formVals.p}
               />
@@ -201,14 +220,15 @@ export default function ReportsPage() {
             <div className="flex gap-1 align-middle">
               <input
                 type="checkbox"
+                className="checkbox"
                 {...register("pIncludeConcessions")}
                 disabled={!formVals.p}
               />
               <label>Concessions</label>
             </div>
-            <div className="my-4 rounded-lg border-2 border-solid border-sky-700" />
+            <div className="divider"></div>
             <div className="flex gap-1 align-middle">
-              <input type="checkbox" {...register("a")} />
+              <input type="checkbox" className="checkbox" {...register("a")} />
               <label className="font-semibold">Admission Report</label>
             </div>
             <div className="flex gap-2">
@@ -222,7 +242,7 @@ export default function ReportsPage() {
                 render={({ field }) => (
                   <DatePicker
                     disabled={!formVals.a}
-                    className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
+                    className="input input-bordered grow"
                     placeholderText="Start Date"
                     selected={field.value}
                     onChange={(date: Date) => field.onChange(date)}
@@ -239,7 +259,7 @@ export default function ReportsPage() {
                 render={({ field }) => (
                   <DatePicker
                     disabled={!formVals.a}
-                    className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
+                    className="input input-bordered grow"
                     placeholderText="End Date"
                     selected={field.value}
                     onChange={(date: Date) => field.onChange(date)}

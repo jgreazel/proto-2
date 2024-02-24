@@ -165,16 +165,22 @@ export default function CheckoutPage() {
     <PageLayout>
       <div className="grid h-full grid-cols-2 grid-rows-2 gap-4 overflow-hidden">
         <div className="col-span-1 row-span-2 p-2">
-          <Button
-            onClick={() => {
-              setFeed((prev) => {
-                if (prev === "concession") return "admission";
-                else return "concession";
-              });
-            }}
-          >
-            Switch Items
-          </Button>
+          <div role="tablist" className="tabs-boxed tabs">
+            <a
+              role="tab"
+              className={`tab ${feed === "concession" && "tab-active"}`}
+              onClick={() => setFeed("concession")}
+            >
+              Concession
+            </a>
+            <a
+              role="tab"
+              className={`tab ${feed === "admission" && "tab-active"}`}
+              onClick={() => setFeed("admission")}
+            >
+              Admission
+            </a>
+          </div>
           <ItemFeed
             onClick={(data) => {
               setCart((prev) => [...prev, data]);
