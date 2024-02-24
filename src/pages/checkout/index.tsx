@@ -29,7 +29,7 @@ const ItemFeed = (props: {
       </div>
     );
   return (
-    <div className="grid grid-cols-3 gap-3 p-3">
+    <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-3">
       {data?.map(({ item }) => (
         <div
           onClick={() => props.onClick(item)}
@@ -226,6 +226,7 @@ export default function CheckoutPage() {
               <LoadingSpinner />
             ) : (
               <Button
+                primary
                 disabled={!cart.length}
                 onClick={() => {
                   const uniq = new Set(cart.map((c) => c.id));

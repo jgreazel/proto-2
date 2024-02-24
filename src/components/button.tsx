@@ -7,10 +7,11 @@ export const Button = (
     disabled?: boolean;
     type?: "button" | "submit" | "reset";
     onClick?: () => void;
+    primary?: boolean;
   },
 ) => {
   return props.href ? (
-    <Link href={props.href} className="btn">
+    <Link href={props.href} className={`btn ${props.primary && "btn-primary"}`}>
       {props.children}
     </Link>
   ) : (
@@ -18,7 +19,7 @@ export const Button = (
       disabled={props.disabled}
       onClick={props.onClick}
       type={props.type ?? "button"}
-      className="btn disabled:opacity-50"
+      className={`btn ${props.primary && "btn-primary"}`}
     >
       {props.children}
     </button>

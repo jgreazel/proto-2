@@ -119,9 +119,13 @@ const RestockForm = (props: {
             </div>
           </div>
         ))}
-      {!!selected.length && formState.isValid && (
-        <Button type="submit">Submit</Button>
-      )}
+      <Button
+        primary
+        type="submit"
+        disabled={!selected.length || !formState.isValid}
+      >
+        Submit
+      </Button>
     </form>
   );
 };
@@ -154,11 +158,30 @@ export default function RestockPage() {
             value={selected}
             setValue={setSelected}
           />
-          <RestockForm
-            data={data as { item: InventoryItem }[]}
-            selected={selected}
-            onSubmit={mutate}
-          />
+          {selected.length ? (
+            <RestockForm
+              data={data as { item: InventoryItem }[]}
+              selected={selected}
+              onSubmit={mutate}
+            />
+          ) : (
+            <div role="alert" className="alert mt-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-6 w-6 shrink-0 stroke-info"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <span>Select items to restock</span>
+            </div>
+          )}
         </div>
       </main>
     </>

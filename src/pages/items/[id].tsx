@@ -1,7 +1,6 @@
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
-import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 
 import { api } from "~/utils/api";
@@ -116,15 +115,20 @@ const AdmissionItemForm = (props: {
             placeholder="Ex: 4"
             className="input input-bordered grow"
             {...register("patronLimit", {
-              required: false,
+              required: watchPassType === "seasonal",
               disabled: isSubmitting || isLoading,
               valueAsNumber: true,
+              min: 1,
             })}
           />
         </>
       )}
-      {formState.isValid && !isSubmitting && (
-        <Button disabled={isSubmitting} type="submit">
+      {!isSubmitting && (
+        <Button
+          primary
+          disabled={isSubmitting || !formState.isValid}
+          type="submit"
+        >
           {data ? "Save" : "Create"}
         </Button>
       )}
@@ -195,6 +199,7 @@ const ConcessionItemForm = (props: {
           required: true,
           disabled: isSubmitting || isLoading,
           valueAsNumber: true,
+          min: 1,
         })}
       />
       <label className="text-xs font-medium">Selling Price</label>
@@ -207,6 +212,7 @@ const ConcessionItemForm = (props: {
           required: true,
           disabled: isSubmitting || isLoading,
           valueAsNumber: true,
+          min: 1,
         })}
       />
       <label className="text-xs font-medium">Quantity in Stock</label>
@@ -219,10 +225,15 @@ const ConcessionItemForm = (props: {
           required: true,
           disabled: isSubmitting || isLoading,
           valueAsNumber: true,
+          min: 1,
         })}
       />
-      {formState.isValid && !isSubmitting && (
-        <Button disabled={isSubmitting} type="submit">
+      {!isSubmitting && (
+        <Button
+          primary
+          disabled={isSubmitting || !formState.isValid}
+          type="submit"
+        >
           {data ? "Save" : "Create"}
         </Button>
       )}

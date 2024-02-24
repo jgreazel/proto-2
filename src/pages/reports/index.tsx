@@ -268,7 +268,7 @@ export default function ReportsPage() {
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit" disabled={!formState.isValid}>
+              <Button primary type="submit" disabled={!formState.isValid}>
                 Generate Report
               </Button>
             </div>
