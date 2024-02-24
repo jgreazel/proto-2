@@ -5,3 +5,16 @@
 body {
   @apply bg-sky-50 text-slate-800;
 }
+
+.react-datepicker {
+  @apply !rounded-xl !font-sans !shadow-xl;
+}
+
+.react-datepicker__header {
+  @apply !rounded-xl !bg-slate-50;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day {
+  @apply !m-1;
+}
