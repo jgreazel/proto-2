@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  @apply bg-sky-50 text-slate-800;
+  /* @apply bg-sky-50 text-slate-800; */
 }
 
 .react-datepicker {

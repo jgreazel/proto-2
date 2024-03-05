@@ -31,16 +31,17 @@ const ItemFeed = (props: {
   return (
     <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-3">
       {data?.map(({ item }) => (
-        <div
-          onClick={() => props.onClick(item)}
-          className="flex flex-col justify-between rounded-md bg-slate-50 p-2 shadow-lg hover:cursor-pointer hover:shadow-2xl"
-          key={item.id}
-        >
-          <div className="overflow-clip text-sm font-medium text-sky-900">
-            {item.label}
-          </div>
-          <div className="self-end text-green-600">
-            {dbUnitToDollars(item.sellingPrice)}
+        <div className="card card-compact bg-base-200 shadow-xl" key={item.id}>
+          <div className="card-body justify-between">
+            <div className="md:card-title">{item.label}</div>
+            <div className="card-actions justify-end">
+              <button
+                onClick={() => props.onClick(item)}
+                className="btn btn-secondary"
+              >
+                {dbUnitToDollars(item.sellingPrice)}
+              </button>
+            </div>
           </div>
         </div>
       ))}
@@ -82,62 +83,74 @@ const AdmissionFeed = () => {
       </div>
     );
   return (
-    <>
-      <h2 className="pb-2 font-semibold">Admit Season Pass Holders:</h2>
-      <div className="flex flex-row items-center gap-2 px-3">
-        <label htmlFor="pass-filter">Filter:</label>
-        <input
-          id="pass-filter"
-          className="input input-bordered w-full"
-          value={filter}
-          placeholder="Ex: Anderson, John, etc..."
-          onChange={(e) => setFilter(e.target.value)}
-        />
+    <div className="collapse collapse-arrow h-min bg-base-200 shadow-xl">
+      <input type="checkbox" />
+      <div className="collapse-title text-xl font-medium">
+        Admit Season Pass Holders
       </div>
-      <div className="grid h-full grid-cols-1 gap-2 overflow-y-scroll">
+      <div className="collapse-content">
+        <div className="m-1 flex flex-row items-center gap-2">
+          <label htmlFor="pass-filter">Filter:</label>
+          <input
+            id="pass-filter"
+            className="input input-bordered w-full"
+            value={filter}
+            placeholder="Ex: Anderson, John, etc..."
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
         {passesData
           ?.filter((p) => filterPasses(p, filter))
           .map(({ label, patrons, id }) => (
-            <div
-              className="flex flex-col justify-between rounded-lg p-2"
-              key={id}
-            >
-              <div className="flex flex-col gap-2 text-sm font-medium text-sky-900">
-                {label}
-                <div className="flex flex-col gap-1">
-                  {patrons.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex justify-between rounded-2xl bg-slate-50 px-4 py-2 shadow-md"
-                    >
-                      <div className="font-normal">
-                        {`${p.firstName} ${p.lastName}`}
-                      </div>
+            <div className="p-1" key={id}>
+              <div className="badge badge-outline"> {label}</div>
 
+              {patrons.map((p) => (
+                <div
+                  key={p.id}
+                  className="card card-side card-compact my-1 bg-base-100 shadow-xl"
+                >
+                  <div className="card-title p-4">{`${p.firstName} ${p.lastName}`}</div>
+                  <div className="card-body">
+                    <div className="card-actions justify-end">
                       {eventData?.find((e) => e.patronId === p.id) ? (
                         <></>
                       ) : (
-                        <span
+                        <button
+                          className="btn btn-square btn-primary btn-sm"
                           onClick={() => onClick(p)}
-                          className="text-sm font-thin hover:cursor-pointer hover:underline"
                         >
-                          Admit
-                        </span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="h-6 w-6 rotate-180"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
+                            />
+                          </svg>
+                        </button>
                       )}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           ))}
       </div>
-    </>
+    </div>
   );
 };
 
 export default function CheckoutPage() {
   const [feed, setFeed] = useState<"concession" | "admission">("admission");
   const [cart, setCart] = useState<Item[]>([]);
+  const cartTotal = cart.reduce((acc, x) => (acc += x.sellingPrice), 0);
   const { mutate, isLoading } = api.items.checkout.useMutation({
     onError: (d) => {
       toast.error(d.message);
@@ -163,8 +176,8 @@ export default function CheckoutPage() {
 
   return (
     <PageLayout>
-      <div className="grid h-full grid-cols-2 grid-rows-2 gap-4 overflow-hidden">
-        <div className="col-span-1 row-span-2 p-2">
+      <div className="flex flex-row gap-2">
+        <div className="w-1/2 p-2">
           <div role="tablist" className="tabs-boxed tabs">
             <a
               role="tab"
@@ -188,67 +201,94 @@ export default function CheckoutPage() {
             category={feed}
           />
         </div>
-        <div className="border-lg col-span-1 row-span-1 overflow-hidden rounded-lg bg-slate-50 p-1 shadow-lg">
+        <div className="w-1/2 p-2">
           <AdmissionFeed />
-        </div>
-        <div className="col-span-1 row-span-1 flex h-full flex-col gap-2 rounded-lg bg-slate-50 p-2 shadow-lg">
-          <div className="font-semibold">Cart</div>
-          <div className="flex h-full flex-col gap-2 overflow-y-scroll">
-            {cart.map((i, idx) => (
-              <div
-                className="text-small flex w-full justify-between rounded-full bg-slate-50 p-1 px-3 text-slate-600 shadow-lg"
-                key={`${i.id}-${idx}`}
-              >
-                {i.label}
-                <span
-                  onClick={() => {
-                    const copy = [...cart];
-                    copy.splice(idx, 1);
-                    setCart(copy);
-                  }}
-                  className="text-xs text-red-400 hover:cursor-pointer hover:underline"
+          <div className="h-4" />
+          <div className="collapse collapse-arrow h-min bg-base-200 shadow-xl">
+            <input type="checkbox" />
+
+            <div className="collapse-title text-xl font-medium">
+              Cart - {dbUnitToDollars(cartTotal)}
+            </div>
+
+            <div className="collapse-content">
+              {cart.map((i, idx) => (
+                <div
+                  className="card card-side card-compact my-1 bg-base-100 shadow-xl"
+                  key={`${i.id}-${idx}`}
                 >
-                  Remove
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-row justify-end gap-2">
-            <Button
-              disabled={!cart.length}
-              onClick={() => {
-                setCart([]);
-              }}
+                  <div className="card-title p-4">{i.label}</div>
+                  <div className="card-body">
+                    <div className="card-actions justify-end">
+                      <button
+                        className="btn btn-square btn-secondary btn-sm"
+                        onClick={() => {
+                          const copy = [...cart];
+                          copy.splice(idx, 1);
+                          setCart(copy);
+                        }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                          stroke="currentColor"
+                          className="h-6 w-6"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              id="section-footer"
+              className="flex flex-row justify-end gap-2 p-4"
             >
-              Empty
-            </Button>
-            {isLoading ? (
-              <LoadingSpinner />
-            ) : (
-              <Button
-                primary
+              <button
+                className="btn btn-outline btn-secondary bg-base-100"
                 disabled={!cart.length}
                 onClick={() => {
-                  const uniq = new Set(cart.map((c) => c.id));
-                  let input: RouterInputs["items"]["checkout"];
-                  uniq.forEach((x) => {
-                    const toAdd = {
-                      id: x,
-                      amountSold: cart.filter((c) => c.id === x).length,
-                    };
-
-                    if (!input) {
-                      input = [toAdd];
-                    } else {
-                      input.push(toAdd);
-                    }
-                  });
-                  mutate(input!);
+                  setCart([]);
                 }}
               >
-                Checkout
-              </Button>
-            )}
+                Empty
+              </button>
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                <Button
+                  primary
+                  disabled={!cart.length}
+                  onClick={() => {
+                    const uniq = new Set(cart.map((c) => c.id));
+                    let input: RouterInputs["items"]["checkout"];
+                    uniq.forEach((x) => {
+                      const toAdd = {
+                        id: x,
+                        amountSold: cart.filter((c) => c.id === x).length,
+                      };
+
+                      if (!input) {
+                        input = [toAdd];
+                      } else {
+                        input.push(toAdd);
+                      }
+                    });
+                    mutate(input!);
+                  }}
+                >
+                  Checkout
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

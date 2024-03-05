@@ -37,7 +37,7 @@ const FullNav = () => {
           </div>
           <ul
             tabIndex={0}
-            className="menu dropdown-content menu-sm z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow"
+            className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow"
           >
             <li>
               <Link href="/">Home</Link>
@@ -79,15 +79,15 @@ const FullNav = () => {
       </div>
       <div className="navbar-end">
         {!!isSignedIn && (
-          <div className="dropdown">
+          <div className="dropdown z-50">
             <div tabIndex={0} role="button" className="btn btn-ghost">
               Hi, {user.username}
             </div>
             <ul
               tabIndex={0}
-              className="menu dropdown-content menu-sm rounded-box bg-base-100 p-2 shadow"
+              className="menu dropdown-content menu-md rounded-box bg-base-100 p-2 shadow"
             >
-              <li>
+              <li className="w-max">
                 <SignOutButton />
               </li>
             </ul>
