@@ -29,11 +29,11 @@ const ItemFeed = (props: {
       </div>
     );
   return (
-    <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-3">
       {data?.map(({ item }) => (
         <div className="card card-compact bg-base-200 shadow-xl" key={item.id}>
           <div className="card-body justify-between">
-            <div className="md:card-title">{item.label}</div>
+            <div className="card-title">{item.label}</div>
             <div className="card-actions justify-end">
               <button
                 onClick={() => props.onClick(item)}
@@ -89,16 +89,32 @@ const AdmissionFeed = () => {
         Admit Season Pass Holders
       </div>
       <div className="collapse-content">
-        <div className="m-1 flex flex-row items-center gap-2">
-          <label htmlFor="pass-filter">Filter:</label>
+        <label
+          htmlFor="pass-filter"
+          className="input input-bordered m-1 flex items-center gap-2"
+        >
           <input
             id="pass-filter"
-            className="input input-bordered w-full"
             value={filter}
-            placeholder="Ex: Anderson, John, etc..."
             onChange={(e) => setFilter(e.target.value)}
+            type="text"
+            className="grow"
+            placeholder="Search"
           />
-        </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            className="h-4 w-4 opacity-70"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </label>
+
         {passesData
           ?.filter((p) => filterPasses(p, filter))
           .map(({ label, patrons, id }) => (
@@ -203,7 +219,7 @@ export default function CheckoutPage() {
         </div>
         <div className="w-1/2 p-2">
           <div className="collapse collapse-arrow h-min bg-base-200 shadow-xl">
-            <input type="checkbox" />
+            <input type="checkbox" defaultChecked />
 
             <div className="collapse-title text-xl font-medium">
               Cart - {dbUnitToDollars(cartTotal)}

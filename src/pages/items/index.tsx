@@ -79,18 +79,9 @@ export default function ItemsPage() {
   api.items.getAll.useQuery();
 
   return (
-    <PageLayout
-      actionRow={
-        <div className="flex justify-end gap-2">
-          {itemType === "concession" && (
-            <Button href="items/restock">Restock</Button>
-          )}
-          <Button href="items/0">New Item</Button>
-        </div>
-      }
-    >
-      <div className="gap flex h-full w-full flex-col items-start">
-        <div className="flex w-full items-center gap-2 p-2">
+    <PageLayout>
+      <div className="gap flex h-full w-full flex-col justify-between">
+        <div className="flex w-full flex-row items-center justify-between gap-2 p-2">
           <div role="tablist" className="tabs-boxed tabs">
             <a
               role="tab"
@@ -107,13 +98,60 @@ export default function ItemsPage() {
               Admission
             </a>
           </div>
-          <label className="text-s font-medium">Filter:</label>
-          <input
-            className="input input-bordered grow"
-            placeholder=""
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
+          <label
+            htmlFor="item-filter"
+            className="input input-bordered m-1 flex grow items-center gap-2"
+          >
+            <input
+              id="item-filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              type="text"
+              className="grow"
+              placeholder="Search"
+            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="h-4 w-4 opacity-70"
+            >
+              <path
+                fillRule="evenodd"
+                d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </label>
+
+          <div className="tooltip tooltip-left" data-tip="Actions">
+            <details className="dropdown dropdown-end">
+              <summary className="btn m-1">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-6 w-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
+                  />
+                </svg>
+              </summary>
+              <ul className="menu dropdown-content z-[1] w-max rounded-box bg-base-200 p-2 shadow-xl">
+                <li>
+                  <Link href="items/restock">Restock</Link>
+                </li>
+                <li>
+                  <Link href="items/0">New Item</Link>
+                </li>
+              </ul>
+            </details>
+          </div>
         </div>
         <ItemList filter={filter} category={itemType} />
       </div>

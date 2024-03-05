@@ -7,9 +7,10 @@ export default {
   // },
   plugins: [require("daisyui")],
   daisyui: {
-    themes: ["aqua"],
+    // themes: ["aqua"],
     // themes: ["business"],
-    darkTheme: "business",
+    themes: ["fantasy"],
+    // darkTheme: "business",
     base: true, // applies background color and foreground color for root element by default
     styled: true, // include daisyUI colors and design decisions for all components
     utils: true, // adds responsive and modifier utility classes
