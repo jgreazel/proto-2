@@ -202,8 +202,6 @@ export default function CheckoutPage() {
           />
         </div>
         <div className="w-1/2 p-2">
-          <AdmissionFeed />
-          <div className="h-4" />
           <div className="collapse collapse-arrow h-min bg-base-200 shadow-xl">
             <input type="checkbox" />
 
@@ -290,6 +288,8 @@ export default function CheckoutPage() {
               )}
             </div>
           </div>
+          <div className="h-4" />
+          <AdmissionFeed />
         </div>
       </div>
     </PageLayout>
