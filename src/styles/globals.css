@@ -5,6 +5,7 @@
 body {
   /* @apply bg-sky-50 text-slate-800; */
 }
+/* todo: style date-picker from theme styles */
 
 .react-datepicker {
   @apply !rounded-xl !font-sans !shadow-xl;
