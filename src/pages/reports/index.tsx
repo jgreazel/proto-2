@@ -196,23 +196,10 @@ export default function ReportsPage() {
           <form onSubmit={handleSubmit(submit)}>
             <div className="card-body">
               <div className="card-title">Select Report Criteria</div>
-              <div className="card card-compact bg-base-100">
-                <div className="card-body">
-                  <div className="form-control">
-                    <label className="label cursor-pointer">
-                      <span className="card-title font-medium">
-                        Purchase Report
-                      </span>
-                      <input
-                        {...register("p")}
-                        type="checkbox"
-                        className="checkbox"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="divider"></div>
-
+              <div className="collapse collapse-arrow bg-base-100">
+                <input {...register("p")} type="checkbox" />
+                <div className="collapse-title card-title">Purchase Report</div>
+                <div className="collapse-content">
                   <div className="form-control">
                     <label className="label cursor-pointer">
                       <span className="text-label">Admissions</span>
@@ -245,7 +232,7 @@ export default function ReportsPage() {
                         <DatePicker
                           disabled={!formVals.p}
                           className="input input-bordered grow"
-                          placeholderText="--/--/--"
+                          placeholderText="--/--/----"
                           selected={field.value}
                           onChange={(date: Date) => field.onChange(date)}
                         />
@@ -262,7 +249,7 @@ export default function ReportsPage() {
                         <DatePicker
                           disabled={!formVals.p}
                           className="input input-bordered grow"
-                          placeholderText="--/--/--"
+                          placeholderText="--/--/----"
                           selected={field.value}
                           onChange={(date: Date) => field.onChange(date)}
                         />
@@ -272,21 +259,13 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              <div className="card card-compact bg-base-100">
-                <div className="card-body">
-                  <div className="form-control">
-                    <label className="label cursor-pointer">
-                      <span className="card-title">Admission Report</span>
-                      <input
-                        {...register("a")}
-                        type="checkbox"
-                        className="checkbox"
-                      />
-                    </label>
-                  </div>
+              <div className="collapse collapse-arrow bg-base-100">
+                <input {...register("a")} type="checkbox" />
 
-                  <div className="divider"></div>
-
+                <div className="collapse-title card-title">
+                  Admission Report
+                </div>
+                <div className="collapse-content">
                   <div className="form-control">
                     <label className="label">Start Date</label>
                     <Controller
@@ -297,7 +276,7 @@ export default function ReportsPage() {
                         <DatePicker
                           disabled={!formVals.a}
                           className="input input-bordered grow"
-                          placeholderText="--/--/--"
+                          placeholderText="--/--/----"
                           selected={field.value}
                           onChange={(date: Date) => field.onChange(date)}
                         />
@@ -314,7 +293,7 @@ export default function ReportsPage() {
                         <DatePicker
                           disabled={!formVals.a}
                           className="input input-bordered grow"
-                          placeholderText="--/--/--"
+                          placeholderText="--/--/----"
                           selected={field.value}
                           onChange={(date: Date) => field.onChange(date)}
                         />
