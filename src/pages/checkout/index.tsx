@@ -29,15 +29,15 @@ const ItemFeed = (props: {
       </div>
     );
   return (
-    <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-3">
       {data?.map(({ item }) => (
         <div className="card card-compact bg-base-200 shadow-xl" key={item.id}>
           <div className="card-body justify-between">
-            <div className="card-title">{item.label}</div>
+            <div className="font-medium md:card-title">{item.label}</div>
             <div className="card-actions justify-end">
               <button
                 onClick={() => props.onClick(item)}
-                className="btn btn-secondary"
+                className="btn btn-secondary btn-sm md:btn-md"
               >
                 {dbUnitToDollars(item.sellingPrice)}
               </button>
@@ -133,7 +133,7 @@ const AdmissionFeed = () => {
                         <></>
                       ) : (
                         <button
-                          className="btn btn-square btn-primary btn-sm"
+                          className="btn btn-square btn-outline btn-primary btn-sm"
                           onClick={() => onClick(p)}
                         >
                           <svg
@@ -235,7 +235,7 @@ export default function CheckoutPage() {
                   <div className="card-body">
                     <div className="card-actions justify-end">
                       <button
-                        className="btn btn-square btn-secondary btn-sm"
+                        className="btn btn-square btn-outline btn-secondary btn-sm"
                         onClick={() => {
                           const copy = [...cart];
                           copy.splice(idx, 1);

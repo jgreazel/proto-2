@@ -4,43 +4,53 @@ import { LoadingPage } from "~/components/loading";
 import { type RouterOutputs, api } from "~/utils/api";
 import Link from "next/link";
 import { PageLayout } from "~/components/layout";
-import { Button } from "~/components/button";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
 const ItemView = (props: { item: ItemWithCreatedBy }) => {
-  const { item, createdBy } = props.item;
+  const { item } = props.item;
 
   return (
-    <div className="rounded-lg bg-slate-50 p-6 shadow-lg" key={item.id}>
-      <div className="flex flex-row items-baseline gap-2">
+    <tr>
+      <td className="font-medium">{item.label}</td>
+      <td>
+        <div className="badge badge-outline">
+          {item.isConcessionItem ? "Concession" : "Admission"}
+        </div>
+      </td>
+      <td>{dbUnitToDollars(item.sellingPrice)}</td>
+      <td>
+        {item.isConcessionItem ? (
+          item.inStock
+        ) : item.isDay ? (
+          <div className="badge badge-secondary badge-outline">Day</div>
+        ) : (
+          <div className="badge badge-accent badge-outline">Seasonal</div>
+        )}
+      </td>
+      <td>
         <Link
           href={`/items/${item.id}`}
-          className="font-medium hover:underline"
+          className="btn btn-square btn-outline btn-primary btn-sm"
         >
-          {item.label}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="h-6 w-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+            />
+          </svg>
         </Link>
-        <div className="text-xs capitalize italic text-slate-400">
-          Last edit:{" "}
-          <Link className="hover:underline" href={`/@${createdBy.username}`}>
-            @{createdBy.username}
-          </Link>{" "}
-          - {item.createdAt.toLocaleString()}
-        </div>
-      </div>
-      <div className="flex flex-row items-center justify-between">
-        <div>
-          Category: {item.isConcessionItem ? "Concession" : "Admission"}
-        </div>
-        <div>Selling Price: {dbUnitToDollars(item.sellingPrice)}</div>
-        {item.isConcessionItem ? (
-          <div>In Stock: {item.inStock}</div>
-        ) : (
-          <div>Type: {item.isDay ? "Day" : "Seasonal"}</div>
-        )}
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 };
 
@@ -55,17 +65,32 @@ const ItemList = (props: {
   if (!data) return <div>Something went wrong</div>;
 
   return (
-    <div className="flex h-full w-full flex-col gap-3 overflow-y-scroll py-3">
-      {data
-        .filter(
-          (d) =>
-            d.item.label.toUpperCase().includes(props.filter.toUpperCase()) &&
-            ((d.item.isAdmissionItem && props.category === "admission") ||
-              (d.item.isConcessionItem && props.category === "concession")),
-        )
-        .map((itemWithCreator) => (
-          <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
-        ))}
+    <div className="h-full">
+      <table className="table table-zebra">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Category</th>
+            <th>Selling Price</th>
+            <th>{props.category === "concession" ? "In Stock" : "Type"}</th>
+            <th>Edit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data
+            .filter(
+              (d) =>
+                d.item.label
+                  .toUpperCase()
+                  .includes(props.filter.toUpperCase()) &&
+                ((d.item.isAdmissionItem && props.category === "admission") ||
+                  (d.item.isConcessionItem && props.category === "concession")),
+            )
+            .map((itemWithCreator) => (
+              <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
+            ))}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -124,34 +149,33 @@ export default function ItemsPage() {
             </svg>
           </label>
 
-          <div className="tooltip tooltip-left" data-tip="Actions">
-            <details className="dropdown dropdown-end">
-              <summary className="btn m-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-6 w-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
-                  />
-                </svg>
-              </summary>
-              <ul className="menu dropdown-content z-[1] w-max rounded-box bg-base-200 p-2 shadow-xl">
-                <li>
-                  <Link href="items/restock">Restock</Link>
-                </li>
-                <li>
-                  <Link href="items/0">New Item</Link>
-                </li>
-              </ul>
-            </details>
-          </div>
+          <details className="dropdown dropdown-end">
+            <summary className="btn m-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
+                />
+              </svg>
+              Actions
+            </summary>
+            <ul className="menu dropdown-content z-[1] w-max rounded-box bg-base-200 p-2 shadow-xl">
+              <li>
+                <Link href="items/restock">Restock</Link>
+              </li>
+              <li>
+                <Link href="items/0">New Item</Link>
+              </li>
+            </ul>
+          </details>
         </div>
         <ItemList filter={filter} category={itemType} />
       </div>
