@@ -11,76 +11,138 @@ export default function PassesPage() {
   const [filter, setFilter] = useState("");
 
   return (
-    <PageLayout
-      actionRow={
-        <div>
-          <Button href="passes/0">Add Pass</Button>
-        </div>
-      }
-    >
+    <PageLayout>
       {isLoading ? (
         <LoadingPage />
       ) : (
-        <div className="flex h-full flex-col gap-3 p-1">
-          <h1 className="p-3 font-bold underline">Season Passes</h1>
-          <div className="flex flex-row items-center gap-2">
+        <div className="flex h-full flex-col gap-3">
+          <div className="flex w-full flex-row items-center justify-between gap-2 p-2">
             <label
-              className="font-semibold text-slate-800"
               htmlFor="pass-filter"
+              className="input input-bordered m-1 flex grow items-center gap-2"
             >
-              Filter:
+              <input
+                id="pass-filter"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                type="text"
+                className="grow"
+                placeholder="Search"
+              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="h-4 w-4 opacity-70"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                  clipRule="evenodd"
+                />
+              </svg>
             </label>
-            <input
-              id="pass-filter"
-              value={filter}
-              placeholder="Ex: Anderson, John, etc..."
-              onChange={(e) => setFilter(e.target.value)}
-              className="input input-bordered w-full"
-            />
+            <Link href="passes/0" className="btn">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
+              </svg>
+              Add Pass
+            </Link>
           </div>
-          <div className="flex h-full flex-col gap-2 overflow-auto">
-            {data
-              ?.filter((d) => filterPasses(d, filter))
-              .map((p) => (
-                <div
-                  className="rounded-md bg-slate-50 p-3 font-medium text-slate-700 shadow-lg"
-                  key={p.id + "-pass-card"}
-                >
-                  <div className="flex flex-row items-baseline gap-2">
-                    <div>{p.label}</div>
+          {data
+            ?.filter((d) => filterPasses(d, filter))
+            .map((pass) => (
+              <div
+                className="card card-compact bg-base-200 shadow-xl"
+                key={pass.id}
+              >
+                <div className="card-body">
+                  <h2 className="card-title"> {pass.label}</h2>
+                  <table className="table table-sm bg-base-100">
+                    <thead>
+                      <tr>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Age</th>
+                        <th>Edit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pass.patrons.map((patron) => (
+                        <tr key={patron.passId + patron.id}>
+                          <td className="font-medium">{patron.firstName}</td>
+                          <td>{patron.lastName}</td>
+                          <td>
+                            {!!patron.birthDate
+                              ? `${
+                                  new Date().getFullYear() -
+                                  patron.birthDate.getFullYear()
+                                } y/o`
+                              : "-"}
+                          </td>
+                          <td>
+                            <div className="tooltip" data-tip="Edit Patron">
+                              <Link
+                                className="btn btn-square btn-outline btn-secondary btn-sm"
+                                href={`passes/patrons/${patron.id}`}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.5}
+                                  stroke="currentColor"
+                                  className="h-6 w-6"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+                                  />
+                                </svg>
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="card-actions justify-end">
                     <Link
-                      className="text-xs text-slate-400"
-                      href={`passes/${p.id}`}
+                      className="btn btn-outline btn-primary bg-base-100"
+                      href={`passes/${pass.id}`}
                     >
-                      Edit
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="h-6 w-6"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+                        />
+                      </svg>
+                      Edit Pass
                     </Link>
                   </div>
-                  <div className="flex flex-col gap-2 p-4">
-                    {p.patrons.map((x) => (
-                      <div
-                        key={x.passId + x.id}
-                        className="flex flex-row items-baseline justify-between rounded-2xl bg-slate-50 p-1 px-4 shadow-lg"
-                      >
-                        {x.firstName}
-                        {!!x.birthDate && (
-                          <div className="text-sm text-slate-400">
-                            {new Date().getFullYear() -
-                              x.birthDate.getFullYear()}{" "}
-                            y/o
-                          </div>
-                        )}
-                        <Link
-                          className="ml-2 text-xs text-slate-400"
-                          href={`passes/patrons/${x.id}`}
-                        >
-                          Edit
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              ))}
-          </div>
+              </div>
+            ))}
         </div>
       )}
     </PageLayout>
