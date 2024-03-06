@@ -231,7 +231,7 @@ export default function CheckoutPage() {
                   className="card card-side card-compact my-1 bg-base-100 shadow-xl"
                   key={`${i.id}-${idx}`}
                 >
-                  <div className="card-title p-4">{i.label}</div>
+                  <div className="p-4 font-medium md:card-title">{i.label}</div>
                   <div className="card-body">
                     <div className="card-actions justify-end">
                       <button

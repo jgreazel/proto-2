@@ -10,6 +10,7 @@ export default {
     // themes: ["aqua"],
     // themes: ["business"],
     themes: ["fantasy"],
+    // themes: ["cupcake"],
     // darkTheme: "business",
     base: true, // applies background color and foreground color for root element by default
     styled: true, // include daisyUI colors and design decisions for all components
