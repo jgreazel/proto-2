@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import PatronForm, { type PatronFormData } from "~/components/patronForm";
+import Link from "next/link";
 
 const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
   const [showRemove, setShowRemove] = useState(true);
@@ -165,13 +166,14 @@ const PatronFormSection = (props: {
           submitText="Add"
         />
       ) : (
-        <div>
-          <Button
+        <div className="flex justify-end">
+          <button
+            className="btn btn-outline btn-secondary"
             onClick={() => setShowForm((prev) => !prev)}
             disabled={isGray}
           >
             + Add Patron
-          </Button>
+          </button>
         </div>
       )}
     </div>
@@ -249,8 +251,32 @@ export default function SinglePassPage() {
   const isMutating = isCreating || isUpdating;
 
   return (
-    <PageLayout hideHeader>
-      <div className="flex flex-col gap-3">
+    <dialog id="single-item-modal" className="modal modal-open">
+      <form method="dialog" className="modal-backdrop">
+        <Link href="/passes">close</Link>
+      </form>
+      <div className="modal-box">
+        <form method="dialog">
+          <Link
+            href="/passes"
+            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18 18 6M6 6l12 12"
+              />
+            </svg>
+          </Link>
+        </form>
         <h2 className="font-semibold underline">Patron Details</h2>
         {isReallyLoading ? (
           <LoadingPage />
@@ -283,17 +309,18 @@ export default function SinglePassPage() {
                   <LoadingSpinner />
                 </div>
               ) : (
-                <Button
+                <button
+                  className="btn btn-primary"
                   disabled={!formState.isValid || !formState.isDirty}
                   type="submit"
                 >
                   {isEditing ? "Update" : "Create"}
-                </Button>
+                </button>
               )}
             </form>
           </>
         )}
       </div>
-    </PageLayout>
+    </dialog>
   );
 }

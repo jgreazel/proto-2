@@ -20,9 +20,10 @@ type Props = {
 };
 
 const PatronForm = (props: Props) => {
-  const { register, handleSubmit, control, reset } = useForm<PatronFormData>({
-    defaultValues: { ...props.data },
-  });
+  const { register, handleSubmit, control, reset, formState } =
+    useForm<PatronFormData>({
+      defaultValues: { ...props.data },
+    });
 
   const submitAndReset = (data: PatronFormData) => {
     props.onSubmit(data);
@@ -66,6 +67,7 @@ const PatronForm = (props: Props) => {
       <Controller
         control={control}
         name="birthDate"
+        rules={{ required: false }}
         render={({ field }) => (
           <DatePicker
             disabled={props.disabled}
@@ -76,8 +78,14 @@ const PatronForm = (props: Props) => {
           />
         )}
       />
-      <div>
-        <Button type="submit">{props.submitText ?? "Submit"}</Button>
+      <div className="flex justify-end gap-2">
+        <button
+          className="btn btn-primary"
+          type="submit"
+          disabled={!formState.isValid}
+        >
+          {props.submitText ?? "Submit"}
+        </button>
         <Button
           onClick={() => {
             reset();
