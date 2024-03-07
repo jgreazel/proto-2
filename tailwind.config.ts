@@ -9,8 +9,8 @@ export default {
   daisyui: {
     // themes: ["aqua"],
     // themes: ["business"],
-    themes: ["fantasy"],
-    // themes: ["cupcake"],
+    themes: ["corporate"],
+    // themes: ["fantasy"],
     // darkTheme: "business",
     base: true, // applies background color and foreground color for root element by default
     styled: true, // include daisyUI colors and design decisions for all components

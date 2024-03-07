@@ -164,7 +164,7 @@ const AdmissionFeed = () => {
 };
 
 export default function CheckoutPage() {
-  const [feed, setFeed] = useState<"concession" | "admission">("admission");
+  const [feed, setFeed] = useState<"concession" | "admission">("concession");
   const [cart, setCart] = useState<Item[]>([]);
   const cartTotal = cart.reduce((acc, x) => (acc += x.sellingPrice), 0);
   const { mutate, isLoading } = api.items.checkout.useMutation({
