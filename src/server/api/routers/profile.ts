@@ -2,7 +2,11 @@ import { clerkClient } from "@clerk/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  privateProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
 
@@ -20,4 +24,9 @@ export const profileRouter = createTRPCRouter({
         });
       return filterUserForClient(user);
     }),
+
+  getAllUsers: privateProcedure.query(async () => {
+    const users = await clerkClient.users.getUserList();
+    return users.filter(filterUserForClient);
+  }),
 });

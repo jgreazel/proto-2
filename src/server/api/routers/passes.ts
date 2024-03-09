@@ -1,4 +1,3 @@
-import { clerkClient } from "@clerk/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -25,6 +24,7 @@ const ratelimit = new Ratelimit({
 });
 
 export const passesRouter = createTRPCRouter({
+  // should account for effective dates
   getAll: publicProcedure.query(
     async ({ ctx }) =>
       await ctx.db.seasonPass.findMany({
