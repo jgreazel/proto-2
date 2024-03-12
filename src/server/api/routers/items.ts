@@ -279,15 +279,23 @@ export const itemsRouter = createTRPCRouter({
         include: { items: { select: { item: true, amountSold: true } } },
       });
 
-      const receiptItems = transaction.items.map((i) => ({
-        id: i.item.id,
-        label: i.item.label,
-        amountSold: i.amountSold,
-        total: i.amountSold * i.item.sellingPrice,
-      }));
+      let total = 0;
+
+      const receiptItems = transaction.items.map((i) => {
+        const lineTotal = i.amountSold * i.item.sellingPrice;
+        total += lineTotal;
+
+        return {
+          id: i.item.id,
+          label: i.item.label,
+          amountSold: i.amountSold,
+          total: lineTotal,
+        };
+      });
 
       return {
         message: "Transaction successful!",
+        total,
         action: includedSeasonPass
           ? "Create necessary season passes on the Passes tab."
           : null,

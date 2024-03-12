@@ -9,6 +9,7 @@ type ShiftFormData = {
   start: Date;
   end: Date;
 };
+
 const ShiftForm = () => {
   const { mutate, isLoading } = api.schedules.createShift.useMutation({
     onError: handleApiError,

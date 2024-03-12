@@ -173,7 +173,9 @@ export default function CheckoutPage() {
     },
     onSuccess: (r) => {
       setCart([]);
-      toast.success(r.message);
+      toast.success(`${r.message} - Collect ${dbUnitToDollars(r.total)}`, {
+        duration: 5000,
+      });
       if (r.action) {
         toast(
           (t) => (
@@ -192,8 +194,8 @@ export default function CheckoutPage() {
 
   return (
     <PageLayout>
-      <div className="flex flex-row gap-2">
-        <div className="w-1/2 p-2">
+      <div className="flex flex-col gap-2 md:flex-row">
+        <div className="p-2 md:w-1/2">
           <div role="tablist" className="tabs-boxed tabs">
             <a
               role="tab"
@@ -217,7 +219,7 @@ export default function CheckoutPage() {
             category={feed}
           />
         </div>
-        <div className="w-1/2 p-2">
+        <div className="p-2 md:w-1/2">
           <div className="collapse collapse-arrow h-min bg-base-200 shadow-xl">
             <input type="checkbox" defaultChecked />
 
