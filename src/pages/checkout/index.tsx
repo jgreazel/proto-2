@@ -173,7 +173,7 @@ export default function CheckoutPage() {
     },
     onSuccess: (r) => {
       setCart([]);
-      toast.success(`${r.message} - Collect ${dbUnitToDollars(r.total)}`, {
+      toast.success(`${r.message} Collect ${dbUnitToDollars(r.total)}`, {
         duration: 5000,
       });
       if (r.action) {

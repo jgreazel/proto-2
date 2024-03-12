@@ -11,6 +11,9 @@ type ShiftFormData = {
 };
 
 const ShiftForm = () => {
+  const { data, isLoading: isGettingUsers } =
+    api.profile.getAllUsers.useQuery();
+
   const { mutate, isLoading } = api.schedules.createShift.useMutation({
     onError: handleApiError,
     onSuccess: () => {
@@ -30,14 +33,18 @@ const ShiftForm = () => {
           <span className="label-text">Assignee</span>
         </div>
         <select
-          className="select select-bordered"
+          className="select select-bordered capitalize"
           {...(register("userId"),
           {
             required: true,
-            disabled: isLoading,
+            disabled: isLoading || isGettingUsers,
           })}
         >
-          {/* // todo get all users from api */}
+          {data?.map((u) => (
+            <option key={u.id} value={u.id} className="capitalize">
+              {u.username}
+            </option>
+          ))}
         </select>
       </label>
     </form>
