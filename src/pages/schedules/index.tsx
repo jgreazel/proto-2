@@ -1,29 +1,45 @@
 import { Controller, useForm } from "react-hook-form";
+import type { Dayjs } from "dayjs";
+import { TimePicker } from "antd";
 import { api } from "~/utils/api";
 
 import { PageLayout } from "~/components/layout";
 import handleApiError from "~/helpers/handleApiError";
+import toast from "react-hot-toast";
 
+type RangeValueType<DateType> = [
+  start: DateType | null | undefined,
+  end: DateType | null | undefined,
+];
 type ShiftFormData = {
   userId: string;
-  start: Date;
-  end: Date;
+  timeRange: RangeValueType<Dayjs>;
 };
 
 const ShiftForm = () => {
   const { data, isLoading: isGettingUsers } =
     api.profile.getAllUsers.useQuery();
 
+  const { register, handleSubmit, control, reset } = useForm<ShiftFormData>();
   const { mutate, isLoading } = api.schedules.createShift.useMutation({
     onError: handleApiError,
     onSuccess: () => {
-      console.log("success!");
+      reset();
+      toast.success("Shift Created!");
     },
   });
-  const { register, handleSubmit } = useForm<ShiftFormData>();
 
   const submit = (data: ShiftFormData) => {
-    mutate(data);
+    if (!data.timeRange[0] || !data.timeRange[1]) {
+      console.error("date values can't be undefined");
+      return;
+    }
+
+    mutate({
+      userId: data.userId,
+      start: data.timeRange[0].toDate(),
+      end: data.timeRange[1].toDate(),
+    });
   };
 
   return (
@@ -33,12 +49,11 @@ const ShiftForm = () => {
           <span className="label-text">Assignee</span>
         </div>
         <select
-          className="select select-bordered capitalize"
-          {...(register("userId"),
-          {
+          {...register("userId", {
             required: true,
             disabled: isLoading || isGettingUsers,
           })}
+          className="select select-bordered capitalize"
         >
           {data?.map((u) => (
             <option key={u.id} value={u.id} className="capitalize">
@@ -47,6 +62,29 @@ const ShiftForm = () => {
           ))}
         </select>
       </label>
+      <Controller
+        control={control}
+        name="timeRange"
+        render={({ field }) => (
+          <label className="form-control w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Shift</span>
+            </div>
+            <TimePicker.RangePicker
+              format="HH:mm"
+              minuteStep={15}
+              className="input input-bordered w-full max-w-xs"
+              value={field.value}
+              onChange={(dates) => field.onChange(dates)}
+            />
+          </label>
+        )}
+      />
+      <div className="flex justify-end">
+        <button type="submit" className="btn btn-primary">
+          Create
+        </button>
+      </div>
     </form>
   );
 };

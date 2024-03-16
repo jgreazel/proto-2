@@ -19,3 +19,7 @@ body {
 .react-datepicker__day {
   @apply !m-1;
 }
+
+.ant-picker-ok button {
+  @apply !btn !btn-primary !btn-sm;
+}
