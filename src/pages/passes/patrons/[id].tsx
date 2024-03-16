@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/router";
@@ -5,7 +6,7 @@ import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import PatronForm from "~/components/patronForm";
 import handleApiError from "~/helpers/handleApiError";
-import { api } from "~/utils/api";
+import { type RouterOutputs, api } from "~/utils/api";
 
 export default function SinglePatronPage() {
   const params = useParams<{ id: string }>();
@@ -54,7 +55,12 @@ export default function SinglePatronPage() {
         </form>
 
         <PatronForm
-          data={data}
+          data={{
+            id: data?.id,
+            firstName: data?.firstName ?? "",
+            lastName: data?.lastName ?? "",
+            birthDate: dayjs(data?.birthDate),
+          }}
           disabled={isLoading || isUpdating}
           onCancel={() => {
             router.back();
@@ -64,7 +70,11 @@ export default function SinglePatronPage() {
             if (!data.id) {
               toast.error("Missing patron id. Cannot update database");
             } else {
-              mutate({ id: data.id, ...data });
+              mutate({
+                ...data,
+                id: data.id,
+                birthDate: data.birthDate.toDate(),
+              });
             }
           }}
         />
