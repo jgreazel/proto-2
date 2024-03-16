@@ -68,7 +68,7 @@ export const passesRouter = createTRPCRouter({
               firstName: z.string().min(1).max(50),
               lastName: z.string().min(1).max(50),
               birthDate: z.date().optional().nullable(),
-              banReEntryDate: z.date().optional().nullable(),
+              // banReEntryDate: z.date().optional().nullable(),
             }),
           )
           .optional(),
@@ -91,7 +91,9 @@ export const passesRouter = createTRPCRouter({
             patrons: {
               createMany: {
                 data: input.patrons.map((p) => ({
-                  ...p,
+                  firstName: p.firstName,
+                  lastName: p.lastName,
+                  birthDate: p.birthDate,
                   createdBy: createdById,
                 })),
               },

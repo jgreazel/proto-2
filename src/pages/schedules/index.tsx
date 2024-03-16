@@ -6,11 +6,8 @@ import { api } from "~/utils/api";
 import { PageLayout } from "~/components/layout";
 import handleApiError from "~/helpers/handleApiError";
 import toast from "react-hot-toast";
+import type { RangeValueType } from "../_app";
 
-type RangeValueType<DateType> = [
-  start: DateType | null | undefined,
-  end: DateType | null | undefined,
-];
 type ShiftFormData = {
   userId: string;
   timeRange: RangeValueType<Dayjs>;

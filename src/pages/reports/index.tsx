@@ -1,12 +1,16 @@
-import { PageLayout } from "~/components/layout";
-import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
-import { LoadingSpinner } from "~/components/loading";
 import { useState } from "react";
+import { DatePicker } from "antd";
+import type { Dayjs } from "dayjs";
 import { useForm, Controller } from "react-hook-form";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+
+import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
+
+import type { RangeValueType } from "../_app";
+import { PageLayout } from "~/components/layout";
+import { LoadingSpinner } from "~/components/loading";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
-import { getEndOfDay } from "~/helpers/dateHelpers";
+
+const { RangePicker } = DatePicker;
 
 const PurchaseReportTable = (props: {
   data: RouterOutputs["reports"]["getNew"]["purchaseReport"];
@@ -140,15 +144,13 @@ const AdmissionReportTable = (props: {
 
 type ReportData = {
   // p = purchase report
-  p: boolean;
-  pStartDate: Date;
-  pEndDate: Date;
+  includePatronData: boolean;
+  patronDataDateRange: RangeValueType<Dayjs>;
   pIncludeAdmissions: boolean;
   pIncludeConcessions: boolean;
   // a = admission report
   a: boolean;
-  aStartDate: Date;
-  aEndDate: Date;
+  admissionDataDateRange: RangeValueType<Dayjs>;
 };
 
 export default function ReportsPage() {
@@ -156,19 +158,22 @@ export default function ReportsPage() {
     useForm<ReportData>();
   const formVals = watch();
   const purchaseReport: RouterInputs["reports"]["getNew"]["purchaseReport"] = {
-    startDate: formVals.pStartDate,
-    endDate: getEndOfDay(formVals.pEndDate ?? new Date()),
+    startDate: formVals.patronDataDateRange?.[0]?.toDate() ?? new Date(),
+    endDate:
+      formVals.patronDataDateRange?.[1]?.endOf("day").toDate() ?? new Date(),
     includeAdmissions: formVals.pIncludeAdmissions,
     includeConcessions: formVals.pIncludeConcessions,
   };
   const admissionReport: RouterInputs["reports"]["getNew"]["admissionReport"] =
     {
-      startDate: formVals.aStartDate,
-      endDate: getEndOfDay(formVals.aEndDate ?? new Date()),
+      startDate: formVals.admissionDataDateRange?.[0]?.toDate() ?? new Date(),
+      endDate:
+        formVals.admissionDataDateRange?.[1]?.endOf("day").toDate() ??
+        new Date(),
     };
   const { data, refetch } = api.reports.getNew.useQuery(
     {
-      purchaseReport: formVals.p ? purchaseReport : null,
+      purchaseReport: formVals.includePatronData ? purchaseReport : null,
       admissionReport: formVals.a ? admissionReport : null,
     },
     {
@@ -197,7 +202,7 @@ export default function ReportsPage() {
             <div className="card-body">
               <div className="card-title">Select Report Criteria</div>
               <div className="collapse collapse-arrow bg-base-100">
-                <input {...register("p")} type="checkbox" />
+                <input {...register("includePatronData")} type="checkbox" />
                 <div className="collapse-title card-title">Purchase Report</div>
                 <div className="collapse-content">
                   <div className="form-control">
@@ -207,7 +212,7 @@ export default function ReportsPage() {
                         {...register("pIncludeAdmissions")}
                         type="checkbox"
                         className="checkbox"
-                        disabled={!formVals.p}
+                        disabled={!formVals.includePatronData}
                       />
                     </label>
                   </div>
@@ -218,44 +223,26 @@ export default function ReportsPage() {
                         {...register("pIncludeConcessions")}
                         type="checkbox"
                         className="checkbox"
-                        disabled={!formVals.p}
+                        disabled={!formVals.includePatronData}
                       />
                     </label>
                   </div>
-                  <div className="form-control">
-                    <label className="label">Start Date</label>
-                    <Controller
-                      control={control}
-                      rules={{ required: formVals.p }}
-                      name="pStartDate"
-                      render={({ field }) => (
-                        <DatePicker
-                          disabled={!formVals.p}
-                          className="input input-bordered grow"
-                          placeholderText="--/--/----"
-                          selected={field.value}
-                          onChange={(date: Date) => field.onChange(date)}
+                  <Controller
+                    control={control}
+                    name="patronDataDateRange"
+                    render={({ field }) => (
+                      <label className="form-control w-full max-w-xs">
+                        <div className="label">
+                          <span className="label-text">Date Range</span>
+                        </div>
+                        <RangePicker
+                          value={field.value}
+                          className="input input-bordered w-full max-w-xs"
+                          onChange={(dates) => field.onChange(dates)}
                         />
-                      )}
-                    />
-                  </div>
-                  <div className="form-control">
-                    <label className="label">End Date</label>
-                    <Controller
-                      control={control}
-                      rules={{ required: formVals.p }}
-                      name="pEndDate"
-                      render={({ field }) => (
-                        <DatePicker
-                          disabled={!formVals.p}
-                          className="input input-bordered grow"
-                          placeholderText="--/--/----"
-                          selected={field.value}
-                          onChange={(date: Date) => field.onChange(date)}
-                        />
-                      )}
-                    />
-                  </div>
+                      </label>
+                    )}
+                  />
                 </div>
               </div>
 
@@ -266,40 +253,22 @@ export default function ReportsPage() {
                   Admission Report
                 </div>
                 <div className="collapse-content">
-                  <div className="form-control">
-                    <label className="label">Start Date</label>
-                    <Controller
-                      control={control}
-                      rules={{ required: formVals.a }}
-                      name="aStartDate"
-                      render={({ field }) => (
-                        <DatePicker
-                          disabled={!formVals.a}
-                          className="input input-bordered grow"
-                          placeholderText="--/--/----"
-                          selected={field.value}
-                          onChange={(date: Date) => field.onChange(date)}
+                  <Controller
+                    control={control}
+                    name="admissionDataDateRange"
+                    render={({ field }) => (
+                      <label className="form-control w-full max-w-xs">
+                        <div className="label">
+                          <span className="label-text">Date Range</span>
+                        </div>
+                        <RangePicker
+                          value={field.value}
+                          className="input input-bordered w-full max-w-xs"
+                          onChange={(dates) => field.onChange(dates)}
                         />
-                      )}
-                    />
-                  </div>
-                  <div className="form-control">
-                    <label className="label">End Date</label>
-                    <Controller
-                      control={control}
-                      rules={{ required: formVals.a }}
-                      name="aEndDate"
-                      render={({ field }) => (
-                        <DatePicker
-                          disabled={!formVals.a}
-                          className="input input-bordered grow"
-                          placeholderText="--/--/----"
-                          selected={field.value}
-                          onChange={(date: Date) => field.onChange(date)}
-                        />
-                      )}
-                    />
-                  </div>
+                      </label>
+                    )}
+                  />
                 </div>
               </div>
               <div className="card-actions justify-end">

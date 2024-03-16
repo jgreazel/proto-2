@@ -1,14 +1,15 @@
 import { Controller, useForm } from "react-hook-form";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { Button } from "./button";
 import { useEffect } from "react";
+import { DatePicker } from "antd";
+
+import { Button } from "./button";
+import type { Dayjs } from "dayjs";
 
 export type PatronFormData = {
   id?: string;
   firstName: string;
   lastName: string;
-  birthDate: Date | null;
+  birthDate: Dayjs;
 };
 
 type Props = {
@@ -63,8 +64,24 @@ const PatronForm = (props: Props) => {
           disabled: props.disabled,
         })}
       />
-      <label className="text-xs font-medium">Birth Date</label>
       <Controller
+        control={control}
+        name="birthDate"
+        render={({ field }) => (
+          <label className="form-control w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Birthday (Optional)</span>
+            </div>
+            <DatePicker
+              value={field.value}
+              className="input input-bordered w-full max-w-xs"
+              onChange={(date) => field.onChange(date)}
+            />
+          </label>
+        )}
+      />
+      {/* <label className="text-xs font-medium">Birth Date</label> */}
+      {/* <Controller
         control={control}
         name="birthDate"
         rules={{ required: false }}
@@ -77,7 +94,7 @@ const PatronForm = (props: Props) => {
             onChange={(date: Date) => field.onChange(date)}
           />
         )}
-      />
+      /> */}
       <div className="flex justify-end gap-2">
         <button
           className="btn btn-primary"

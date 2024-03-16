@@ -1,16 +1,16 @@
 import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { Button } from "~/components/button";
-import { LoadingPage, LoadingSpinner } from "~/components/loading";
-import { api } from "~/utils/api";
-import handleApiError from "~/helpers/handleApiError";
-import Select from "react-select";
-
 import { useParams } from "next/navigation";
-import toast from "react-hot-toast";
-import { PageLayout } from "~/components/layout";
-import PatronForm, { type PatronFormData } from "~/components/patronForm";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import Select from "react-select";
+import dayjs from "dayjs";
+import toast from "react-hot-toast";
+
+import { type RouterOutputs, api } from "~/utils/api";
+import { LoadingPage, LoadingSpinner } from "~/components/loading";
+import { Button } from "~/components/button";
+import handleApiError from "~/helpers/handleApiError";
+import PatronForm, { type PatronFormData } from "~/components/patronForm";
 
 const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
   const [showRemove, setShowRemove] = useState(true);
@@ -86,17 +86,30 @@ const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
 
 const PatronFormSection = (props: {
   isLoading?: boolean;
-  value: PatronFormData[];
-  onChange: Dispatch<SetStateAction<PatronFormData[]>>;
+  value: RouterOutputs["passes"]["createPatron"][];
+  onChange: Dispatch<SetStateAction<RouterOutputs["passes"]["createPatron"][]>>;
   isEditing?: boolean;
   passId?: string;
 }) => {
   const [showForm, setShowForm] = useState(false);
 
-  const onAdd = (data: PatronFormData) => {
-    props.onChange([...props.value, data]);
+  function onAdd<
+    T extends PatronFormData | RouterOutputs["passes"]["createPatron"],
+  >(data: T) {
+    props.onChange([
+      ...props.value,
+      {
+        ...data,
+        birthDate: dayjs(data.birthDate).toDate(),
+        id: data.id ?? "",
+        createdAt: "createdAt" in data ? data.createdAt : new Date(),
+        createdBy: "createdBy" in data ? data.createdBy : "",
+        passId: "passId" in data ? data.passId : "",
+        banReEntryDate: "banReEntryDate" in data ? data.banReEntryDate : null,
+      },
+    ]);
     setShowForm(false);
-  };
+  }
 
   const { mutate, isLoading: isCreating } = api.passes.createPatron.useMutation(
     {
@@ -107,7 +120,11 @@ const PatronFormSection = (props: {
 
   const onSubmit = (data: PatronFormData) => {
     if (props.isEditing) {
-      mutate({ ...data, passId: props.passId! });
+      mutate({
+        ...data,
+        passId: props.passId!,
+        birthDate: data.birthDate.toDate(),
+      });
       toast.success(`Success!`);
     } else {
       onAdd(data);
@@ -137,7 +154,7 @@ const PatronFormSection = (props: {
               <div className="grow" />
               {props.isEditing ? (
                 <ReassignNode
-                  patronId={p.id!}
+                  patronId={p.id}
                   onSubmit={() => removeFromState(idx)}
                 />
               ) : (
@@ -196,21 +213,16 @@ export default function SinglePassPage() {
   );
   const isReallyLoading = isLoading && isEditing;
 
-  const [patrons, setPatrons] = useState<PatronFormData[]>([]);
+  const [patrons, setPatrons] = useState<
+    RouterOutputs["passes"]["createPatron"][]
+  >([]);
 
   const { register, handleSubmit, reset, formState } =
     useForm<SeasonPassFormData>();
   useEffect(() => {
     if (data && !isReallyLoading) {
       reset({ label: data.label });
-      setPatrons(
-        data.patrons.map((p) => ({
-          id: p.id,
-          firstName: p.firstName,
-          lastName: p.lastName,
-          birthDate: p.birthDate,
-        })),
-      );
+      setPatrons(data.patrons);
     }
   }, [isReallyLoading, data, reset]);
 

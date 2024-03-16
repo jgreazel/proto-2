@@ -7,6 +7,11 @@ import "~/styles/globals.css";
 import { Toaster } from "react-hot-toast";
 import Head from "next/head";
 
+export type RangeValueType<DateType> = [
+  start: DateType | null | undefined,
+  end: DateType | null | undefined,
+];
+
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (
     <ClerkProvider>
