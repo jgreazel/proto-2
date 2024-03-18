@@ -36,7 +36,7 @@ export const schedulesRouter = createTRPCRouter({
       return Promise.all(
         shifts.map(async (s) => ({
           ...s,
-          username: await clerkClient.users.getUser(s.userId),
+          username: (await clerkClient.users.getUser(s.userId)).username,
         })),
       );
     }),
@@ -66,8 +66,9 @@ export const schedulesRouter = createTRPCRouter({
           message: "Failed to create a new shift",
         });
       }
+      const username = (await clerkClient.users.getUser(shift.userId)).username;
 
-      return shift;
+      return { ...shift, username };
     }),
 
   clockInOrOut: privateProcedure
