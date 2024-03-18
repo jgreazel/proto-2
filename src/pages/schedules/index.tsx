@@ -39,7 +39,7 @@ const ShiftForm = ({
     onError: handleApiError,
     onSuccess: async () => {
       reset();
-      toast.success("Shift Created!");
+      toast.success(`${!!value ? "Schedule modified" : "Shift created"}!`);
       await onSuccess();
     },
   };
@@ -47,13 +47,14 @@ const ShiftForm = ({
   const { mutate: edit, isLoading: isEditing } =
     api.schedules.editShift.useMutation(onMutate);
   const { mutate, isLoading } = api.schedules.createShift.useMutation(onMutate);
+  const { mutate: delMutate, isLoading: isDeleting } =
+    api.schedules.deleteShift.useMutation(onMutate);
 
-  const submit = (data: ShiftFormData) => {
+  const handleFormSubmit = (data: ShiftFormData) => {
     if (!data.timeRange[0] || !data.timeRange[1]) {
       console.error("date values can't be undefined");
       return;
     }
-
     const mainChunk = {
       userId: data.userId,
       start: dayjs(day)
@@ -73,8 +74,18 @@ const ShiftForm = ({
       : mutate(mainChunk);
   };
 
+  const handleDelete = () => {
+    if (!value) {
+      console.error("No Shift to delete");
+      return;
+    }
+    delMutate({ id: value.id });
+  };
+
+  const isDisabled = isLoading || isEditing || isDeleting;
+
   return (
-    <form onSubmit={handleSubmit(submit)}>
+    <form onSubmit={handleSubmit(handleFormSubmit)}>
       <h2 className="mb-2 text-xl font-bold">{day.format("dddd, MMMM D")}</h2>
       <h3 className="font-md text-lg">{!!value ? "Edit" : "New"} Shift</h3>
       <label className="form-control w-full max-w-xs">
@@ -104,7 +115,7 @@ const ShiftForm = ({
               <span className="label-text">Shift</span>
             </div>
             <TimePicker.RangePicker
-              disabled={isLoading || isEditing}
+              disabled={isDisabled}
               format="HH:mm a"
               minuteStep={15}
               className="input input-bordered w-full max-w-xs"
@@ -114,12 +125,20 @@ const ShiftForm = ({
           </label>
         )}
       />
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={isEditing || isLoading}
-        >
+      <div
+        className={`mt-4 flex ${!!value ? "justify-between" : "justify-end"}`}
+      >
+        {!!value && (
+          <button
+            type="button"
+            className="btn btn-outline btn-accent"
+            disabled={isDisabled}
+            onClick={handleDelete}
+          >
+            Delete
+          </button>
+        )}
+        <button type="submit" className="btn btn-primary" disabled={isDisabled}>
           {!!value ? "Save" : "Create"}
         </button>
       </div>
@@ -174,26 +193,56 @@ const CellView = ({
   data: RouterOutputs["schedules"]["getShifts"];
   onClick?: (shift: RouterOutputs["schedules"]["getShifts"][number]) => void;
 }) => {
-  const hoverClasses = "hover:cursor-pointer hover:bg-base-200 p-1";
+  const hoverClasses = "hover:cursor-pointer hover:bg-base-200 p-1 rounded-md";
+  const dataByHours = data.reduce(
+    (acc, d) => {
+      const dataIdx = acc.findIndex(
+        (x) =>
+          x.start === dayjs(d.start).format("HH:mm") &&
+          x.end === dayjs(d.end).format("HH:mm"),
+      );
+      if (dataIdx > -1) {
+        acc[dataIdx]?.shifts.push(d);
+      } else {
+        acc.push({
+          day: dayjs(d.start).format("MMM, D"),
+          start: dayjs(d.start).format("HH:mm"),
+          end: dayjs(d.end).format("HH:mm"),
+          shifts: [d],
+        });
+      }
+      return acc;
+    },
+    [] as {
+      day: string;
+      start: string;
+      end: string;
+      shifts: RouterOutputs["schedules"]["getShifts"][number][];
+    }[],
+  );
 
   return (
     <ul>
-      {data.map((d) => (
-        <li
-          key={d.id}
-          className={`flex flex-row items-center gap-2 rounded-md capitalize ${
-            onClick && hoverClasses
-          }`}
-          onClick={(e) => {
-            if (!onClick) return;
-            e.stopPropagation();
-            onClick(d);
-          }}
-        >
+      {dataByHours.map((d) => (
+        <li key={d.day}>
           <div className="badge badge-secondary badge-sm">
-            {dayjs(d.start).format("HH:mm")}
+            {d.start + " - " + d.end}
           </div>
-          <span>{d.username}</span>
+          <div>
+            {d.shifts.map((s) => (
+              <div
+                className={`capitalize ${onClick && hoverClasses}`}
+                onClick={(e) => {
+                  if (!onClick) return;
+                  e.stopPropagation();
+                  onClick(s);
+                }}
+                key={s.id}
+              >
+                {s.username}
+              </div>
+            ))}
+          </div>
         </li>
       ))}
     </ul>

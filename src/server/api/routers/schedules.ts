@@ -7,6 +7,8 @@ import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
 import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
 
+const ONEYEARMILLIS = 86400000;
+
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
   limiter: Ratelimit.slidingWindow(5, "1 m"),
@@ -99,6 +101,63 @@ export const schedulesRouter = createTRPCRouter({
       }
       const username = (await clerkClient.users.getUser(shift.userId)).username;
       return { ...shift, username };
+    }),
+
+  deleteShift: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const result = await ctx.db.shift.delete({
+        where: { id: input.id },
+      });
+      if (!result) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to delete shift",
+        });
+      }
+      return result;
+    }),
+
+  // safest to use source.startof('day') on the UI
+  cloneDay: privateProcedure
+    .input(z.object({ source: z.date(), target: z.date() }))
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const srcBegin = new Date(input.source);
+      srcBegin.setHours(0, 0, 0, 0);
+      const srcShifts = await ctx.db.shift.findMany({
+        where: {
+          start: {
+            gte: srcBegin,
+            lt: new Date(input.source.getTime() + ONEYEARMILLIS),
+          },
+        },
+      });
+
+      // todo: need to overwrite start & end's date with date from target
+      const shiftsToAdd = srcShifts.map((s) => ({
+        userId: s.userId,
+        start: s.start,
+        end: s.end,
+        createdBy: ctx.userId,
+      }));
+      const result = await ctx.db.shift.createMany({
+        data: shiftsToAdd,
+      });
+      if (!result) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to clone shifts",
+        });
+      }
+      return result;
     }),
 
   clockInOrOut: privateProcedure
