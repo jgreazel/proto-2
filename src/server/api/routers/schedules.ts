@@ -71,6 +71,36 @@ export const schedulesRouter = createTRPCRouter({
       return { ...shift, username };
     }),
 
+  editShift: privateProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        userId: z.string().optional(),
+        start: z.date().optional(),
+        end: z.date().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const shift = await ctx.db.shift.update({
+        where: { id: input.id },
+        data: {
+          ...input,
+        },
+      });
+      if (!shift) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to create a new shift",
+        });
+      }
+      const username = (await clerkClient.users.getUser(shift.userId)).username;
+      return { ...shift, username };
+    }),
+
   clockInOrOut: privateProcedure
     .input(
       z.object({

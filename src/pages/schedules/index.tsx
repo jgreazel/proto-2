@@ -14,36 +14,39 @@ type ShiftFormData = {
   timeRange: RangeValueType<Dayjs>;
 };
 
-const ShiftForm = ({ day }: { day: Dayjs }) => {
+const ShiftForm = ({
+  day,
+  value,
+  onSuccess,
+}: {
+  day: Dayjs;
+  value?: RouterOutputs["schedules"]["getShifts"][number];
+  onSuccess: () => Promise<void>;
+}) => {
   const { data, isLoading: isGettingUsers } =
     api.profile.getAllUsers.useQuery();
 
-  const { register, handleSubmit, control, reset } = useForm<ShiftFormData>();
-  // todo: handle optimistic updates to UI, may need to change query to lazy query and pass in onsuccess to requery?
-  // ? or can i invalidate and cause an auto refetch?
-  const { mutate, isLoading } = api.schedules.createShift.useMutation({
+  const { register, handleSubmit, control, reset } = useForm<ShiftFormData>({
+    defaultValues: !!value
+      ? {
+          userId: value?.userId,
+          timeRange: [dayjs(value?.start), dayjs(value?.end)],
+        }
+      : undefined,
+  });
+
+  const onMutate = {
     onError: handleApiError,
-    onSuccess: (newShift) => {
+    onSuccess: async () => {
       reset();
       toast.success("Shift Created!");
-      // api.schedules.getShifts.useQuery({
-      //   dateRange: [day.startOf("day").toDate(), day.endOf("day").toDate()],
-      // });
-      const utils = api.useUtils();
-      // const prev = utils.schedules.getShifts.getData({
-      //   dateRange: [day.startOf("month").toDate(), day.endOf("month").toDate()]
-      // });
-      utils.schedules.getShifts.setData(
-        {
-          dateRange: [
-            day.startOf("month").toDate(),
-            day.endOf("month").toDate(),
-          ],
-        },
-        (prev) => [...(prev ?? []), newShift],
-      );
+      await onSuccess();
     },
-  });
+  };
+
+  const { mutate: edit, isLoading: isEditing } =
+    api.schedules.editShift.useMutation(onMutate);
+  const { mutate, isLoading } = api.schedules.createShift.useMutation(onMutate);
 
   const submit = (data: ShiftFormData) => {
     if (!data.timeRange[0] || !data.timeRange[1]) {
@@ -51,7 +54,7 @@ const ShiftForm = ({ day }: { day: Dayjs }) => {
       return;
     }
 
-    mutate({
+    const mainChunk = {
       userId: data.userId,
       start: dayjs(day)
         .set("hour", data.timeRange[0].hour())
@@ -61,11 +64,19 @@ const ShiftForm = ({ day }: { day: Dayjs }) => {
         .set("hour", data.timeRange[1].hour())
         .set("minute", data.timeRange[1].minute())
         .toDate(),
-    });
+    };
+    !!value
+      ? edit({
+          id: value.id,
+          ...mainChunk,
+        })
+      : mutate(mainChunk);
   };
 
   return (
     <form onSubmit={handleSubmit(submit)}>
+      <h2 className="mb-2 text-xl font-bold">{day.format("dddd, MMMM D")}</h2>
+      <h3 className="font-md text-lg">{!!value ? "Edit" : "New"} Shift</h3>
       <label className="form-control w-full max-w-xs">
         <div className="label">
           <span className="label-text">Assignee</span>
@@ -73,7 +84,7 @@ const ShiftForm = ({ day }: { day: Dayjs }) => {
         <select
           {...register("userId", {
             required: true,
-            disabled: isLoading || isGettingUsers,
+            disabled: isLoading || isGettingUsers || isEditing,
           })}
           className="select select-bordered capitalize"
         >
@@ -93,6 +104,7 @@ const ShiftForm = ({ day }: { day: Dayjs }) => {
               <span className="label-text">Shift</span>
             </div>
             <TimePicker.RangePicker
+              disabled={isLoading || isEditing}
               format="HH:mm a"
               minuteStep={15}
               className="input input-bordered w-full max-w-xs"
@@ -103,8 +115,12 @@ const ShiftForm = ({ day }: { day: Dayjs }) => {
         )}
       />
       <div className="flex justify-end">
-        <button type="submit" className="btn btn-primary">
-          Create
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={isEditing || isLoading}
+        >
+          {!!value ? "Save" : "Create"}
         </button>
       </div>
     </form>
@@ -153,35 +169,57 @@ const ShiftModal = ({
 
 const CellView = ({
   data,
+  onClick,
 }: {
   data: RouterOutputs["schedules"]["getShifts"];
-}) => (
-  <ul>
-    {data.map((d) => (
-      <li key={d.id} className="flex flex-row items-center gap-2 capitalize">
-        <div className="badge badge-secondary badge-sm">
-          {dayjs(d.start).format("HH:mm")}
-        </div>
-        <span>{d.username}</span>
-      </li>
-    ))}
-  </ul>
-);
+  onClick?: (shift: RouterOutputs["schedules"]["getShifts"][number]) => void;
+}) => {
+  const hoverClasses = "hover:cursor-pointer hover:bg-base-200 p-1";
+
+  return (
+    <ul>
+      {data.map((d) => (
+        <li
+          key={d.id}
+          className={`flex flex-row items-center gap-2 rounded-md capitalize ${
+            onClick && hoverClasses
+          }`}
+          onClick={(e) => {
+            if (!onClick) return;
+            e.stopPropagation();
+            onClick(d);
+          }}
+        >
+          <div className="badge badge-secondary badge-sm">
+            {dayjs(d.start).format("HH:mm")}
+          </div>
+          <span>{d.username}</span>
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 const DesktopView = () => {
   const [showModal, setShowModal] = useState(false);
   const [calVal, setCalVal] = useState(() => dayjs());
-  const { data, isLoading } = api.schedules.getShifts.useQuery({
+  const [singleModalData, setSingleModalData] =
+    useState<RouterOutputs["schedules"]["getShifts"][number]>();
+  const { data, isLoading, refetch } = api.schedules.getShifts.useQuery({
     dateRange: [
-      calVal.startOf("month").toDate(),
-      calVal.endOf("month").toDate(),
+      calVal.startOf("month").startOf("day").toDate(),
+      calVal.endOf("month").startOf("day").toDate(),
     ],
   });
 
-  const handleCellClick = (value: Dayjs) => {
-    // todo: figure out how not to open a modal when switching months
+  const handleCellClick = (
+    value: Dayjs,
+    info: { source: "date" | "month" | "year" | "customize" },
+  ) => {
     setCalVal(value);
-    setShowModal(true);
+    if (info.source === "date") {
+      setShowModal(true);
+    }
   };
 
   const filterShifts =
@@ -193,6 +231,10 @@ const DesktopView = () => {
     if (info.type === "date") {
       return <CellView data={shifts} />;
     }
+  };
+
+  const handleFormSuccess = async () => {
+    await refetch();
   };
 
   return (
@@ -218,18 +260,77 @@ const DesktopView = () => {
             </div>
           )}
           <Calendar
+            disabledDate={() => isLoading}
             cellRender={cellRenderer}
             className="rounded-lg p-2 shadow-lg"
             value={calVal}
-            onChange={handleCellClick}
-            onPanelChange={handleCellClick}
+            onChange={setCalVal}
+            onPanelChange={setCalVal}
+            onSelect={handleCellClick}
           />
         </div>
       </div>
       {showModal && (
         <ShiftModal onClose={() => setShowModal(false)}>
-          <ShiftForm day={calVal} />
-          <CellView data={data?.filter(filterShifts(calVal)) ?? []} />
+          <ShiftForm day={calVal} onSuccess={handleFormSuccess} />
+          <div className="items-bottom flex flex-row gap-2">
+            <h3 className="font-md mb-2 text-lg">Scheduled</h3>
+            <div
+              key="info-tooltip"
+              className="tooltip hover:cursor-pointer"
+              data-tip="Click a shift for editing"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </div>
+          </div>
+          {data?.some(filterShifts(calVal)) ? (
+            <CellView
+              onClick={(x) => setSingleModalData(x)}
+              data={data?.filter(filterShifts(calVal)) ?? []}
+            />
+          ) : (
+            <div role="alert" className="alert">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-6 w-6 shrink-0 stroke-info"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <span>No shifts scheduled for today</span>
+            </div>
+          )}
+        </ShiftModal>
+      )}
+      {singleModalData && (
+        <ShiftModal onClose={() => setSingleModalData(undefined)}>
+          <ShiftForm
+            day={calVal}
+            onSuccess={async () => {
+              await handleFormSuccess();
+              setSingleModalData(undefined);
+            }}
+            value={singleModalData}
+          />
         </ShiftModal>
       )}
     </PageLayout>
