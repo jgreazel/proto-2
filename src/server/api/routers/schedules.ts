@@ -34,6 +34,9 @@ export const schedulesRouter = createTRPCRouter({
             lte: input.dateRange?.[1],
           },
         },
+        orderBy: {
+          start: "asc",
+        },
       });
       return Promise.all(
         shifts.map(async (s) => ({

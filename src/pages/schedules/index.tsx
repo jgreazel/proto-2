@@ -1,6 +1,8 @@
 import { Controller, useForm } from "react-hook-form";
 import dayjs, { type Dayjs } from "dayjs";
 import { TimePicker, Calendar, DatePicker } from "antd";
+import { useUser } from "@clerk/nextjs";
+
 import { type RouterOutputs, api } from "~/utils/api";
 
 import { PageLayout } from "~/components/layout";
@@ -297,6 +299,69 @@ const CloneSection = ({
   );
 };
 
+const Clock = () => {
+  const { user, isLoaded } = useUser();
+
+  const { data, isLoading, refetch } = api.schedules.getShifts.useQuery({
+    userId: user?.id,
+    dateRange: [dayjs().startOf("day").toDate(), dayjs().endOf("day").toDate()],
+  });
+  const { mutate, isLoading: isClocking } =
+    api.schedules.clockInOrOut.useMutation({
+      onError: handleApiError,
+      onSuccess: async () => {
+        toast.success("Clocked in!");
+        await refetch();
+      },
+    });
+
+  const next = data?.find(
+    (x) => !x.clockIn && !x.clockOut && dayjs(x.end).isAfter(dayjs()),
+  );
+
+  const handleClick = () => {
+    if (!next) return;
+    mutate({
+      shiftId: next.id,
+    });
+  };
+
+  return !isLoaded || isLoading || !next ? (
+    <></>
+  ) : (
+    <div className="card card-compact bg-base-100">
+      <div className="card-body">
+        <h2 className="card-title">
+          Next shift: {dayjs(next.start).format("dddd, HH:mm a")}
+        </h2>
+        <div className="card-actions justify-end">
+          <button
+            onClick={handleClick}
+            disabled={isClocking}
+            className={`btn ${next?.clockIn ? "btn-accent" : "btn-primary"}`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+              />
+            </svg>
+            Clock {next?.clockIn ? "Out" : "In"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DesktopView = () => {
   const [showModal, setShowModal] = useState(false);
   const [calVal, setCalVal] = useState(() => dayjs());
@@ -338,6 +403,7 @@ const DesktopView = () => {
     <PageLayout>
       <div className="card card-compact bg-base-200">
         <div className="card-body">
+          <Clock />
           {data?.length === 0 && (
             <div role="alert" className="alert alert-info">
               <svg
