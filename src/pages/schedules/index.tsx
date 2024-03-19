@@ -315,9 +315,11 @@ const Clock = () => {
       },
     });
 
-  const next = data?.find(
-    (x) => !x.clockIn && !x.clockOut && dayjs(x.end).isAfter(dayjs()),
-  );
+  const next = data?.find((x) => {
+    const clkIn = !x.clockIn && !x.clockOut && dayjs(x.end).isAfter(dayjs());
+    const clkOut = !!x.clockIn && !x.clockOut;
+    return clkIn || clkOut;
+  });
 
   const handleClick = () => {
     if (!next) return;
@@ -329,35 +331,35 @@ const Clock = () => {
   return !isLoaded || isLoading || !next ? (
     <></>
   ) : (
-    <div className="card card-compact bg-base-100">
-      <div className="card-body">
-        <h2 className="card-title">
-          Next shift: {dayjs(next.start).format("dddd, HH:mm a")}
-        </h2>
-        <div className="card-actions justify-end">
-          <button
-            onClick={handleClick}
-            disabled={isClocking}
-            className={`btn ${next?.clockIn ? "btn-accent" : "btn-primary"}`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-              />
-            </svg>
-            Clock {next?.clockIn ? "Out" : "In"}
-          </button>
+    <div role="alert" className="alert bg-base-100 shadow-lg">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="h-6 w-6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+        />
+      </svg>
+      <div>
+        <h3 className="font-bold">Time Clock</h3>
+        <div className="text-xs">
+          Next shift: {dayjs(next.start).format("dddd, HH:mm a")} -{" "}
+          {dayjs(next.end).format("HH:mm a")}
         </div>
       </div>
+      <button
+        onClick={handleClick}
+        disabled={isClocking}
+        className={`btn btn-sm ${next?.clockIn ? "btn-accent" : "btn-primary"}`}
+      >
+        Clock {next?.clockIn ? "Out" : "In"}
+      </button>
     </div>
   );
 };
