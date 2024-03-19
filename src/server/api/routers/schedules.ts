@@ -141,13 +141,24 @@ export const schedulesRouter = createTRPCRouter({
         },
       });
 
-      // todo: need to overwrite start & end's date with date from target
-      const shiftsToAdd = srcShifts.map((s) => ({
-        userId: s.userId,
-        start: s.start,
-        end: s.end,
-        createdBy: ctx.userId,
-      }));
+      const shiftsToAdd = srcShifts.map((s) => {
+        const targetStart = new Date(s.start);
+        targetStart.setFullYear(input.target.getFullYear());
+        targetStart.setMonth(input.target.getMonth());
+        targetStart.setDate(input.target.getDate());
+
+        const targetEnd = new Date(s.end);
+        targetEnd.setFullYear(input.target.getFullYear());
+        targetEnd.setMonth(input.target.getMonth());
+        targetEnd.setDate(input.target.getDate());
+
+        return {
+          userId: s.userId,
+          start: targetStart,
+          end: targetEnd,
+          createdBy: ctx.userId,
+        };
+      });
       const result = await ctx.db.shift.createMany({
         data: shiftsToAdd,
       });

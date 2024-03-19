@@ -1,6 +1,6 @@
 import { Controller, useForm } from "react-hook-form";
 import dayjs, { type Dayjs } from "dayjs";
-import { TimePicker, Calendar } from "antd";
+import { TimePicker, Calendar, DatePicker } from "antd";
 import { type RouterOutputs, api } from "~/utils/api";
 
 import { PageLayout } from "~/components/layout";
@@ -87,6 +87,7 @@ const ShiftForm = ({
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)}>
       <h2 className="mb-2 text-xl font-bold">{day.format("dddd, MMMM D")}</h2>
+      <div className="divider" />
       <h3 className="font-md text-lg">{!!value ? "Edit" : "New"} Shift</h3>
       <label className="form-control w-full max-w-xs">
         <div className="label">
@@ -249,6 +250,53 @@ const CellView = ({
   );
 };
 
+const CloneSection = ({
+  srcDate,
+  onSuccess,
+}: {
+  srcDate: Dayjs;
+  onSuccess: () => Promise<void>;
+}) => {
+  const [val, setVal] = useState<Dayjs>();
+  const { mutate, isLoading } = api.schedules.cloneDay.useMutation({
+    onError: handleApiError,
+    onSuccess: async () => {
+      await onSuccess();
+      toast.success("Shifts successfully duplicated!");
+      setVal(undefined);
+    },
+  });
+  const handleClick = () => {
+    if (!val) {
+      return;
+    }
+    mutate({ source: srcDate.toDate(), target: val.toDate() });
+  };
+
+  return (
+    <>
+      <h3 className="font-md mb-2 text-lg">Duplicate Shifts</h3>
+      <div className="label">Target Date</div>
+      <div className="flex flex-row gap-2">
+        <DatePicker
+          value={val}
+          onChange={setVal}
+          placeholder="Target Date"
+          className="input input-bordered w-full"
+          disabled={isLoading}
+        />
+        <button
+          disabled={isLoading || !val}
+          onClick={handleClick}
+          className="btn btn-outline btn-secondary"
+        >
+          Duplicate
+        </button>
+      </div>
+    </>
+  );
+};
+
 const DesktopView = () => {
   const [showModal, setShowModal] = useState(false);
   const [calVal, setCalVal] = useState(() => dayjs());
@@ -322,6 +370,7 @@ const DesktopView = () => {
       {showModal && (
         <ShiftModal onClose={() => setShowModal(false)}>
           <ShiftForm day={calVal} onSuccess={handleFormSuccess} />
+          <div className="divider" />
           <div className="items-bottom flex flex-row gap-2">
             <h3 className="font-md mb-2 text-lg">Scheduled</h3>
             <div
@@ -368,6 +417,8 @@ const DesktopView = () => {
               <span>No shifts scheduled for today</span>
             </div>
           )}
+          <div className="divider" />
+          <CloneSection srcDate={calVal} onSuccess={handleFormSuccess} />
         </ShiftModal>
       )}
       {singleModalData && (

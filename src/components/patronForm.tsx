@@ -80,29 +80,7 @@ const PatronForm = (props: Props) => {
           </label>
         )}
       />
-      {/* <label className="text-xs font-medium">Birth Date</label> */}
-      {/* <Controller
-        control={control}
-        name="birthDate"
-        rules={{ required: false }}
-        render={({ field }) => (
-          <DatePicker
-            disabled={props.disabled}
-            className="grow rounded-lg bg-slate-50 p-2 shadow-lg outline-none disabled:bg-slate-200"
-            placeholderText="Birthday (Optional)"
-            selected={field.value}
-            onChange={(date: Date) => field.onChange(date)}
-          />
-        )}
-      /> */}
       <div className="flex justify-end gap-2">
-        <button
-          className="btn btn-primary"
-          type="submit"
-          disabled={!formState.isValid}
-        >
-          {props.submitText ?? "Submit"}
-        </button>
         <Button
           onClick={() => {
             reset();
@@ -111,6 +89,13 @@ const PatronForm = (props: Props) => {
         >
           Cancel
         </Button>
+        <button
+          className="btn btn-primary"
+          type="submit"
+          disabled={!formState.isValid}
+        >
+          {props.submitText ?? "Submit"}
+        </button>
       </div>
     </form>
   );
