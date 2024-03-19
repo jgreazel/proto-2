@@ -310,7 +310,7 @@ const Clock = () => {
     api.schedules.clockInOrOut.useMutation({
       onError: handleApiError,
       onSuccess: async () => {
-        toast.success("Clocked in!");
+        toast.success("Successful timecard action!");
         await refetch();
       },
     });
