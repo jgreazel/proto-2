@@ -189,7 +189,11 @@ const FullNav = () => {
       <div className="navbar-end">
         {!!isSignedIn && (
           <div className="dropdown dropdown-end z-50">
-            <div tabIndex={0} role="button" className="btn btn-ghost">
+            <div
+              tabIndex={0}
+              role="button"
+              className="btn btn-ghost capitalize"
+            >
               Hi, {user.username}
             </div>
             <ul

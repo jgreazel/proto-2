@@ -46,8 +46,9 @@ const TimecardReportTable = (props: {
                   {x.shifts.map((s) => (
                     <tr key={s.id}>
                       <td>
-                        {dayjs(s.start).format("dddd, DD HH:mm")} -
-                        {dayjs(s.end).format("HH:mm")}
+                        {`${dayjs(s.start).format("dddd, DD HH:mm")} - ${dayjs(
+                          s.end,
+                        ).format("HH:mm")}`}
                       </td>
                       <td>{dayjs(s.clockIn).format("HH:mm")}</td>
                       <td>{dayjs(s.clockOut).format("HH:mm")}</td>
