@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DatePicker } from "antd";
-import type { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
+import duration from "dayjs/plugin/duration";
 import { useForm, Controller } from "react-hook-form";
 
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
@@ -11,6 +12,61 @@ import { LoadingSpinner } from "~/components/loading";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 
 const { RangePicker } = DatePicker;
+dayjs.extend(duration);
+
+const TimecardReportTable = (props: {
+  data: RouterOutputs["reports"]["getNew"]["timecardReport"];
+}) => {
+  return (
+    <div className="card card-compact bg-base-200">
+      <div className="card-body">
+        <h2 className="card-title">Timecard Report</h2>
+
+        {props.data?.shifts.map((x) => (
+          <div key={x.user.id} className="card card-compact bg-base-100">
+            <div className="card-body">
+              <h3 className="card-title flex flex-row justify-between capitalize">
+                <span>{x.user.username}</span>
+                <span>
+                  {dayjs
+                    .duration(x.totalWorkedMs)
+                    .format("H [Hours], m [Minutes]")}
+                </span>
+              </h3>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Shift</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {x.shifts.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        {dayjs(s.start).format("dddd, DD HH:mm")} -
+                        {dayjs(s.end).format("HH:mm")}
+                      </td>
+                      <td>{dayjs(s.clockIn).format("HH:mm")}</td>
+                      <td>{dayjs(s.clockOut).format("HH:mm")}</td>
+                      <td>
+                        {dayjs
+                          .duration(dayjs(s.clockOut).diff(dayjs(s.clockIn)))
+                          .format("HH [Hours], mm [Minutes]")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const PurchaseReportTable = (props: {
   data: RouterOutputs["reports"]["getNew"]["purchaseReport"];
@@ -151,6 +207,9 @@ type ReportData = {
   // a = admission report
   a: boolean;
   admissionDataDateRange: RangeValueType<Dayjs>;
+  // timecard report
+  includeTimecard: boolean;
+  timecardDateRange: RangeValueType<Dayjs>;
 };
 
 export default function ReportsPage() {
@@ -171,10 +230,16 @@ export default function ReportsPage() {
         formVals.admissionDataDateRange?.[1]?.endOf("day").toDate() ??
         new Date(),
     };
+  const timecardReport: RouterInputs["reports"]["getNew"]["timecardReport"] = {
+    startDate: formVals.timecardDateRange?.[0]?.toDate() ?? new Date(),
+    endDate: formVals.timecardDateRange?.[1]?.toDate() ?? new Date(),
+  };
+
   const { data, refetch } = api.reports.getNew.useQuery(
     {
       purchaseReport: formVals.includePatronData ? purchaseReport : null,
       admissionReport: formVals.a ? admissionReport : null,
+      timecardReport: formVals.includeTimecard ? timecardReport : null,
     },
     {
       enabled: false,
@@ -248,7 +313,6 @@ export default function ReportsPage() {
 
               <div className="collapse collapse-arrow bg-base-100">
                 <input {...register("a")} type="checkbox" />
-
                 <div className="collapse-title card-title">
                   Admission Report
                 </div>
@@ -271,6 +335,30 @@ export default function ReportsPage() {
                   />
                 </div>
               </div>
+
+              <div className="collapse collapse-arrow bg-base-100">
+                <input {...register("includeTimecard")} type="checkbox" />
+                <div className="collapse-title card-title">Timecard Report</div>
+                <div className="collapse-content">
+                  <Controller
+                    control={control}
+                    name="timecardDateRange"
+                    render={({ field }) => (
+                      <label className="form-control w-full max-w-xs">
+                        <div className="label">
+                          <span className="label-text">Date Range</span>
+                        </div>
+                        <RangePicker
+                          value={field.value}
+                          className="input input-bordered w-full max-w-xs"
+                          onChange={(dates) => field.onChange(dates)}
+                        />
+                      </label>
+                    )}
+                  />
+                </div>
+              </div>
+
               <div className="card-actions justify-end">
                 <button
                   className="btn btn-primary"
@@ -293,6 +381,9 @@ export default function ReportsPage() {
         )}
         {showReport && data?.admissionReport && (
           <AdmissionReportTable data={data.admissionReport} />
+        )}
+        {showReport && data?.timecardReport && (
+          <TimecardReportTable data={data.timecardReport} />
         )}
       </div>
     </PageLayout>

@@ -1,6 +1,8 @@
 import { clerkClient } from "@clerk/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { Shift } from "@prisma/client";
+import dayjs from "dayjs";
 
 import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
@@ -29,6 +31,13 @@ export const reportsRouter = createTRPCRouter({
           .optional()
           .nullable(),
         admissionReport: z
+          .object({
+            startDate: z.date(),
+            endDate: z.date(),
+          })
+          .optional()
+          .nullable(),
+        timecardReport: z
           .object({
             startDate: z.date(),
             endDate: z.date(),
@@ -105,6 +114,52 @@ export const reportsRouter = createTRPCRouter({
           users.find((u) => u.id === e.createdBy)?.username ?? e.createdBy;
       });
 
+      // Timecard Report
+      const shifts = await ctx.db.shift.findMany({
+        where: {
+          start: {
+            gte: input.timecardReport?.startDate,
+          },
+          end: {
+            lte: input.timecardReport?.endDate,
+          },
+          clockIn: { not: null },
+          clockOut: { not: null },
+        },
+        orderBy: {
+          start: "asc",
+        },
+      });
+      type Timecard = {
+        user: { id: string; username: string };
+        totalWorkedMs: number;
+        shifts: Shift[];
+      }[];
+      const tcUsers = await clerkClient.users
+        .getUserList({ userId: shifts.map((s) => s.userId) })
+        .then((res) => res.filter(filterUserForClient));
+      const shiftsByUser: Timecard = shifts.reduce((acc, shift) => {
+        const existingUser = acc.find((user) => user.user.id === shift.userId);
+        const timeDiff = dayjs(shift.clockOut).diff(dayjs(shift.clockIn));
+
+        if (existingUser) {
+          existingUser.shifts.push(shift);
+          existingUser.totalWorkedMs += timeDiff;
+        } else {
+          acc.push({
+            user: {
+              id: shift.userId,
+              username:
+                tcUsers.find((u) => u.id === shift.userId)?.username ??
+                "Not Found",
+            },
+            shifts: [shift],
+            totalWorkedMs: timeDiff,
+          });
+        }
+        return acc;
+      }, [] as Timecard);
+
       return {
         purchaseReport: !!input.purchaseReport
           ? {
@@ -125,6 +180,9 @@ export const reportsRouter = createTRPCRouter({
               endDate: input.admissionReport?.endDate,
               admissionEvents: adEvents,
             }
+          : null,
+        timecardReport: !!input.timecardReport
+          ? { shifts: shiftsByUser }
           : null,
       };
     }),
