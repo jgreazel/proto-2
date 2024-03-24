@@ -1,0 +1,57 @@
+import { clerkClient } from "@clerk/nextjs";
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+
+import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
+
+import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
+import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
+import { filterUserForClient } from "../helpers/filterUsersForClient";
+import {
+  S3Client,
+  ListObjectsCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+const Bucket = process.env.AWS_BUCKET;
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+// Create a new ratelimiter, that allows 3 req per 1 min
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, "1 m"),
+  analytics: true,
+});
+
+export const documentsRouter = createTRPCRouter({
+  getAll: privateProcedure.query(async ({ ctx }) => {
+    const { success } = await ratelimit.limit(ctx.userId);
+    if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+    const response = await s3.send(new ListObjectsCommand({ Bucket }));
+    return response.Contents ?? [];
+  }),
+
+  getSignedUrl: privateProcedure
+    .input(
+      z.object({
+        key: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { success } = await ratelimit.limit(ctx.userId);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const cmd = new GetObjectCommand({ Bucket, Key: input.key });
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+      const src = await getSignedUrl(s3, cmd, { expiresIn: 3600 });
+      return src as string;
+    }),
+});
