@@ -198,30 +198,34 @@ export default function FilesPage() {
 
   return (
     <PageLayout>
-      <div className="flex flex-col gap-2 p-2">
-        <div className="rounded-lg p-4 shadow-lg">
-          <Dropzone />
-        </div>
-        <table className="table table-zebra mt-2 rounded-lg shadow-lg">
-          <thead>
-            <tr>
-              <th>File Name</th>
-              <th>Last Modified</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.map((x) => (
-              <tr key={x.ETag}>
-                <td>{x.Key}</td>
-                <td>{dayjs(x.LastModified).format("MM/DD/YYYY HH:mm")}</td>
-                <td>
-                  <FileColumn imgKey={x.Key ?? ""} />
-                </td>
+      <div className="card card-compact flex flex-col gap-2 bg-base-200 p-2">
+        <div className="card-body">
+          <div className="card card-compact rounded-lg bg-base-100 shadow-lg">
+            <div className="card-body">
+              <Dropzone />
+            </div>
+          </div>
+          <table className="table table-zebra mt-2 rounded-lg bg-base-100 shadow-lg">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Last Modified</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data?.map((x) => (
+                <tr key={x.ETag}>
+                  <td>{x.Key}</td>
+                  <td>{dayjs(x.LastModified).format("MM/DD/YYYY HH:mm")}</td>
+                  <td>
+                    <FileColumn imgKey={x.Key ?? ""} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </PageLayout>
   );

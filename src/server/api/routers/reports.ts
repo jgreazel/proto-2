@@ -115,13 +115,21 @@ export const reportsRouter = createTRPCRouter({
       });
 
       // Timecard Report
+      const [start, end] = [
+        dayjs(input.timecardReport?.startDate)
+          .startOf("day")
+          .toDate(),
+        dayjs(input.timecardReport?.endDate)
+          .endOf("day")
+          .toDate(),
+      ];
       const shifts = await ctx.db.shift.findMany({
         where: {
           start: {
-            gte: input.timecardReport?.startDate,
+            gte: start,
           },
           end: {
-            lte: input.timecardReport?.endDate,
+            lte: end,
           },
           clockIn: { not: null },
           clockOut: { not: null },

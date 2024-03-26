@@ -4,6 +4,7 @@ import axios from "axios";
 
 import { api } from "../utils/api";
 
+// todo make generic
 export const Dropzone = () => {
   const [presignedUrl, setPresignedUrl] = useState<string | null>(null);
   const { mutateAsync: fetchPresignedUrls } =
@@ -66,15 +67,14 @@ export const Dropzone = () => {
       <p className="mb-3">Upload files and documents for storage.</p>
       <div {...getRootProps()} className="dropzone-container">
         <input {...getInputProps()} />
-        {isDragActive ? (
-          <div className="flex h-full items-center justify-center font-semibold">
-            <p>Drop the file here...</p>
-          </div>
-        ) : (
-          <div className="flex h-full items-center justify-center font-semibold">
-            <p>Drag n drop file here, or click to select files</p>
-          </div>
-        )}
+
+        <div className="flex h-full items-center justify-center rounded-lg border-2 border-dashed border-base-200 p-4 font-semibold">
+          <p>
+            {isDragActive
+              ? "Drop the file here..."
+              : "Drag n drop file here, or click to select files"}
+          </p>
+        </div>
       </div>
       <aside className="my-2">
         <h4 className="font-semibold text-zinc-400">Files pending upload</h4>

@@ -132,7 +132,7 @@ const PurchaseReportTable = (props: {
                       {dbUnitToDollars(t.amountSold * t.item.sellingPrice)}
                     </td>
                     <td>{t.createdAt.toLocaleString()}</td>
-                    <td>{t.createdBy}</td>
+                    <td className="capitalize">{t.createdBy}</td>
                     <td>
                       {t.item.isAdmissionItem ? (
                         <div className="badge badge-secondary badge-outline">
@@ -187,7 +187,7 @@ const AdmissionReportTable = (props: {
                   <tr key={e.id}>
                     <td>{`${e.patron.firstName} ${e.patron.lastName}`}</td>
                     <td>{e.createdAt.toLocaleString()}</td>
-                    <td>{e.createdBy}</td>
+                    <td className="capitalize">{e.createdBy}</td>
                   </tr>
                 ))}
               </tbody>
