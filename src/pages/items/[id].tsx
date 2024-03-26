@@ -172,6 +172,34 @@ const ConcessionItemForm = (props: {
     if (data) reset(data);
   }, [data, reset]);
 
+  const quantityInput = (
+    <input
+      id="init-stock"
+      type="number"
+      placeholder="Ex: 0"
+      className="input input-bordered w-full grow"
+      {...register("inStock", {
+        required: true,
+        disabled: isSubmitting || isLoading || !!data,
+        valueAsNumber: true,
+        min: 1,
+      })}
+    />
+  );
+
+  const quantityRow = !data ? (
+    quantityInput
+  ) : (
+    <div className="flex flex-row gap-2">
+      <div className="tooltip w-full" data-tip="Cannot modify stock from here.">
+        {quantityInput}
+      </div>
+      <Link href="/items/restock" className="btn btn-ghost">
+        Restock
+      </Link>
+    </div>
+  );
+
   return (
     <form
       className="flex grow flex-col gap-2"
@@ -216,19 +244,10 @@ const ConcessionItemForm = (props: {
           min: 1,
         })}
       />
-      <label className="text-xs font-medium">Quantity in Stock</label>
-      <input
-        id="init-stock"
-        type="number"
-        placeholder="Ex: 0"
-        className="input input-bordered grow"
-        {...register("inStock", {
-          required: true,
-          disabled: isSubmitting || isLoading,
-          valueAsNumber: true,
-          min: 1,
-        })}
-      />
+      <label className="text-xs font-medium">
+        {!data && "Initial "}Quantity in Stock
+      </label>
+      {quantityRow}
       {!isSubmitting && (
         <Button
           primary
