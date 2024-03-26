@@ -1,35 +1,46 @@
-import { type _Object } from "@aws-sdk/client-s3";
 import dayjs from "dayjs";
 import { useState } from "react";
-import { Document, Page } from "react-pdf";
-import Image from "next/image";
 import { PageLayout } from "~/components/layout";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import { api } from "~/utils/api";
 
 const FileView = (props: { imgKey: string; onClose: () => void }) => {
-  console.log("view", props.imgKey);
   const { data, isLoading } = api.documents.getSignedUrl.useQuery({
     key: props.imgKey,
   });
 
-  //   <Image width={500} height={500} alt="File storage" src={data} />
   return (
     <dialog className="modal modal-open">
-      <div className="modal-box">
+      <form method="dialog" className="modal-backdrop">
+        <button onClick={props.onClose}>close</button>
+      </form>
+      <div className="modal-box h-full w-full">
+        <form method="dialog">
+          <button
+            onClick={props.onClose}
+            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18 18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </form>
         {isLoading || !data ? (
           <LoadingSpinner />
         ) : (
-          <Document file={data}>
-            <Page />
-          </Document>
+          <embed className="h-full w-full" type="application/pdf" src={data} />
         )}
-
-        <div className="flex flex-row justify-end">
-          <button className="btn" onClick={props.onClose}>
-            Close
-          </button>
-        </div>
       </div>
     </dialog>
   );
@@ -37,7 +48,6 @@ const FileView = (props: { imgKey: string; onClose: () => void }) => {
 
 const FileButton = (props: { imgKey: string }) => {
   const [show, setShow] = useState(false);
-  console.log("button", props.imgKey);
 
   return (
     <>

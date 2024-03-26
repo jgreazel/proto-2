@@ -6,7 +6,6 @@ import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
 import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
 import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
-import { filterUserForClient } from "../helpers/filterUsersForClient";
 import {
   S3Client,
   ListObjectsCommand,
@@ -52,6 +51,6 @@ export const documentsRouter = createTRPCRouter({
       const cmd = new GetObjectCommand({ Bucket, Key: input.key });
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const src = await getSignedUrl(s3, cmd, { expiresIn: 3600 });
-      return src as string;
+      return src;
     }),
 });
