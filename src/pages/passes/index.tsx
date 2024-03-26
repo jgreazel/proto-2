@@ -81,8 +81,10 @@ export default function PassesPage() {
                     <tbody>
                       {pass.patrons.map((patron) => (
                         <tr key={patron.passId + patron.id}>
-                          <td className="font-medium">{patron.firstName}</td>
-                          <td>{patron.lastName}</td>
+                          <td className="font-medium capitalize">
+                            {patron.firstName}
+                          </td>
+                          <td className="capitalize">{patron.lastName}</td>
                           <td>
                             {!!patron.birthDate
                               ? `${

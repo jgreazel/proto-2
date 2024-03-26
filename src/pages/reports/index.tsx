@@ -21,7 +21,6 @@ const TimecardReportTable = (props: {
     <div className="card card-compact bg-base-200">
       <div className="card-body">
         <h2 className="card-title">Timecard Report</h2>
-
         {props.data?.shifts.map((x) => (
           <div key={x.user.id} className="card card-compact bg-base-100">
             <div className="card-body">
@@ -33,6 +32,11 @@ const TimecardReportTable = (props: {
                     .format("H [Hours], m [Minutes]")}
                 </span>
               </h3>
+              <h4>
+                {dayjs(x.period[0]).format("MMMM DD, YYYY") +
+                  " - " +
+                  dayjs(x.period[1]).format("MMMM DD, YYYY")}
+              </h4>
               <table className="table">
                 <thead>
                   <tr>
@@ -46,16 +50,16 @@ const TimecardReportTable = (props: {
                   {x.shifts.map((s) => (
                     <tr key={s.id}>
                       <td>
-                        {`${dayjs(s.start).format("dddd, DD HH:mm")} - ${dayjs(
+                        {`${dayjs(s.start).format("dddd, DD h:mm A")} - ${dayjs(
                           s.end,
-                        ).format("HH:mm")}`}
+                        ).format("h:mm A")}`}
                       </td>
-                      <td>{dayjs(s.clockIn).format("HH:mm")}</td>
-                      <td>{dayjs(s.clockOut).format("HH:mm")}</td>
+                      <td>{dayjs(s.clockIn).format("h:mm A")}</td>
+                      <td>{dayjs(s.clockOut).format("h:mm A")}</td>
                       <td>
                         {dayjs
                           .duration(dayjs(s.clockOut).diff(dayjs(s.clockIn)))
-                          .format("HH [Hours], mm [Minutes]")}
+                          .format("H [Hours], m [Minutes]")}
                       </td>
                     </tr>
                   ))}
@@ -79,9 +83,9 @@ const PurchaseReportTable = (props: {
       <div className="card-body">
         <h2 className="card-title">Purchase Report</h2>
         <div>
-          {data?.startDate.toLocaleString() +
+          {dayjs(data?.startDate).format("MMMM DD, YYYY") +
             " - " +
-            data?.endDate.toLocaleString()}
+            dayjs(data?.endDate).format("MMMM DD, YYYY")}
         </div>
         <div className="card card-compact bg-base-100">
           <div className="card-body">
@@ -118,6 +122,7 @@ const PurchaseReportTable = (props: {
                   <th>Label</th>
                   <th># Sold</th>
                   <th>Total ($)</th>
+                  <th>Date</th>
                   <th>Time</th>
                   <th>Cashier</th>
                   <th>Type</th>
@@ -131,7 +136,8 @@ const PurchaseReportTable = (props: {
                     <td>
                       {dbUnitToDollars(t.amountSold * t.item.sellingPrice)}
                     </td>
-                    <td>{t.createdAt.toLocaleString()}</td>
+                    <td>{dayjs(t.createdAt).format("MM/DD/YY")}</td>
+                    <td>{dayjs(t.createdAt).format("h:mm A")}</td>
                     <td className="capitalize">{t.createdBy}</td>
                     <td>
                       {t.item.isAdmissionItem ? (
@@ -165,9 +171,9 @@ const AdmissionReportTable = (props: {
       <div className="card-body">
         <h2 className="card-title">Admission Report</h2>
         <div>
-          {data?.startDate.toLocaleString() +
+          {dayjs(data?.startDate).format("MMMM DD, YYYY") +
             " - " +
-            data?.endDate.toLocaleString()}
+            dayjs(data?.endDate).format("MMMM DD, YYYY")}
         </div>
         <div className="card card-compact bg-base-100">
           <div className="card-body">
@@ -178,6 +184,7 @@ const AdmissionReportTable = (props: {
               <thead>
                 <tr>
                   <th>Patron</th>
+                  <th>Date</th>
                   <th>Time</th>
                   <th>Cashier</th>
                 </tr>
@@ -186,7 +193,8 @@ const AdmissionReportTable = (props: {
                 {data?.admissionEvents.map((e) => (
                   <tr key={e.id}>
                     <td>{`${e.patron.firstName} ${e.patron.lastName}`}</td>
-                    <td>{e.createdAt.toLocaleString()}</td>
+                    <td>{dayjs(e.createdAt).format("MM/DD/YY")}</td>
+                    <td>{dayjs(e.createdAt).format("h:mm A")}</td>
                     <td className="capitalize">{e.createdBy}</td>
                   </tr>
                 ))}

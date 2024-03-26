@@ -140,6 +140,7 @@ export const reportsRouter = createTRPCRouter({
       });
       type Timecard = {
         user: { id: string; username: string };
+        period: [start: Date, end: Date];
         totalWorkedMs: number;
         shifts: Shift[];
       }[];
@@ -163,6 +164,7 @@ export const reportsRouter = createTRPCRouter({
             },
             shifts: [shift],
             totalWorkedMs: timeDiff,
+            period: [start, end],
           });
         }
         return acc;

@@ -217,7 +217,7 @@ export default function FilesPage() {
               {data?.map((x) => (
                 <tr key={x.ETag}>
                   <td>{x.Key}</td>
-                  <td>{dayjs(x.LastModified).format("MM/DD/YYYY HH:mm")}</td>
+                  <td>{dayjs(x.LastModified).format("MM/DD/YYYY, h:mm A")}</td>
                   <td>
                     <FileColumn imgKey={x.Key ?? ""} />
                   </td>

@@ -119,7 +119,7 @@ const ShiftForm = ({
             </div>
             <TimePicker.RangePicker
               disabled={isDisabled}
-              format="HH:mm a"
+              format="h:mm A"
               minuteStep={15}
               className="input input-bordered w-full max-w-xs"
               value={field.value}
@@ -201,16 +201,16 @@ const CellView = ({
     (acc, d) => {
       const dataIdx = acc.findIndex(
         (x) =>
-          x.start === dayjs(d.start).format("HH:mm") &&
-          x.end === dayjs(d.end).format("HH:mm"),
+          x.start === dayjs(d.start).format("h:mm") &&
+          x.end === dayjs(d.end).format("h:mm"),
       );
       if (dataIdx > -1) {
         acc[dataIdx]?.shifts.push(d);
       } else {
         acc.push({
           day: dayjs(d.start).format("MMM, D"),
-          start: dayjs(d.start).format("HH:mm"),
-          end: dayjs(d.end).format("HH:mm"),
+          start: dayjs(d.start).format("h:mm"),
+          end: dayjs(d.end).format("h:mm"),
           shifts: [d],
         });
       }
@@ -371,8 +371,8 @@ const Clock = () => {
       <div>
         <h3 className="font-bold">Time Clock</h3>
         <div className="text-xs">
-          Next shift: {dayjs(next.start).format("dddd, HH:mm a")} -{" "}
-          {dayjs(next.end).format("HH:mm a")}
+          Next shift: {dayjs(next.start).format("dddd, h:mm A")} -{" "}
+          {dayjs(next.end).format("h:mm A")}
         </div>
       </div>
       <button
