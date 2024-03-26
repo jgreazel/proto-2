@@ -10,6 +10,7 @@ import {
   ListObjectsCommand,
   GetObjectCommand,
   PutObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -58,5 +59,12 @@ export const documentsRouter = createTRPCRouter({
       });
 
       return await getSignedUrl(s3, putObjectCommand);
+    }),
+
+  deleteItem: privateProcedure
+    .input(z.object({ key: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const deleteCmd = new DeleteObjectCommand({ Bucket, Key: input.key });
+      return await ctx.s3.send(deleteCmd);
     }),
 });
