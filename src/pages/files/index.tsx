@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { useState } from "react";
+import { Dropzone } from "~/components/dropzone";
 import { PageLayout } from "~/components/layout";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import { api } from "~/utils/api";
@@ -92,26 +93,31 @@ export default function FilesPage() {
 
   return (
     <PageLayout>
-      <table className="table table-zebra mt-2">
-        <thead>
-          <tr>
-            <th>File Name</th>
-            <th>Last Modified</th>
-            <th>View</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data?.map((x) => (
-            <tr key={x.ETag}>
-              <td>{x.Key}</td>
-              <td>{dayjs(x.LastModified).format("MM/DD/YYYY HH:mm")}</td>
-              <td>
-                <FileButton imgKey={x.Key ?? ""} />
-              </td>
+      <div className="flex flex-col gap-2 p-2">
+        <div className="rounded-lg p-4 shadow-lg">
+          <Dropzone />
+        </div>
+        <table className="table table-zebra mt-2 rounded-lg shadow-lg">
+          <thead>
+            <tr>
+              <th>File Name</th>
+              <th>Last Modified</th>
+              <th>View</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data?.map((x) => (
+              <tr key={x.ETag}>
+                <td>{x.Key}</td>
+                <td>{dayjs(x.LastModified).format("MM/DD/YYYY HH:mm")}</td>
+                <td>
+                  <FileButton imgKey={x.Key ?? ""} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </PageLayout>
   );
 }

@@ -13,6 +13,7 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { db } from "~/server/db";
+import { s3 } from "../aws/s3";
 
 /**
  * 1. CONTEXT
@@ -36,6 +37,7 @@ export const createTRPCContext = (opts: CreateNextContextOptions) => {
   return {
     db,
     userId,
+    s3,
   };
 };
 
