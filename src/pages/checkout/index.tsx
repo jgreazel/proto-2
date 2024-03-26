@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "~/components/button";
@@ -179,9 +180,33 @@ export default function CheckoutPage() {
       if (r.action) {
         toast(
           (t) => (
-            <span className="flex flex-row justify-between">
-              Action Required: {r.action}
-              <Button onClick={() => toast.dismiss(t.id)}>X</Button>
+            <span className="flex flex-row items-center justify-between gap-2">
+              <button
+                className="btn btn-circle btn-sm"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-6 w-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18 18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+              Action Required: {r.action?.message}
+              <Link
+                className="btn btn-square btn-primary btn-sm"
+                href={r.action?.href ?? ""}
+              >
+                Go
+              </Link>
             </span>
           ),
           {
