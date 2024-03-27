@@ -30,11 +30,11 @@ const TimecardReportTable = (props: {
                   .format("H [Hours], m [Minutes]")}
               </span>
             </h3>
-            <h4>
+            <span className="text-sm">
               {dayjs(x.period[0]).format("MMMM DD, YYYY") +
                 " - " +
                 dayjs(x.period[1]).format("MMMM DD, YYYY")}
-            </h4>
+            </span>
             <table className="table">
               <thead>
                 <tr>
