@@ -2,12 +2,14 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { api } from "~/utils/api";
 import { Button } from "~/components/button";
 import { useParams } from "next/navigation";
 import handleApiError from "~/helpers/handleApiError";
+import { InputNumber } from "antd";
+import moneyMask from "~/helpers/moneyMask";
 
 type AdmissionFormData = {
   label: string;
@@ -26,14 +28,21 @@ const AdmissionItemForm = (props: {
 
   const [showPatronLimit, setShowPatronLimit] = useState(false);
 
-  const { register, handleSubmit, watch, formState, reset, getValues } =
-    useForm<AdmissionFormData>({
-      defaultValues: {
-        label: "",
-        sellingPrice: 0,
-        passType: "day",
-      },
-    });
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState,
+    reset,
+    getValues,
+    control,
+  } = useForm<AdmissionFormData>({
+    defaultValues: {
+      label: "",
+      sellingPrice: 0,
+      passType: "day",
+    },
+  });
   const watchPassType = watch("passType");
 
   useEffect(() => {
@@ -64,17 +73,21 @@ const AdmissionItemForm = (props: {
         })}
       />
       <label className="text-xs font-medium">Selling Price</label>
-      <input
-        id="sell-price"
-        type="number"
-        placeholder="Ex: 400 ($4.00)"
-        className="input input-bordered grow"
-        {...register("sellingPrice", {
-          required: true,
-          disabled: isSubmitting || isLoading,
-          valueAsNumber: true,
-        })}
+      <Controller
+        control={control}
+        name="sellingPrice"
+        render={({ field }) => (
+          <InputNumber
+            {...moneyMask}
+            placeholder="$0.00"
+            disabled={isSubmitting || isLoading}
+            min={1}
+            value={field.value}
+            onChange={(v) => field.onChange(v)}
+          />
+        )}
       />
+
       <div className="mb-4 flex items-center">
         <input
           id="passTypeDayPassOption"
@@ -157,7 +170,7 @@ const ConcessionItemForm = (props: {
 }) => {
   const { onSubmit, isSubmitting, isLoading, data } = props;
 
-  const { register, handleSubmit, watch, formState, reset } =
+  const { register, handleSubmit, watch, formState, reset, control } =
     useForm<ConcessionFormData>({
       defaultValues: {
         label: "",
@@ -219,30 +232,34 @@ const ConcessionItemForm = (props: {
         })}
       />
       <label className="text-xs font-medium">Purchase Price</label>
-      <input
-        id="purchase-price"
-        type="number"
-        placeholder="Ex: 50 ($0.50)"
-        className="input input-bordered grow"
-        {...register("purchasePrice", {
-          required: true,
-          disabled: isSubmitting || isLoading,
-          valueAsNumber: true,
-          min: 1,
-        })}
+      <Controller
+        control={control}
+        name="purchasePrice"
+        render={({ field }) => (
+          <InputNumber
+            {...moneyMask}
+            placeholder="$0.00"
+            min={1}
+            disabled={isSubmitting || isLoading}
+            value={field.value}
+            onChange={(v) => field.onChange(v)}
+          />
+        )}
       />
       <label className="text-xs font-medium">Selling Price</label>
-      <input
-        id="sell-price"
-        type="number"
-        placeholder="Ex: 150 ($1.50)"
-        className="input input-bordered grow"
-        {...register("sellingPrice", {
-          required: true,
-          disabled: isSubmitting || isLoading,
-          valueAsNumber: true,
-          min: 1,
-        })}
+      <Controller
+        control={control}
+        name="sellingPrice"
+        render={({ field }) => (
+          <InputNumber
+            {...moneyMask}
+            placeholder="$0.00"
+            disabled={isSubmitting || isLoading}
+            min={1}
+            value={field.value}
+            onChange={(v) => field.onChange(v)}
+          />
+        )}
       />
       <label className="text-xs font-medium">
         {!data && "Initial "}Quantity in Stock
