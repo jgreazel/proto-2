@@ -81,7 +81,7 @@ const AdmissionItemForm = (props: {
             {...moneyMask}
             placeholder="$0.00"
             disabled={isSubmitting || isLoading}
-            min={1}
+            min={0}
             value={field.value}
             onChange={(v) => field.onChange(v)}
           />
@@ -239,7 +239,7 @@ const ConcessionItemForm = (props: {
           <InputNumber
             {...moneyMask}
             placeholder="$0.00"
-            min={1}
+            min={0}
             disabled={isSubmitting || isLoading}
             value={field.value}
             onChange={(v) => field.onChange(v)}
@@ -255,7 +255,7 @@ const ConcessionItemForm = (props: {
             {...moneyMask}
             placeholder="$0.00"
             disabled={isSubmitting || isLoading}
-            min={1}
+            min={0}
             value={field.value}
             onChange={(v) => field.onChange(v)}
           />
