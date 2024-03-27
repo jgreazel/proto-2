@@ -15,7 +15,7 @@ export default function PassesPage() {
       {isLoading ? (
         <LoadingPage />
       ) : (
-        <div className="flex h-full flex-col gap-3">
+        <div className="flex h-full flex-col gap-3 p-4">
           <div className="flex w-full flex-row items-center justify-between gap-2 p-2">
             <label
               htmlFor="pass-filter"
@@ -42,34 +42,35 @@ export default function PassesPage() {
                 />
               </svg>
             </label>
-            <Link href="passes/0" className="btn">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
-              Add Pass
-            </Link>
+            <div className="tooltip tooltip-bottom" data-tip="New Pass">
+              <Link href="passes/0" className="btn btn-circle btn-ghost">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-6 w-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
+                  />
+                </svg>
+              </Link>
+            </div>
           </div>
           {data
             ?.filter((d) => filterPasses(d, filter))
             .map((pass) => (
               <div
-                className="card card-compact bg-base-200 shadow-xl"
+                className="card card-compact bg-base-100 shadow-xl"
                 key={pass.id}
               >
                 <div className="card-body">
                   <h2 className="card-title"> {pass.label}</h2>
-                  <table className="table table-sm bg-base-100">
+                  <table className="table table-sm">
                     <thead>
                       <tr>
                         <th>First Name</th>
@@ -96,7 +97,7 @@ export default function PassesPage() {
                           <td>
                             <div className="tooltip" data-tip="Edit Patron">
                               <Link
-                                className="btn btn-square btn-outline btn-secondary btn-sm"
+                                className="btn btn-circle btn-ghost btn-sm"
                                 href={`passes/patrons/${patron.id}`}
                               >
                                 <svg
@@ -121,10 +122,7 @@ export default function PassesPage() {
                     </tbody>
                   </table>
                   <div className="card-actions justify-end">
-                    <Link
-                      className="btn btn-outline btn-primary bg-base-100"
-                      href={`passes/${pass.id}`}
-                    >
+                    <Link className="btn btn-ghost" href={`passes/${pass.id}`}>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
