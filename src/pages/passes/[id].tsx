@@ -10,6 +10,7 @@ import { type RouterOutputs, api } from "~/utils/api";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import handleApiError from "~/helpers/handleApiError";
 import PatronForm, { type PatronFormData } from "~/components/patronForm";
+import { PageLayout } from "~/components/layout";
 
 const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
   const [showRemove, setShowRemove] = useState(true);
@@ -360,76 +361,80 @@ export default function SinglePassPage() {
   const isMutating = isCreating || isUpdating;
 
   return (
-    <dialog id="single-item-modal" className="modal modal-open">
-      <form method="dialog" className="modal-backdrop">
-        <Link href="/passes">close</Link>
-      </form>
-      <div className="modal-box">
-        <form method="dialog">
-          <Link
-            href="/passes"
-            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
-              />
-            </svg>
-          </Link>
+    <PageLayout>
+      <dialog id="single-item-modal" className="modal modal-open">
+        <form method="dialog" className="modal-backdrop">
+          <Link href="/passes">close</Link>
         </form>
-        <h2 className="font-semibold underline">Patron Details</h2>
-        {isReallyLoading ? (
-          <LoadingPage />
-        ) : (
-          <>
-            <PatronFormSection
-              value={patrons}
-              onChange={setPatrons}
-              isLoading={isMutating}
-              isEditing={isEditing}
-              passId={id()}
-            />
-            <h2 className="font-semibold underline">Pass Details</h2>
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="flex flex-col gap-3"
+        <div className="modal-box">
+          <form method="dialog">
+            <Link
+              href="/passes"
+              className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
             >
-              <label className="text-xs font-medium">Label / Family Name</label>
-              <input
-                id="label"
-                placeholder="Ex: Johnson, Anderson, etc..."
-                className="input input-bordered grow"
-                {...register("label", {
-                  required: true,
-                  disabled: isMutating,
-                })}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </Link>
+          </form>
+          <h2 className="font-semibold underline">Patron Details</h2>
+          {isReallyLoading ? (
+            <LoadingPage />
+          ) : (
+            <>
+              <PatronFormSection
+                value={patrons}
+                onChange={setPatrons}
+                isLoading={isMutating}
+                isEditing={isEditing}
+                passId={id()}
               />
-              {isMutating ? (
-                <div className="flex justify-center">
-                  <LoadingSpinner />
-                </div>
-              ) : (
-                <button
-                  className="btn btn-primary"
-                  disabled={!formState.isValid || !formState.isDirty}
-                  type="submit"
-                >
-                  {isEditing ? "Update" : "Create"}
-                </button>
-              )}
-            </form>
-          </>
-        )}
-      </div>
-    </dialog>
+              <h2 className="font-semibold underline">Pass Details</h2>
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col gap-3"
+              >
+                <label className="text-xs font-medium">
+                  Label / Family Name
+                </label>
+                <input
+                  id="label"
+                  placeholder="Ex: Johnson, Anderson, etc..."
+                  className="input input-bordered grow"
+                  {...register("label", {
+                    required: true,
+                    disabled: isMutating,
+                  })}
+                />
+                {isMutating ? (
+                  <div className="flex justify-center">
+                    <LoadingSpinner />
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    disabled={!formState.isValid || !formState.isDirty}
+                    type="submit"
+                  >
+                    {isEditing ? "Update" : "Create"}
+                  </button>
+                )}
+              </form>
+            </>
+          )}
+        </div>
+      </dialog>
+    </PageLayout>
   );
 }
