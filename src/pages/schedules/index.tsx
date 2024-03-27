@@ -228,23 +228,29 @@ const CellView = ({
     <ul>
       {dataByHours.map((d) => (
         <li key={d.day}>
-          <div className="badge badge-secondary badge-sm">
+          <div className="badge badge-outline badge-sm">
             {d.start + " - " + d.end}
           </div>
           <div>
-            {d.shifts.map((s) => (
-              <div
-                className={`capitalize ${onClick && hoverClasses}`}
-                onClick={(e) => {
-                  if (!onClick) return;
-                  e.stopPropagation();
-                  onClick(s);
-                }}
-                key={s.id}
-              >
-                {s.username}
-              </div>
-            ))}
+            {d.shifts.map((s) =>
+              !!onClick ? (
+                <button
+                  key={s.id}
+                  className="btn btn-ghost btn-sm btn-wide capitalize"
+                  onClick={(e) => {
+                    if (!onClick) return;
+                    e.stopPropagation();
+                    onClick(s);
+                  }}
+                >
+                  {s.username}
+                </button>
+              ) : (
+                <div key={s.id} className="capitalize">
+                  {s.username}
+                </div>
+              ),
+            )}
           </div>
         </li>
       ))}
@@ -333,9 +339,11 @@ const Clock = () => {
       onError: handleApiError,
       onSuccess: async () => {
         toast.success("Successful timecard action!");
+        setConfirm(false);
         await refetch();
       },
     });
+  const [confirm, setConfirm] = useState(false);
 
   const next = data?.find((x) => {
     const clkIn = !x.clockIn && !x.clockOut && dayjs(x.end).isAfter(dayjs());
@@ -344,6 +352,10 @@ const Clock = () => {
   });
 
   const handleClick = () => {
+    setConfirm(true);
+  };
+
+  const handleConfirm = () => {
     if (!next) return;
     mutate({
       shiftId: next.id,
@@ -353,36 +365,80 @@ const Clock = () => {
   return !isLoaded || isLoading || !next ? (
     <></>
   ) : (
-    <div role="alert" className="alert bg-base-100 shadow-lg">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.5}
-        stroke="currentColor"
-        className="h-6 w-6"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-        />
-      </svg>
-      <div>
-        <h3 className="font-bold">Time Clock</h3>
-        <div className="text-xs">
-          Next shift: {dayjs(next.start).format("dddd, h:mm A")} -{" "}
-          {dayjs(next.end).format("h:mm A")}
+    <>
+      <div role="alert" className="alert bg-base-100 shadow-lg">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-6 w-6"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+          />
+        </svg>
+        <div>
+          <h3 className="font-bold">Time Clock</h3>
+          <div className="text-xs">
+            Next shift: {dayjs(next.start).format("dddd, h:mm A")} -{" "}
+            {dayjs(next.end).format("h:mm A")}
+          </div>
         </div>
+        <button
+          onClick={handleClick}
+          disabled={isClocking}
+          className={`btn btn-sm ${
+            next?.clockIn ? "btn-accent" : "btn-primary"
+          }`}
+        >
+          Clock {next?.clockIn ? "Out" : "In"}
+        </button>
       </div>
-      <button
-        onClick={handleClick}
-        disabled={isClocking}
-        className={`btn btn-sm ${next?.clockIn ? "btn-accent" : "btn-primary"}`}
-      >
-        Clock {next?.clockIn ? "Out" : "In"}
-      </button>
-    </div>
+      {confirm && (
+        <dialog id="confirm_clock" className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="flex flex-row items-center gap-2 font-semibold">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
+              </svg>
+              Clock {next?.clockIn ? "Out" : "In"}
+            </h3>
+            <p className="py-4">Clock Time: {dayjs().format("hh:mm:ss A")}</p>
+            <div className="modal-action">
+              <button
+                onClick={() => setConfirm(false)}
+                className="btn btn-ghost"
+                disabled={isClocking}
+              >
+                Close
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="btn btn-primary"
+                disabled={isClocking}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
+    </>
   );
 };
 
@@ -425,37 +481,35 @@ const DesktopView = () => {
 
   return (
     <PageLayout>
-      <div className="card card-compact bg-base-200">
-        <div className="card-body">
-          <Clock />
-          {data?.length === 0 && (
-            <div role="alert" className="alert alert-info">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="h-6 w-6 shrink-0 stroke-current"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-              <span>Click a date to begin adding shifts</span>
-            </div>
-          )}
-          <Calendar
-            disabledDate={() => isLoading}
-            cellRender={cellRenderer}
-            className="rounded-lg p-2 shadow-lg"
-            value={calVal}
-            onChange={setCalVal}
-            onPanelChange={setCalVal}
-            onSelect={handleCellClick}
-          />
-        </div>
+      <div className="flex flex-col gap-2 p-2">
+        <Clock />
+        {data?.length === 0 && (
+          <div role="alert" className="alert alert-info">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              className="h-6 w-6 shrink-0 stroke-current"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span>Click a date to begin adding shifts</span>
+          </div>
+        )}
+        <Calendar
+          disabledDate={() => isLoading}
+          cellRender={cellRenderer}
+          className="rounded-xl p-2 shadow-xl"
+          value={calVal}
+          onChange={setCalVal}
+          onPanelChange={setCalVal}
+          onSelect={handleCellClick}
+        />
       </div>
       {showModal && (
         <ShiftModal onClose={() => setShowModal(false)}>

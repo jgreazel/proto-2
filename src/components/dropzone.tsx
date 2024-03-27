@@ -62,7 +62,7 @@ export const Dropzone = () => {
   }, [acceptedFiles, apiUtils.documents.getAll, presignedUrl]);
 
   return (
-    <section>
+    <section className="flex flex-col items-center">
       <h2 className="text-lg font-semibold">File Upload</h2>
       <p className="mb-3">Upload files and documents for storage.</p>
       <div {...getRootProps()} className="dropzone-container">
@@ -76,12 +76,14 @@ export const Dropzone = () => {
           </p>
         </div>
       </div>
-      <aside className="my-2">
-        <h4 className="font-semibold text-zinc-400">Files pending upload</h4>
+      <aside className="my-2 self-end ">
+        {files && (
+          <h4 className="font-semibold text-zinc-400">Files pending upload</h4>
+        )}
         <ul>{files}</ul>
       </aside>
       <button
-        className="btn btn-primary btn-sm"
+        className="btn btn-primary btn-sm self-end"
         onClick={() => void handleSubmit()}
         disabled={
           presignedUrl === null || acceptedFiles.length === 0 || submitDisabled

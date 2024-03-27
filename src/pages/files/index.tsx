@@ -198,35 +198,35 @@ export default function FilesPage() {
 
   return (
     <PageLayout>
-      <div className="card card-compact flex flex-col gap-2 bg-base-200 p-2">
-        <div className="card-body">
-          <div className="card card-compact rounded-lg bg-base-100 shadow-lg">
-            <div className="card-body">
-              <Dropzone />
-            </div>
+      {/* <div className="card card-compact flex flex-col gap-2 bg-base-200 p-2"> */}
+      <div className="p-2">
+        <div className="card card-compact rounded-lg bg-base-100 shadow-lg">
+          <div className="card-body">
+            <Dropzone />
           </div>
-          <table className="table table-zebra mt-2 rounded-lg bg-base-100 shadow-lg">
-            <thead>
-              <tr>
-                <th>File Name</th>
-                <th>Last Modified</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.map((x) => (
-                <tr key={x.ETag}>
-                  <td>{x.Key}</td>
-                  <td>{dayjs(x.LastModified).format("MM/DD/YYYY, h:mm A")}</td>
-                  <td>
-                    <FileColumn imgKey={x.Key ?? ""} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
+        <table className="table table-zebra mt-2 rounded-lg bg-base-100 shadow-lg">
+          <thead>
+            <tr>
+              <th>File Name</th>
+              <th>Last Modified</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data?.map((x) => (
+              <tr key={x.ETag}>
+                <td>{x.Key}</td>
+                <td>{dayjs(x.LastModified).format("MM/DD/YYYY, h:mm A")}</td>
+                <td>
+                  <FileColumn imgKey={x.Key ?? ""} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+      {/* // </div> */}
     </PageLayout>
   );
 }
