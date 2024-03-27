@@ -9,6 +9,8 @@ import { Button } from "~/components/button";
 import type { InventoryItem } from "@prisma/client";
 import handleApiError from "~/helpers/handleApiError";
 import Link from "next/link";
+import { PageLayout } from "~/components/layout";
+import { useRouter } from "next/router";
 
 const SelectionHeader = (props: {
   value: string[];
@@ -22,47 +24,33 @@ const SelectionHeader = (props: {
       {props.isLoading ? (
         <LoadingPage />
       ) : (
-        <ul className="grid w-full grid-cols-4 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+        <div className="grid w-full grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-5">
           {props.data?.map((i) => (
-            <li
-              key={i.item.id}
-              className="rounded-t-lg border-b border-gray-200"
-            >
-              <div className="flex">
-                <div className="flex items-center ps-3">
-                  <input
-                    id={i.item.id}
-                    type="checkbox"
-                    value={i.item.id}
-                    onChange={(e) =>
-                      e.target.checked
-                        ? props.setValue((prev) => [...prev, e.target.id])
-                        : props.setValue((prev) =>
-                            prev.filter((i) => i !== e.target.id),
-                          )
-                    }
-                    className="checkbox"
-                  />
+            <div key={i.item.id} className="form-control">
+              <label className="label w-fit cursor-pointer gap-2">
+                <input
+                  id={i.item.id}
+                  type="checkbox"
+                  value={i.item.id}
+                  onChange={(e) =>
+                    e.target.checked
+                      ? props.setValue((prev) => [...prev, e.target.id])
+                      : props.setValue((prev) =>
+                          prev.filter((i) => i !== e.target.id),
+                        )
+                  }
+                  className="checkbox"
+                />
+                <div className="flex flex-col">
+                  <span className="label-text font-medium">{i.item.label}</span>
+                  <span className="text-sm"> {i.item.inStock} in stock</span>
                 </div>
-                <div className="py-1">
-                  <label
-                    htmlFor={i.item.id}
-                    className="ms-2 w-full text-sm font-medium text-gray-900 dark:text-gray-300"
-                  >
-                    {i.item.label}
-                  </label>
-                  <p
-                    id="helper-checkbox-text"
-                    className="ms-2 text-xs font-normal text-gray-500 dark:text-gray-300"
-                  >
-                    {i.item.inStock} in stock
-                  </p>
-                </div>
-              </div>
-            </li>
+              </label>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
+      <div className="divider"></div>
     </>
   );
 };
@@ -76,6 +64,7 @@ const RestockForm = (props: {
   const { register, watch, handleSubmit, getValues, formState } =
     useForm<Record<string, number>>();
   const watchAll = watch();
+
   return (
     <form
       className="mt-2 flex flex-col gap-2"
@@ -93,31 +82,47 @@ const RestockForm = (props: {
         .map((i) => (
           <div
             key={i.item.id}
-            className="flex items-center justify-between rounded-lg bg-slate-50 p-2 shadow-lg"
+            className="flex flex-row items-center justify-between rounded-lg bg-base-100 p-2 shadow-xl"
           >
             <div>
-              <div className="font-semibold text-slate-800">{i.item.label}</div>
-              <div className="text-sm text-slate-500">
-                {i.item.inStock} in stock
-              </div>
+              <div className="font-semibold ">{i.item.label}</div>
+              <div className="text-sm">{i.item.inStock} in stock</div>
             </div>
             {watchAll[i.item.id] !== undefined && watchAll[i.item.id]! > 0 && (
-              <div className="text-sm font-semibold text-green-700">
-                {"=>"} {i.item.inStock! + watchAll[i.item.id]!} in stock
+              <div className="flex flex-row items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-4 w-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+                  />
+                </svg>
+                <div className="badge badge-outline">
+                  {i.item.inStock! + watchAll[i.item.id]!} in stock
+                </div>
               </div>
             )}
-            <div>
-              Amount restocking:{" "}
+            <label className="form-control">
+              <div className="label">
+                <span className="label-text">Amount restocking:</span>
+              </div>
               <input
                 id={i.item.id}
-                className="input input-bordered"
+                className="input input-sm input-bordered"
                 type="number"
                 {...register(i.item.id, {
                   required: true,
                   valueAsNumber: true,
                 })}
               />
-            </div>
+            </label>
           </div>
         ))}
       <Button
@@ -133,15 +138,17 @@ const RestockForm = (props: {
 
 export default function RestockPage() {
   const [selected, setSelected] = useState<string[]>([]);
+  const router = useRouter();
   const { data, isLoading } = api.items.getAll.useQuery({
     category: "concession",
   });
   const ctx = api.useUtils();
   const { mutate, isLoading: isUpdating } = api.items.restockItems.useMutation({
-    onSuccess: (x) => {
+    onSuccess: async (x) => {
       void ctx.items.getAll.invalidate();
       setSelected([]);
-      toast(x.message);
+      toast.success(x.message);
+      await router.push("/items");
     },
     onError: handleApiError,
   });
@@ -149,67 +156,68 @@ export default function RestockPage() {
   return (
     <>
       <Head>
-        <title>GS: Restock</title>
+        <title>Guard Shack - Restock</title>
       </Head>
-
-      <dialog id="restock-modal" className="modal modal-open">
-        <form method="dialog" className="modal-backdrop">
-          <Link href="/items">close</Link>
-        </form>
-        <div className="modal-box">
-          <form method="dialog">
-            <Link
-              href="/items"
-              className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18 18 6M6 6l12 12"
-                />
-              </svg>
-            </Link>
+      <PageLayout>
+        <dialog id="restock-modal" className="modal modal-open">
+          <form method="dialog" className="modal-backdrop">
+            <Link href="/items">close</Link>
           </form>
-          <SelectionHeader
-            data={data}
-            isLoading={isLoading || isUpdating}
-            value={selected}
-            setValue={setSelected}
-          />
-          {selected.length ? (
-            <RestockForm
-              data={data as { item: InventoryItem }[]}
-              selected={selected}
-              onSubmit={mutate}
-            />
-          ) : (
-            <div role="alert" className="alert mt-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="h-6 w-6 shrink-0 stroke-info"
+          <div className="modal-box h-full max-w-4xl">
+            <form method="dialog">
+              <Link
+                href="/items"
+                className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-              <span>Select items to restock</span>
-            </div>
-          )}
-        </div>
-      </dialog>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-6 w-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18 18 6M6 6l12 12"
+                  />
+                </svg>
+              </Link>
+            </form>
+            <SelectionHeader
+              data={data}
+              isLoading={isLoading || isUpdating}
+              value={selected}
+              setValue={setSelected}
+            />
+            {selected.length ? (
+              <RestockForm
+                data={data as { item: InventoryItem }[]}
+                selected={selected}
+                onSubmit={mutate}
+              />
+            ) : (
+              <div role="alert" className="alert">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  className="h-6 w-6 shrink-0 stroke-info"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <span>No items selected.</span>
+              </div>
+            )}
+          </div>
+        </dialog>
+      </PageLayout>
     </>
   );
 }

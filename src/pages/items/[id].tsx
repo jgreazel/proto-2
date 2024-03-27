@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import handleApiError from "~/helpers/handleApiError";
 import { InputNumber } from "antd";
 import moneyMask from "~/helpers/moneyMask";
+import { PageLayout } from "~/components/layout";
 
 type AdmissionFormData = {
   label: string;
@@ -409,43 +410,45 @@ export default function SingleItemPage() {
   return (
     <>
       <Head>
-        <title>GS: Single Item</title>
+        <title>Guard Shack - Item</title>
       </Head>
-      <dialog id="single-item-modal" className="modal modal-open">
-        <form method="dialog" className="modal-backdrop">
-          <Link href="/items">close</Link>
-        </form>
-        <div className="modal-box">
-          <form method="dialog">
-            <Link
-              href="/items"
-              className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18 18 6M6 6l12 12"
-                />
-              </svg>
-            </Link>
+      <PageLayout>
+        <dialog id="single-item-modal" className="modal modal-open">
+          <form method="dialog" className="modal-backdrop">
+            <Link href="/items">close</Link>
           </form>
-          <div className="mt-4">
-            {id === "0" ? (
-              <CreateItemWizard />
-            ) : (
-              <EditItemWizard id={id as string} />
-            )}
+          <div className="modal-box">
+            <form method="dialog">
+              <Link
+                href="/items"
+                className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-6 w-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18 18 6M6 6l12 12"
+                  />
+                </svg>
+              </Link>
+            </form>
+            <div className="mt-4">
+              {id === "0" ? (
+                <CreateItemWizard />
+              ) : (
+                <EditItemWizard id={id as string} />
+              )}
+            </div>
           </div>
-        </div>
-      </dialog>
+        </dialog>
+      </PageLayout>
     </>
   );
 }
