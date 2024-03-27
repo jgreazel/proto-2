@@ -130,7 +130,7 @@ const FileColumn = (props: { imgKey: string }) => {
       <div className="tooltip" data-tip="Delete">
         <button
           onClick={() => setShowDelete(true)}
-          className="btn btn-square btn-outline btn-accent btn-sm"
+          className="btn btn-circle btn-ghost btn-sm"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -151,7 +151,7 @@ const FileColumn = (props: { imgKey: string }) => {
       <div className="tooltip" data-tip="View">
         <button
           onClick={() => setShow(true)}
-          className="btn btn-square btn-outline btn-secondary btn-sm"
+          className="btn btn-circle btn-ghost btn-sm"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -198,7 +198,6 @@ export default function FilesPage() {
 
   return (
     <PageLayout>
-      {/* <div className="card card-compact flex flex-col gap-2 bg-base-200 p-2"> */}
       <div className="p-2">
         <div className="card card-compact rounded-lg bg-base-100 shadow-lg">
           <div className="card-body">
@@ -226,7 +225,6 @@ export default function FilesPage() {
           </tbody>
         </table>
       </div>
-      {/* // </div> */}
     </PageLayout>
   );
 }

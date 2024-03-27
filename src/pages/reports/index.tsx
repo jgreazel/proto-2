@@ -270,116 +270,113 @@ export default function ReportsPage() {
 
   return (
     <PageLayout>
-      <div className="flex flex-col gap-3 pt-2">
-        <div className="card card-compact bg-base-200">
-          <form onSubmit={handleSubmit(submit)}>
-            <div className="card-body">
-              <div className="card-title">Select Report Criteria</div>
-              <div className="collapse collapse-arrow bg-base-100">
-                <input {...register("includePatronData")} type="checkbox" />
-                <div className="collapse-title card-title">Purchase Report</div>
-                <div className="collapse-content">
-                  <div className="form-control">
-                    <label className="label cursor-pointer">
-                      <span className="text-label">Admissions</span>
-                      <input
-                        {...register("pIncludeAdmissions")}
-                        type="checkbox"
-                        className="checkbox"
-                        disabled={!formVals.includePatronData}
-                      />
-                    </label>
-                  </div>
-                  <div className="form-control">
-                    <label className="label cursor-pointer">
-                      <span className="text-label">Concessions</span>
-                      <input
-                        {...register("pIncludeConcessions")}
-                        type="checkbox"
-                        className="checkbox"
-                        disabled={!formVals.includePatronData}
-                      />
-                    </label>
-                  </div>
-                  <Controller
-                    control={control}
-                    name="patronDataDateRange"
-                    render={({ field }) => (
-                      <label className="form-control w-full max-w-xs">
-                        <div className="label">
-                          <span className="label-text">Date Range</span>
-                        </div>
-                        <RangePicker
-                          value={field.value}
-                          className="input input-bordered w-full max-w-xs"
-                          onChange={(dates) => field.onChange(dates)}
-                        />
-                      </label>
-                    )}
+      <div className="flex flex-col gap-3 p-2">
+        <form
+          onSubmit={handleSubmit(submit)}
+          className="flex flex-col gap-2 p-2"
+        >
+          <div className="card-title">Select Report Criteria:</div>
+          <div className="collapse collapse-arrow bg-base-100 shadow-lg">
+            <input {...register("includePatronData")} type="checkbox" />
+            <div className="collapse-title card-title">Purchase Report</div>
+            <div className="collapse-content">
+              <div className="form-control">
+                <label className="label cursor-pointer">
+                  <span className="text-label">Admissions</span>
+                  <input
+                    {...register("pIncludeAdmissions")}
+                    type="checkbox"
+                    className="checkbox"
+                    disabled={!formVals.includePatronData}
                   />
-                </div>
+                </label>
               </div>
-
-              <div className="collapse collapse-arrow bg-base-100">
-                <input {...register("a")} type="checkbox" />
-                <div className="collapse-title card-title">
-                  Admission Report
-                </div>
-                <div className="collapse-content">
-                  <Controller
-                    control={control}
-                    name="admissionDataDateRange"
-                    render={({ field }) => (
-                      <label className="form-control w-full max-w-xs">
-                        <div className="label">
-                          <span className="label-text">Date Range</span>
-                        </div>
-                        <RangePicker
-                          value={field.value}
-                          className="input input-bordered w-full max-w-xs"
-                          onChange={(dates) => field.onChange(dates)}
-                        />
-                      </label>
-                    )}
+              <div className="form-control">
+                <label className="label cursor-pointer">
+                  <span className="text-label">Concessions</span>
+                  <input
+                    {...register("pIncludeConcessions")}
+                    type="checkbox"
+                    className="checkbox"
+                    disabled={!formVals.includePatronData}
                   />
-                </div>
+                </label>
               </div>
-
-              <div className="collapse collapse-arrow bg-base-100">
-                <input {...register("includeTimecard")} type="checkbox" />
-                <div className="collapse-title card-title">Timecard Report</div>
-                <div className="collapse-content">
-                  <Controller
-                    control={control}
-                    name="timecardDateRange"
-                    render={({ field }) => (
-                      <label className="form-control w-full max-w-xs">
-                        <div className="label">
-                          <span className="label-text">Date Range</span>
-                        </div>
-                        <RangePicker
-                          value={field.value}
-                          className="input input-bordered w-full max-w-xs"
-                          onChange={(dates) => field.onChange(dates)}
-                        />
-                      </label>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="card-actions justify-end">
-                <button
-                  className="btn btn-primary"
-                  type="submit"
-                  disabled={!formState.isValid}
-                >
-                  Generate Report
-                </button>
-              </div>
+              <Controller
+                control={control}
+                name="patronDataDateRange"
+                render={({ field }) => (
+                  <label className="form-control w-full max-w-xs">
+                    <div className="label">
+                      <span className="label-text">Date Range</span>
+                    </div>
+                    <RangePicker
+                      value={field.value}
+                      className="input input-bordered w-full max-w-xs"
+                      onChange={(dates) => field.onChange(dates)}
+                    />
+                  </label>
+                )}
+              />
             </div>
-          </form>
-        </div>
+          </div>
+
+          <div className="collapse collapse-arrow bg-base-100 shadow-lg">
+            <input {...register("a")} type="checkbox" />
+            <div className="collapse-title card-title">Admission Report</div>
+            <div className="collapse-content">
+              <Controller
+                control={control}
+                name="admissionDataDateRange"
+                render={({ field }) => (
+                  <label className="form-control w-full max-w-xs">
+                    <div className="label">
+                      <span className="label-text">Date Range</span>
+                    </div>
+                    <RangePicker
+                      value={field.value}
+                      className="input input-bordered w-full max-w-xs"
+                      onChange={(dates) => field.onChange(dates)}
+                    />
+                  </label>
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="collapse collapse-arrow bg-base-100 shadow-lg">
+            <input {...register("includeTimecard")} type="checkbox" />
+            <div className="collapse-title card-title">Timecard Report</div>
+            <div className="collapse-content">
+              <Controller
+                control={control}
+                name="timecardDateRange"
+                render={({ field }) => (
+                  <label className="form-control w-full max-w-xs">
+                    <div className="label">
+                      <span className="label-text">Date Range</span>
+                    </div>
+                    <RangePicker
+                      value={field.value}
+                      className="input input-bordered w-full max-w-xs"
+                      onChange={(dates) => field.onChange(dates)}
+                    />
+                  </label>
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="card-actions justify-end">
+            <button
+              className="btn btn-primary"
+              type="submit"
+              disabled={!formState.isValid}
+            >
+              Generate Report
+            </button>
+          </div>
+        </form>
         {loading && (
           <div className="flex justify-center">
             <LoadingSpinner size={36} />
