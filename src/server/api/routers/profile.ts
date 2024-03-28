@@ -29,4 +29,19 @@ export const profileRouter = createTRPCRouter({
     const users = await clerkClient.users.getUserList();
     return users.filter(filterUserForClient);
   }),
+
+  leaveFeedback: privateProcedure
+    .input(z.object({ message: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const msg = await ctx.db.feedback.create({
+        data: { message: input.message, createdBy: ctx.userId },
+      });
+      if (!msg) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Feedback not recorded",
+        });
+      }
+      return msg;
+    }),
 });

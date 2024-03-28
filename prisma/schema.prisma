@@ -109,3 +109,10 @@ model Shift {
     createdBy String
     createdAt DateTime @default(now())
 }
+
+model Feedback {
+    id        String   @id @default(cuid())
+    message   String
+    createdBy String
+    createdAt DateTime @default(now())
+}

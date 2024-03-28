@@ -9,6 +9,7 @@ import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import type { RangeValueType } from "../_app";
 import { PageLayout } from "~/components/layout";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
+import NoData from "~/components/noData";
 
 const { RangePicker } = DatePicker;
 dayjs.extend(duration);
@@ -373,7 +374,7 @@ export default function ReportsPage() {
               </div>
             )}
 
-            <div className="card-actions justify-end p-2">
+            <div className="card-actions justify-end px-2">
               <button
                 className="btn btn-primary"
                 type="submit"
@@ -389,6 +390,12 @@ export default function ReportsPage() {
           {loading && (
             <div className="flex justify-center">
               <span className="loading loading-spinner loading-lg"></span>
+            </div>
+          )}
+          {!showReport && (
+            <div className="flex flex-col items-center gap-4 p-12">
+              <NoData />
+              <div className="font-medium">Nothing to Show</div>
             </div>
           )}
           {showReport && data?.purchaseReport && (

@@ -304,7 +304,7 @@ export default function CheckoutPage() {
                 </div>
               ))
             ) : (
-              <div className="p-8">
+              <div className="max-w-sm p-12">
                 <EmptyCart />
               </div>
             )}

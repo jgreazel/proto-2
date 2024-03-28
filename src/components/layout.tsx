@@ -1,6 +1,9 @@
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { useState, type PropsWithChildren, type ReactNode } from "react";
 import Link from "next/link";
+import { api } from "~/utils/api";
+import handleApiError from "~/helpers/handleApiError";
+import toast from "react-hot-toast";
 
 type LayoutProps = {
   actionRow?: ReactNode;
@@ -8,8 +11,17 @@ type LayoutProps = {
 };
 
 const Feedback = ({ onClose }: { onClose: () => void }) => {
-  // todo: create db and api
+  const { mutate, isLoading } = api.profile.leaveFeedback.useMutation({
+    onError: handleApiError,
+    onSuccess: () => {
+      toast.success("Feedback recorded!");
+      setVal("");
+      onClose();
+    },
+  });
+
   const [val, setVal] = useState("");
+
   return (
     <dialog className="modal modal-open">
       <form method="dialog" className="modal-backdrop">
@@ -39,13 +51,20 @@ const Feedback = ({ onClose }: { onClose: () => void }) => {
         </form>
         <div className="font-medium">Leave Feedback</div>
         <textarea
+          disabled={isLoading}
           value={val}
           onChange={(e) => setVal(e.target.value)}
           className="textarea textarea-bordered w-full"
           placeholder="Experiencing bugs or have an idea?"
         ></textarea>
         <div className="flex justify-end">
-          <button className="btn btn-primary">
+          <button
+            disabled={isLoading}
+            onClick={() => {
+              mutate({ message: val });
+            }}
+            className="btn btn-primary"
+          >
             Submit
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -68,7 +87,7 @@ const Feedback = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-const LinkListItems = () => {
+export const LinkListItems = () => {
   return (
     <>
       {/* <li>
@@ -239,7 +258,7 @@ const FullNav = () => {
             </div>
             <ul
               tabIndex={0}
-              className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-200 p-2 shadow-xl"
+              className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow-xl"
             >
               <LinkListItems />
             </ul>
@@ -303,7 +322,7 @@ const FullNav = () => {
                   <SignOutButton />
                 </li>
                 <li className="w-max" onClick={() => setShow(true)}>
-                  <a>Give Feedback</a>
+                  <a>Feedback</a>
                 </li>
               </ul>
             </div>
