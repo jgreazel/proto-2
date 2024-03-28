@@ -68,7 +68,7 @@ export const passesRouter = createTRPCRouter({
               firstName: z.string().min(1).max(50),
               lastName: z.string().min(1).max(50),
               birthDate: z.date().optional().nullable(),
-              // banReEntryDate: z.date().optional().nullable(),
+              // todo: banReEntryDate: z.date().optional().nullable(),
             }),
           )
           .optional(),
