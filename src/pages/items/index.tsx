@@ -5,6 +5,7 @@ import { type RouterOutputs, api } from "~/utils/api";
 import Link from "next/link";
 import { PageLayout } from "~/components/layout";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
+import NoData from "~/components/noData";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
@@ -64,6 +65,13 @@ const ItemList = (props: {
 
   if (!data) return <div>Something went wrong</div>;
 
+  const filterItems = data.filter(
+    (d) =>
+      d.item.label.toUpperCase().includes(props.filter.toUpperCase()) &&
+      ((d.item.isAdmissionItem && props.category === "admission") ||
+        (d.item.isConcessionItem && props.category === "concession")),
+  );
+
   return (
     <div className="h-full">
       <table className="table table-zebra shadow-lg">
@@ -77,20 +85,17 @@ const ItemList = (props: {
           </tr>
         </thead>
         <tbody>
-          {data
-            .filter(
-              (d) =>
-                d.item.label
-                  .toUpperCase()
-                  .includes(props.filter.toUpperCase()) &&
-                ((d.item.isAdmissionItem && props.category === "admission") ||
-                  (d.item.isConcessionItem && props.category === "concession")),
-            )
-            .map((itemWithCreator) => (
-              <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
-            ))}
+          {filterItems.map((itemWithCreator) => (
+            <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
+          ))}
         </tbody>
       </table>
+      {!filterItems.length && (
+        <div className="p-12">
+          <NoData />
+          <div className="mt-8 text-center font-medium">No Items Yet</div>
+        </div>
+      )}
       <div className="flex flex-row justify-center p-2">
         <Link className="btn btn-sm" href="items/0">
           <svg

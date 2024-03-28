@@ -10,6 +10,7 @@ import filterPasses from "~/helpers/filterPasses";
 import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import EmptyCart from "~/components/emptyCart";
+import NoData from "~/components/noData";
 type Item = RouterOutputs["items"]["getAll"][number]["item"];
 
 const ItemFeed = (props: {
@@ -26,17 +27,26 @@ const ItemFeed = (props: {
       </div>
     );
   return (
-    <div className="grid grid-cols-3 gap-4 p-4">
-      {data?.map(({ item }) => (
-        <button
-          onClick={() => props.onClick(item)}
-          key={item.id}
-          className="btn capitalize"
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
+    <>
+      {!!data?.length ? (
+        <div className="grid grid-cols-3 gap-4 p-4">
+          {data?.map(({ item }) => (
+            <button
+              onClick={() => props.onClick(item)}
+              key={item.id}
+              className="btn capitalize"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="p-12">
+          <NoData />
+          <div className="mt-8 text-center font-medium">No Items Yet</div>
+        </div>
+      )}
+    </>
   );
 };
 
@@ -70,9 +80,12 @@ const AdmissionFeed = () => {
   if (isFetchingPasses || isFetchingEvents)
     return (
       <div className="my-4 flex justify-center">
-        <LoadingSpinner />
+        <div className="loading loading-spinner"></div>
       </div>
     );
+
+  const filteredPasses = passesData?.filter((p) => filterPasses(p, filter));
+
   return (
     <div className="p-2">
       <label
@@ -101,9 +114,8 @@ const AdmissionFeed = () => {
         </svg>
       </label>
 
-      {passesData
-        ?.filter((p) => filterPasses(p, filter))
-        .map(({ label, patrons, id }) => (
+      {!!filteredPasses && filteredPasses.length > 0 ? (
+        filteredPasses.map(({ label, patrons, id }) => (
           <div className="p-1" key={id}>
             <div className="badge badge-outline"> {label}</div>
 
@@ -143,7 +155,15 @@ const AdmissionFeed = () => {
               </div>
             ))}
           </div>
-        ))}
+        ))
+      ) : (
+        <div className="p-12">
+          <NoData />
+          <div className="mt-8 text-center font-medium">
+            No Season Passes Yet
+          </div>
+        </div>
+      )}
     </div>
   );
 };

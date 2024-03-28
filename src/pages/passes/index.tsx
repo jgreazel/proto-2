@@ -5,10 +5,13 @@ import { LoadingPage } from "~/components/loading";
 import Link from "next/link";
 import { useState } from "react";
 import filterPasses from "~/helpers/filterPasses";
+import PeopleGrid from "~/components/peopleGrid";
 
 export default function PassesPage() {
   const { data, isLoading } = api.passes.getAll.useQuery();
   const [filter, setFilter] = useState("");
+
+  const filteredPasses = data?.filter((d) => filterPasses(d, filter));
 
   return (
     <PageLayout>
@@ -61,9 +64,8 @@ export default function PassesPage() {
               </Link>
             </div>
           </div>
-          {data
-            ?.filter((d) => filterPasses(d, filter))
-            .map((pass) => (
+          {!!filteredPasses?.length ? (
+            filteredPasses.map((pass) => (
               <div
                 className="card card-compact bg-base-100 shadow-xl"
                 key={pass.id}
@@ -142,7 +144,13 @@ export default function PassesPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            ))
+          ) : (
+            <div className="p-12">
+              <PeopleGrid />
+              <div className="mt-8 text-center font-medium">No Passes Yet</div>
+            </div>
+          )}
         </div>
       )}
     </PageLayout>

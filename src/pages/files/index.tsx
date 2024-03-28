@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { Dropzone } from "~/components/dropzone";
 import { PageLayout } from "~/components/layout";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
+import NoData from "~/components/noData";
 import handleApiError from "~/helpers/handleApiError";
 import { api } from "~/utils/api";
 
@@ -204,26 +205,34 @@ export default function FilesPage() {
             <Dropzone />
           </div>
         </div>
-        <table className="table table-zebra mt-2 rounded-lg bg-base-100 shadow-lg">
-          <thead>
-            <tr>
-              <th>File Name</th>
-              <th>Last Modified</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.map((x) => (
-              <tr key={x.ETag}>
-                <td>{x.Key}</td>
-                <td>{dayjs(x.LastModified).format("MM/DD/YYYY, h:mm A")}</td>
-                <td>
-                  <FileColumn imgKey={x.Key ?? ""} />
-                </td>
+
+        {data.length ? (
+          <table className="table table-zebra mt-2 rounded-lg bg-base-100 shadow-lg">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Last Modified</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data?.map((x) => (
+                <tr key={x.ETag}>
+                  <td>{x.Key}</td>
+                  <td>{dayjs(x.LastModified).format("MM/DD/YYYY, h:mm A")}</td>
+                  <td>
+                    <FileColumn imgKey={x.Key ?? ""} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="p-12">
+            <NoData />
+            <div className="mt-8 text-center font-medium">No Files Yet</div>
+          </div>
+        )}
       </div>
     </PageLayout>
   );
