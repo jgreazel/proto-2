@@ -21,7 +21,7 @@ const MyApp: AppType = ({ Component, pageProps }) => {
           name="description"
           content="Bookkeeping software for lifeguards"
         />
-        <link rel="icon" href="/favicon.svg" />
+        <link rel="icon" href="/LOGO.png" />
       </Head>
       <Toaster position="bottom-center" />
       <Component {...pageProps} />
