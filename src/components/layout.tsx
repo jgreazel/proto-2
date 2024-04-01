@@ -231,6 +231,8 @@ const FullNav = () => {
   const { user, isLoaded: userLoaded, isSignedIn } = useUser();
   const [show, setShow] = useState(false);
 
+  const isDev = process.env.NODE_ENV === "development";
+
   // user should load fast, just return empty until then
   if (!userLoaded) return <div></div>;
 
@@ -282,11 +284,11 @@ const FullNav = () => {
           </Link>
         </div>
         {/* // full width */}
-        {/* <div className="navbar-center hidden lg:flex">
-        <ul className="menu menu-horizontal px-1">
-          <LinkListItems />
-        </ul>
-      </div> */}
+        {isDev && (
+          <div className="navbar-center">
+            <div className="badge badge-accent badge-outline">Development</div>
+          </div>
+        )}
         <div className="navbar-end">
           {!!isSignedIn && (
             <div className="dropdown dropdown-end z-50">
