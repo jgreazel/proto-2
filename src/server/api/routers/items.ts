@@ -12,6 +12,10 @@ import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
 import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
 import { filterUserForClient } from "../helpers/filterUsersForClient";
 
+const SELL_MIN = 0;
+// $500.00
+const SELL_MAX = 50000;
+
 // Create a new ratelimiter, that allows 3 req per 1 min
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
@@ -103,9 +107,9 @@ export const itemsRouter = createTRPCRouter({
     .input(
       z.object({
         label: z.string().min(1).max(20, "Too many characters"),
-        sellingPrice: z.number().min(25).max(1500),
-        purchasePrice: z.number().min(25).max(1500),
-        inStock: z.number().min(0).max(1000),
+        sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX),
+        purchasePrice: z.number().min(SELL_MIN).max(SELL_MAX),
+        inStock: z.number().min(0).max(10000),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -130,8 +134,8 @@ export const itemsRouter = createTRPCRouter({
   createAdmissionItem: privateProcedure
     .input(
       z.object({
-        label: z.string().min(1).max(20, "Too many characters"),
-        sellingPrice: z.number().min(100).max(20000),
+        label: z.string().min(1).max(30, "Too many characters"),
+        sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX),
         isSeasonal: z.boolean(),
         isDay: z.boolean(),
         patronLimit: z.number().min(1).optional(),
@@ -162,8 +166,8 @@ export const itemsRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         label: z.string().min(1).max(20, "Too many characters").optional(),
-        sellingPrice: z.number().min(25).max(1500).optional(),
-        purchasePrice: z.number().min(25).max(1500).optional(),
+        sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
+        purchasePrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         inStock: z.number().min(0).max(1000).optional(),
       }),
     )
@@ -180,7 +184,7 @@ export const itemsRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         label: z.string().min(1).max(20, "Too many characters").optional(),
-        sellingPrice: z.number().min(25).max(20000).optional(),
+        sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         isSeasonal: z.boolean().optional(),
         isDay: z.boolean().optional(),
         patronLimit: z.number().min(1).max(100).optional(),
