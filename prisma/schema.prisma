@@ -145,6 +145,8 @@ model UserSettings {
     defaultHourCodeId String?
     defaultHourCode   HourCode? @relation(fields: [defaultHourCodeId], references: [id])
     canModifyHourCode Boolean   @default(false)
+    // todo: when i add roles
+    // isAdmin  Boolean @default(false)
 
     createdBy String
     createdAt DateTime @default(now())

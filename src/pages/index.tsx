@@ -4,7 +4,7 @@ import Welcome from "~/components/welcome";
 import { useUser } from "@clerk/nextjs";
 
 export default function HomePage() {
-  const { user, isLoaded } = useUser();
+  const { user } = useUser();
   return (
     <PageLayout>
       <div className="p-4">
@@ -15,7 +15,7 @@ export default function HomePage() {
         <div className="flex flex-col gap-4 p-2 md:flex-row">
           <div className="card card-compact w-full shadow-lg ">
             <div className="card-body">
-              {isLoaded ? (
+              {!!user?.username ? (
                 <div className="card-title capitalize">
                   Hi, {user?.username}
                 </div>
