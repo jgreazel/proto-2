@@ -103,6 +103,7 @@ model Shift {
     userId   String
     start    DateTime
     end      DateTime
+    // todo remove once timeclock v2 is done
     clockIn  DateTime?
     clockOut DateTime?
 
@@ -115,4 +116,38 @@ model Feedback {
     message   String
     createdBy String
     createdAt DateTime @default(now())
+}
+
+model HourCode {
+    id              String           @id @default(cuid())
+    label           String
+    hourlyRate      Int
+    timeclockEvents TimeClockEvent[]
+    userSettings    UserSettings[]
+
+    createdBy String
+    createdAt DateTime @default(now())
+}
+
+model TimeClockEvent {
+    id         String   @id @default(cuid())
+    hourCodeId String
+    hourCode   HourCode @relation(fields: [hourCodeId], references: [id])
+    createdBy  String
+    createdAt  DateTime @default(now())
+
+    @@index([hourCodeId])
+}
+
+model UserSettings {
+    id                String    @id @default(cuid())
+    userId            String    @unique
+    defaultHourCodeId String?
+    defaultHourCode   HourCode? @relation(fields: [defaultHourCodeId], references: [id])
+    canModifyHourCode Boolean   @default(false)
+
+    createdBy String
+    createdAt DateTime @default(now())
+
+    @@index([defaultHourCodeId])
 }

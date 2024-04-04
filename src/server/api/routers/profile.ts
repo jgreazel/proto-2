@@ -44,4 +44,50 @@ export const profileRouter = createTRPCRouter({
       }
       return msg;
     }),
+
+  createSettings: privateProcedure
+    .input(z.object({ userId: z.string(), defaultHourCodeId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const isInvalidHourCode = !(await ctx.db.hourCode.findUnique({
+        where: { id: input.defaultHourCodeId },
+      }));
+      if (isInvalidHourCode) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Hour Code doesn't exist.",
+        });
+      }
+      const result = await ctx.db.userSettings.create({
+        data: {
+          userId: input.userId,
+          createdBy: ctx.userId,
+          defaultHourCode: { connect: { id: input.defaultHourCodeId } },
+        },
+      });
+      if (!result) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failure to create record",
+        });
+      }
+      return result;
+    }),
+
+  updateSettings: privateProcedure
+    .input(z.object({ userId: z.string(), defaultHourCodeId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db.userSettings.update({
+        where: { userId: input.userId },
+        data: {
+          defaultHourCode: { connect: { id: input.defaultHourCodeId } },
+        },
+      });
+      if (!result) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failure to update record",
+        });
+      }
+      return result;
+    }),
 });

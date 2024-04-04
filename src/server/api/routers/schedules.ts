@@ -174,6 +174,7 @@ export const schedulesRouter = createTRPCRouter({
       return result;
     }),
 
+  // todo: create new for tc v2, then remove once everything's transferred
   clockInOrOut: privateProcedure
     .input(
       z.object({
@@ -208,5 +209,121 @@ export const schedulesRouter = createTRPCRouter({
         data: updateData,
       });
       return updatedShift;
+    }),
+
+  createHourCode: privateProcedure
+    .input(
+      z.object({
+        label: z.string(),
+        hourlyRate: z.number().min(725),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const hc = await ctx.db.hourCode.create({
+        data: {
+          label: input.label,
+          hourlyRate: input.hourlyRate,
+          createdBy: createdById,
+        },
+      });
+      if (!hc) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to create the Hour Code object in the Database.",
+        });
+      }
+      return hc;
+    }),
+
+  getHourCodes: privateProcedure.query(
+    async ({ ctx }) => await ctx.db.hourCode.findMany(),
+  ),
+
+  editHourCode: privateProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        hourlyRate: z.number().min(725),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const hc = await ctx.db.hourCode.update({
+        where: { id: input.id },
+        data: { ...input },
+      });
+
+      if (!hc) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to create a new Hour Code",
+        });
+      }
+      return hc;
+    }),
+
+  deleteHourCode: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const result = await ctx.db.hourCode.delete({
+        where: { id: input.id },
+      });
+      if (!result) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to delete Hour Code",
+        });
+      }
+      return result;
+    }),
+
+  createTimeClockEvent: privateProcedure
+    .input(z.object({ hourCodeId: z.string() }).optional())
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      let workingHourCode = input?.hourCodeId ?? "";
+      if (!input) {
+        const userSettings = await ctx.db.userSettings.findFirst({
+          where: { userId: createdById },
+        });
+        if (!userSettings?.defaultHourCodeId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "No default hour code found in user settings. Please add one to your request.",
+          });
+        }
+        workingHourCode = userSettings.defaultHourCodeId;
+      }
+
+      const tce = await ctx.db.timeClockEvent.create({
+        data: {
+          hourCodeId: workingHourCode,
+          createdBy: createdById,
+        },
+      });
+
+      if (!tce) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to create Time Clock event.",
+        });
+      }
+      return tce;
     }),
 });

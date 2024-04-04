@@ -121,7 +121,7 @@ const AdmissionFeed = () => {
 
             {patrons.map((p) => (
               <div
-                className="flex-base my-1 flex items-center justify-between rounded-lg bg-base-100 p-2 shadow-xl"
+                className="flex-base my-1 flex items-center justify-between rounded-lg bg-base-100 p-2 shadow-lg"
                 key={p.id}
               >
                 <div className="font-medium capitalize">{`${p.firstName} ${p.lastName}`}</div>

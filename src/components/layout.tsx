@@ -338,7 +338,7 @@ const FullNav = () => {
 
 export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
   return (
-    <main className="mx-auto flex h-screen w-full flex-col justify-start md:max-w-5xl">
+    <main className="mx-auto flex h-screen w-full flex-col justify-start md:max-w-5xl lg:max-w-6xl">
       {!props.hideHeader && <FullNav />}
       {props.actionRow && <div className="p-2">{props.actionRow}</div>}
       <div className="grow overflow-auto">{props.children}</div>
