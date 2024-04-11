@@ -1,6 +1,8 @@
 import { clerkClient } from "@clerk/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { Redis } from "@upstash/redis";
+import { Ratelimit } from "@upstash/ratelimit";
 
 import {
   createTRPCRouter,
@@ -9,6 +11,12 @@ import {
 } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, "1 m"),
+  analytics: true,
+});
 
 export const profileRouter = createTRPCRouter({
   getUserByUsername: publicProcedure
@@ -43,6 +51,45 @@ export const profileRouter = createTRPCRouter({
         });
       }
       return msg;
+    }),
+
+  getUsers: privateProcedure.query(async ({ ctx }) => {
+    const createdById = ctx.userId;
+    const { success } = await ratelimit.limit(createdById);
+    if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+    const users = await clerkClient.users.getUserList();
+    return users.map((u) => filterUserForClient(u));
+  }),
+
+  createUser: privateProcedure
+    .input(
+      z.object({
+        username: z.string(),
+        firstname: z.string(),
+        lastname: z.string(),
+        password: z.string().min(8),
+        email: z.string().email().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const user = await clerkClient.users.createUser({
+        username: input.username,
+        password: input.password,
+        firstName: input.firstname,
+        lastName: input.lastname,
+        ...(!!input.email && { email: input.email }),
+      });
+      if (!user) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Feedback not recorded",
+        });
+      }
+      return user;
     }),
 
   createSettings: privateProcedure
