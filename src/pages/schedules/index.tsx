@@ -196,7 +196,6 @@ const CellView = ({
   data: RouterOutputs["schedules"]["getShifts"];
   onClick?: (shift: RouterOutputs["schedules"]["getShifts"][number]) => void;
 }) => {
-  const hoverClasses = "hover:cursor-pointer hover:bg-base-200 p-1 rounded-md";
   const dataByHours = data.reduce(
     (acc, d) => {
       const dataIdx = acc.findIndex(
