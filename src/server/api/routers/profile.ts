@@ -126,11 +126,18 @@ export const profileRouter = createTRPCRouter({
     }),
 
   updateSettings: privateProcedure
-    .input(z.object({ userId: z.string(), defaultHourCodeId: z.string() }))
+    .input(
+      z.object({
+        userId: z.string(),
+        defaultHourCodeId: z.string(),
+        canModifyHourCode: z.boolean(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.db.userSettings.update({
         where: { userId: input.userId },
         data: {
+          canModifyHourCode: input.canModifyHourCode,
           defaultHourCode: { connect: { id: input.defaultHourCodeId } },
         },
       });

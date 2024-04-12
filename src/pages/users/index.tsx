@@ -327,15 +327,23 @@ const UserPermissionsModal = ({
   const { data: hcOpts, isLoading: gettingHCs } =
     api.schedules.getHourCodes.useQuery();
 
-  const { mutate, isLoading } = api.profile.createSettings.useMutation({
-    onSuccess: () => {
-      toast.success("Created!");
-      onClose();
-    },
+  const utils = api.useUtils();
+  const onSuccess = (msg: string) => async () => {
+    toast.success(msg);
+    await utils.profile.getUsers.invalidate();
+    onClose();
+  };
+  const { mutate: create, isLoading } = api.profile.createSettings.useMutation({
+    onSuccess: onSuccess("Created!"),
     onError: handleApiError,
   });
+  const { mutate: update, isLoading: isUpdating } =
+    api.profile.updateSettings.useMutation({
+      onSuccess: onSuccess("Updated!"),
+      onError: handleApiError,
+    });
 
-  const isGray = isLoading || gettingHCs;
+  const isGray = isLoading || gettingHCs || isUpdating;
 
   const options = hcOpts?.map((x) => ({
     label: `${x.label} - ${dbUnitToDollars(x.hourlyRate)}`,
@@ -344,11 +352,12 @@ const UserPermissionsModal = ({
   options?.unshift({ value: "", label: "---" });
 
   const handleSubmit = () => {
-    mutate({
+    const input = {
       userId,
       defaultHourCodeId: select,
       canModifyHourCode: canModify,
-    });
+    };
+    !!data ? update(input) : create(input);
   };
 
   return (
@@ -425,6 +434,22 @@ const UserTable = ({ filter }: { filter: string }) => {
   const { data, isLoading } = api.profile.getUsers.useQuery();
   const [modalId, setModalId] = useState<string | undefined>(undefined);
 
+  const ss = data?.find((u) => u.id === modalId)?.settings;
+  const modal = (
+    <UserPermissionsModal
+      userId={modalId!}
+      onClose={() => setModalId(undefined)}
+      data={
+        !!ss
+          ? {
+              defaultHourCodeId: ss.defaultHourCodeId ?? "",
+              canModifyHourCode: !!ss.canModifyHourCode,
+            }
+          : undefined
+      }
+    />
+  );
+
   const isIn = (val?: string | null) =>
     val?.toUpperCase().includes(filter.toUpperCase()) ?? false;
 
@@ -432,7 +457,7 @@ const UserTable = ({ filter }: { filter: string }) => {
     <span className="loading loading-spinner loading-md"></span>
   ) : (
     <>
-      <table className="table">
+      <table className="table table-zebra rounded-lg shadow-lg">
         <thead>
           <tr>
             <th>Username</th>
@@ -505,12 +530,7 @@ const UserTable = ({ filter }: { filter: string }) => {
             })}
         </tbody>
       </table>
-      {!!modalId && (
-        <UserPermissionsModal
-          userId={modalId}
-          onClose={() => setModalId(undefined)}
-        />
-      )}
+      {!!modalId && modal}
     </>
   );
 };
