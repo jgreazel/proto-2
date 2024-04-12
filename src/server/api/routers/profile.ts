@@ -33,11 +33,6 @@ export const profileRouter = createTRPCRouter({
       return filterUserForClient(user);
     }),
 
-  getAllUsers: privateProcedure.query(async () => {
-    const users = await clerkClient.users.getUserList();
-    return users.filter(filterUserForClient);
-  }),
-
   leaveFeedback: privateProcedure
     .input(z.object({ message: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -57,8 +52,20 @@ export const profileRouter = createTRPCRouter({
     const createdById = ctx.userId;
     const { success } = await ratelimit.limit(createdById);
     if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
     const users = await clerkClient.users.getUserList();
-    return users.map((u) => filterUserForClient(u));
+    const userSettings = await ctx.db.userSettings.findMany({
+      where: { userId: { in: users.map((u) => u.id) } },
+    });
+    const result = users.map((u) => {
+      const user = filterUserForClient(u);
+      const s = userSettings.find((x) => x.userId === u.id);
+      return {
+        ...user,
+        settings: s,
+      };
+    });
+    return result;
   }),
 
   createUser: privateProcedure
@@ -93,21 +100,19 @@ export const profileRouter = createTRPCRouter({
     }),
 
   createSettings: privateProcedure
-    .input(z.object({ userId: z.string(), defaultHourCodeId: z.string() }))
+    .input(
+      z.object({
+        userId: z.string(),
+        defaultHourCodeId: z.string(),
+        canModifyHourCode: z.boolean(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      const isInvalidHourCode = !(await ctx.db.hourCode.findUnique({
-        where: { id: input.defaultHourCodeId },
-      }));
-      if (isInvalidHourCode) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Hour Code doesn't exist.",
-        });
-      }
       const result = await ctx.db.userSettings.create({
         data: {
           userId: input.userId,
           createdBy: ctx.userId,
+          canModifyHourCode: input.canModifyHourCode,
           defaultHourCode: { connect: { id: input.defaultHourCodeId } },
         },
       });

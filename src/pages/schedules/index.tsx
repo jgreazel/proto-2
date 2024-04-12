@@ -25,8 +25,7 @@ const ShiftForm = ({
   value?: RouterOutputs["schedules"]["getShifts"][number];
   onSuccess: () => Promise<void>;
 }) => {
-  const { data, isLoading: isGettingUsers } =
-    api.profile.getAllUsers.useQuery();
+  const { data, isLoading: isGettingUsers } = api.profile.getUsers.useQuery();
 
   const { register, handleSubmit, control, reset } = useForm<ShiftFormData>({
     defaultValues: !!value

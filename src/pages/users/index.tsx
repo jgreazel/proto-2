@@ -1,10 +1,7 @@
-import { InputNumber } from "antd";
-import dayjs from "dayjs";
+import { InputNumber, Select } from "antd";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Dropzone } from "~/components/dropzone";
 import { PageLayout } from "~/components/layout";
-import { LoadingPage } from "~/components/loading";
 import NoData from "~/components/noData";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import handleApiError from "~/helpers/handleApiError";
@@ -115,8 +112,9 @@ const HourCodeFormModal = ({
           {!!data && (
             <button
               onClick={() => apiDelete({ id: data.id })}
+              // todo disabled if used by any users
               disabled={cantSubmit}
-              className="btn btn-accent"
+              className="btn btn-outline btn-accent"
             >
               Delete
             </button>
@@ -312,13 +310,213 @@ const OptionsButton = () => {
   );
 };
 
-export default function UsersPage() {
-  const { data, isLoading } = api.documents.getAll.useQuery();
-  const [filter, setFilter] = useState("");
+const UserPermissionsModal = ({
+  onClose,
+  data,
+  userId,
+}: {
+  onClose: () => void;
+  data?: { defaultHourCodeId: string; canModifyHourCode: boolean };
+  userId: string;
+}) => {
+  const [select, setSelect] = useState(data?.defaultHourCodeId ?? "");
+  const [canModify, setCanModify] = useState<boolean>(
+    !!data?.canModifyHourCode,
+  );
 
-  if (isLoading || !data) {
-    return <LoadingPage />;
-  }
+  const { data: hcOpts, isLoading: gettingHCs } =
+    api.schedules.getHourCodes.useQuery();
+
+  const { mutate, isLoading } = api.profile.createSettings.useMutation({
+    onSuccess: () => {
+      toast.success("Created!");
+      onClose();
+    },
+    onError: handleApiError,
+  });
+
+  const isGray = isLoading || gettingHCs;
+
+  const options = hcOpts?.map((x) => ({
+    label: `${x.label} - ${dbUnitToDollars(x.hourlyRate)}`,
+    value: x.id,
+  }));
+  options?.unshift({ value: "", label: "---" });
+
+  const handleSubmit = () => {
+    mutate({
+      userId,
+      defaultHourCodeId: select,
+      canModifyHourCode: canModify,
+    });
+  };
+
+  return (
+    <dialog id="new-hour-code-modal" className="modal modal-open">
+      <div className="modal-box">
+        <form method="dialog">
+          <button
+            onClick={onClose}
+            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18 18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </form>
+        <div id="modal-content" className="flex flex-col gap-2">
+          <h3 className="text-large font-medium">User Permissions</h3>
+          <div>
+            <label className="label w-fit cursor-pointer gap-2">
+              <span className="text-label">
+                May clock in with any hour code
+              </span>
+              <input
+                type="checkbox"
+                className="checkbox"
+                checked={canModify}
+                onChange={(v) => setCanModify(v.target.checked)}
+                disabled={isGray}
+              />
+            </label>
+          </div>
+          <div>
+            <div className="text-label">Default Hour Code</div>
+            <Select
+              className="h-10 w-full"
+              value={select}
+              onChange={(newValue) => {
+                setSelect(newValue);
+              }}
+              options={options}
+              disabled={isGray}
+            />
+          </div>
+        </div>
+        <div className="modal-action">
+          <button
+            disabled={isGray || select === ""}
+            className="btn btn-primary"
+            onClick={handleSubmit}
+          >
+            {!data ? "Create" : "Update"}
+          </button>
+        </div>
+      </div>
+      <form method="dialog" className="modal-backdrop">
+        <button onClick={onClose}>close</button>
+      </form>
+    </dialog>
+  );
+};
+
+const UserTable = ({ filter }: { filter: string }) => {
+  const { data, isLoading } = api.profile.getUsers.useQuery();
+  const [modalId, setModalId] = useState<string | undefined>(undefined);
+
+  const isIn = (val?: string | null) =>
+    val?.toUpperCase().includes(filter.toUpperCase()) ?? false;
+
+  return isLoading ? (
+    <span className="loading loading-spinner loading-md"></span>
+  ) : (
+    <>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Permissions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data
+            ?.filter(
+              (x) => isIn(x.username) || isIn(x.firstName) || isIn(x.lastName),
+            )
+            .map((x) => {
+              const isEdit = !!x.settings;
+              return (
+                <tr key={x.id}>
+                  <td>{x.username}</td>
+                  <td className="capitalize">{x.firstName ?? "-"}</td>
+                  <td className="capitalize">{x.lastName ?? "-"}</td>
+                  <td>
+                    {
+                      <div
+                        className="tooltip"
+                        data-tip={
+                          isEdit ? "Edit Permissions" : "Create Permissions"
+                        }
+                      >
+                        <button
+                          onClick={() => setModalId(x.id)}
+                          className="btn btn-circle btn-ghost btn-sm"
+                        >
+                          {isEdit ? (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="h-6 w-6"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="h-6 w-6"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 4.5v15m7.5-7.5h-15"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    }
+                  </td>
+                </tr>
+              );
+            })}
+        </tbody>
+      </table>
+      {!!modalId && (
+        <UserPermissionsModal
+          userId={modalId}
+          onClose={() => setModalId(undefined)}
+        />
+      )}
+    </>
+  );
+};
+
+export default function UsersPage() {
+  const [filter, setFilter] = useState("");
 
   return (
     <PageLayout>
@@ -351,6 +549,7 @@ export default function UsersPage() {
           </label>
           <OptionsButton />
         </div>
+        <UserTable filter={filter} />
       </div>
     </PageLayout>
   );
