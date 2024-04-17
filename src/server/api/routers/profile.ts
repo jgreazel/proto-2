@@ -68,6 +68,7 @@ export const profileRouter = createTRPCRouter({
     return result;
   }),
 
+  // todo WTF is "Unprocessable Entity"
   createUser: privateProcedure
     .input(
       z.object({
@@ -75,28 +76,35 @@ export const profileRouter = createTRPCRouter({
         firstname: z.string(),
         lastname: z.string(),
         password: z.string().min(8),
-        email: z.string().email().optional(),
+        email: z.string().email().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
       const { success } = await ratelimit.limit(createdById);
       if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
-
-      const user = await clerkClient.users.createUser({
-        username: input.username,
-        password: input.password,
-        firstName: input.firstname,
-        lastName: input.lastname,
-        ...(!!input.email && { email: input.email }),
-      });
-      if (!user) {
+      try {
+        const toAdd = {
+          username: input.username,
+          password: input.password,
+          firstName: input.firstname,
+          lastName: input.lastname,
+          ...(!!input.email && { emailAddress: [input.email] }),
+        };
+        const user = await clerkClient.users.createUser(toAdd);
+        if (!user) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "User not created",
+          });
+        }
+        return user;
+      } catch (e) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Feedback not recorded",
+          message: (e as Error).message,
         });
       }
-      return user;
     }),
 
   createSettings: privateProcedure

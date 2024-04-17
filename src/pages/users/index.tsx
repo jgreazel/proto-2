@@ -1,5 +1,6 @@
 import { InputNumber, Select } from "antd";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import NoData from "~/components/noData";
@@ -233,12 +234,156 @@ const HourCodeListModal = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
+type UserFormData = {
+  username: string;
+  firstname: string;
+  lastname: string;
+  password: string;
+  email: string;
+};
+
+const NewUserModal = ({ onClose }: { onClose: () => void }) => {
+  const { register, handleSubmit, reset, formState } = useForm<UserFormData>();
+  const ctx = api.useUtils();
+
+  // todo fix clerk server code...
+  const { mutate, isLoading } = api.profile.createUser.useMutation({
+    onSuccess: async () => {
+      toast.success("Created!");
+      await ctx.profile.getUsers.invalidate();
+      reset();
+      onClose();
+    },
+    onError: handleApiError,
+  });
+
+  const handleFormSubmit = (data: UserFormData) => {
+    mutate({ ...data, email: !!data.email ? data.email : null });
+  };
+
+  return (
+    <dialog id="hour-code-modal" className="modal modal-open">
+      <div className="modal-box">
+        <form method="dialog">
+          <button
+            onClick={onClose}
+            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18 18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </form>
+        <form onSubmit={handleSubmit(handleFormSubmit)}>
+          <div id="modal-content" className="flex flex-col gap-2">
+            <h4 className="text-lg font-medium">New User</h4>
+            <label className="text-xs font-medium">First Name</label>
+            <input
+              id="firstname"
+              type="text"
+              placeholder="Ex: John"
+              className="input input-bordered"
+              {...register("firstname", {
+                required: true,
+                disabled: isLoading,
+              })}
+            />
+            <label className="text-xs font-medium">Last Name</label>
+            <input
+              id="lastname"
+              type="text"
+              placeholder="Ex: Doe"
+              className="input input-bordered"
+              {...register("lastname", {
+                required: true,
+                disabled: isLoading,
+              })}
+            />
+
+            <label className="text-xs font-medium">Username</label>
+            <input
+              id="username"
+              type="text"
+              className="input input-bordered"
+              {...register("username", {
+                required: true,
+                disabled: isLoading,
+              })}
+            />
+            <label className="text-xs font-medium">Password</label>
+            <input
+              id="password"
+              type="text"
+              className="input input-bordered"
+              {...register("password", {
+                required: true,
+                disabled: isLoading,
+                min: 8,
+              })}
+            />
+            <label className="form-control">
+              <div className="label">
+                <span className="text-xs font-medium">Email</span>
+              </div>
+              <input
+                id="email"
+                type="text"
+                placeholder="Ex: name@example.com"
+                className="input input-bordered"
+                {...register("email", {
+                  disabled: isLoading,
+                  pattern: {
+                    value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                    message: "Invalid email format",
+                  },
+                })}
+              />
+              <div className="label">
+                {formState.errors.email && (
+                  <span className="label-text-alt">
+                    {formState.errors.email.message}
+                  </span>
+                )}
+              </div>
+            </label>
+          </div>
+          <div className="modal-action justify-end">
+            <button
+              disabled={!formState.isValid}
+              className="btn btn-primary"
+              type="submit"
+            >
+              Create
+            </button>
+          </div>
+        </form>
+      </div>
+      <form method="dialog" className="modal-backdrop">
+        <button onClick={onClose}>close</button>
+      </form>
+    </dialog>
+  );
+};
+
 const OptionsButton = () => {
   const [showHC, setShowHC] = useState(false);
+  const [showUser, setShowUser] = useState(false);
 
   return (
     <>
       {showHC && <HourCodeListModal onClose={() => setShowHC(false)} />}
+      {showUser && <NewUserModal onClose={() => setShowUser(false)} />}
       <details className="dropdown dropdown-end">
         <summary className="btn btn-circle btn-ghost m-1">
           <svg
@@ -282,11 +427,7 @@ const OptionsButton = () => {
             </span>
           </li>
           <li>
-            <span
-              onClick={() => {
-                // todo: open new user modal
-              }}
-            >
+            <span onClick={() => setShowUser(true)}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
