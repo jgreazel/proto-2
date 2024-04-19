@@ -7,6 +7,6 @@ export const filterUserForClient = (user: User) => {
     imageUrl: user.imageUrl,
     firstName: user.firstName,
     lastName: user.lastName,
-    emails: user.emailAddresses,
+    emails: user.emailAddresses.map((e) => e.emailAddress),
   };
 };

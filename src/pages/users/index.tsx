@@ -236,8 +236,8 @@ const HourCodeListModal = ({ onClose }: { onClose: () => void }) => {
 
 type UserFormData = {
   username: string;
-  firstname: string;
-  lastname: string;
+  firstName: string;
+  lastName: string;
   password: string;
   email: string;
 };
@@ -294,7 +294,7 @@ const NewUserModal = ({ onClose }: { onClose: () => void }) => {
               type="text"
               placeholder="Ex: John"
               className="input input-bordered"
-              {...register("firstname", {
+              {...register("firstName", {
                 required: true,
                 disabled: isLoading,
               })}
@@ -305,7 +305,7 @@ const NewUserModal = ({ onClose }: { onClose: () => void }) => {
               type="text"
               placeholder="Ex: Doe"
               className="input input-bordered"
-              {...register("lastname", {
+              {...register("lastName", {
                 required: true,
                 disabled: isLoading,
               })}

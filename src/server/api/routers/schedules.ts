@@ -6,6 +6,7 @@ import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
 import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
 import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
+import { filterUserForClient } from "../helpers/filterUsersForClient";
 
 const ONEYEARMILLIS = 86400000;
 
@@ -174,6 +175,7 @@ export const schedulesRouter = createTRPCRouter({
       return result;
     }),
 
+  // old
   // todo: create new for tc v2, then remove once everything's transferred
   clockInOrOut: privateProcedure
     .input(
@@ -289,6 +291,8 @@ export const schedulesRouter = createTRPCRouter({
       return result;
     }),
 
+  // new
+  // todo: account for PIN
   createTimeClockEvent: privateProcedure
     .input(z.object({ hourCodeId: z.string() }).optional())
     .mutation(async ({ ctx, input }) => {
@@ -325,5 +329,41 @@ export const schedulesRouter = createTRPCRouter({
         });
       }
       return tce;
+    }),
+
+  getShiftsByUser: privateProcedure
+    .input(
+      z.object({
+        dateRange: z.tuple([z.date(), z.date()]).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const { success } = await ratelimit.limit(createdById);
+      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+
+      const shifts = await ctx.db.shift.findMany({
+        where: {
+          start: {
+            gte: input.dateRange?.[0],
+          },
+          end: {
+            lte: input.dateRange?.[1],
+          },
+        },
+        orderBy: {
+          start: "asc",
+        },
+      });
+      const users = await clerkClient.users.getUserList();
+      const groupedResult = users.map((u) => {
+        const fu = filterUserForClient(u);
+        const uShifts = shifts.filter((s) => s.userId === u.id);
+        return {
+          user: fu,
+          shifts: uShifts,
+        };
+      });
+      return groupedResult;
     }),
 });

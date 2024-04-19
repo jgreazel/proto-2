@@ -73,8 +73,8 @@ export const profileRouter = createTRPCRouter({
     .input(
       z.object({
         username: z.string(),
-        firstname: z.string(),
-        lastname: z.string(),
+        firstName: z.string(),
+        lastName: z.string(),
         password: z.string().min(8),
         email: z.string().email().nullable().optional(),
       }),
@@ -87,8 +87,8 @@ export const profileRouter = createTRPCRouter({
         const toAdd = {
           username: input.username,
           password: input.password,
-          firstName: input.firstname,
-          lastName: input.lastname,
+          firstName: input.firstName,
+          lastName: input.lastName,
           ...(!!input.email && { emailAddress: [input.email] }),
         };
         const user = await clerkClient.users.createUser(toAdd);
