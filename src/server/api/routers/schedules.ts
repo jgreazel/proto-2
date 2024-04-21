@@ -356,14 +356,28 @@ export const schedulesRouter = createTRPCRouter({
       const settings = await ctx.db.userSettings.findMany({
         where: { userId: { in: users.map((u) => u.id) } },
       });
+      const tces = await ctx.db.timeClockEvent.findMany({
+        where: {
+          createdAt: {
+            gte: input.dateRange?.[0],
+            lte: input.dateRange?.[1],
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
       const groupedResult = users.map((u) => {
         const fu = filterUserForClient(u);
         const uShifts = shifts.filter((s) => s.userId === u.id);
         const uSetts = settings.find((s) => s.userId === u.id);
+        const uTces = tces.filter((t) => t.userId === u.id);
         return {
           user: fu,
           shifts: uShifts,
           settings: uSetts,
+          timeClockEvents: uTces,
         };
       });
       return groupedResult;

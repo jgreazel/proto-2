@@ -12,19 +12,23 @@ type TimeClockEvent = {
   userId: string;
 };
 
+type ClockUser = {
+  username: string;
+  settings: RouterOutputs["schedules"]["getShiftsByUser"][number]["settings"];
+  timePunches: RouterOutputs["schedules"]["getShiftsByUser"][number]["timeClockEvents"];
+};
+
 const ClockInModal = ({
   onClose,
-  settings,
-  username,
+  user,
 }: {
-  username: string;
   onClose: () => void;
-  settings: RouterOutputs["schedules"]["getShiftsByUser"][number]["settings"];
+  user: ClockUser;
 }) => {
   const { register, handleSubmit, reset, formState } = useForm<TimeClockEvent>({
     defaultValues: {
-      hourCodeId: settings?.defaultHourCodeId ?? undefined,
-      userId: settings?.userId,
+      hourCodeId: user.settings?.defaultHourCodeId ?? undefined,
+      userId: user.settings?.userId,
       clockPIN: "",
     },
   });
@@ -71,7 +75,9 @@ const ClockInModal = ({
         </form>
         <form onSubmit={handleSubmit(handleForm)}>
           <div className="card-body">
-            <div className="card-title capitalize">Time Card - {username}</div>
+            <div className="card-title capitalize">
+              Time Card - {user.username}
+            </div>
 
             <label className="form-control">
               <span className="label-text">Clock PIN</span>
@@ -114,21 +120,20 @@ const ShiftFeed = () => {
     return <div className="loading loading-spinner loading-md"></div>;
   }
 
-  const modalSettings = !punchId
+  const punchIdData = !punchId
     ? undefined
-    : data?.find((d) => d.user.id === punchId)?.settings;
-
-  const username = !punchId
-    ? undefined
-    : data?.find((d) => d.user.id === punchId)?.user.username;
+    : data?.find((d) => d.user.id === punchId);
 
   return (
     <>
       {!!punchId && (
         <ClockInModal
-          username={username ?? ""}
+          user={{
+            username: punchIdData?.user.username ?? "",
+            settings: punchIdData?.settings,
+            timePunches: punchIdData?.timeClockEvents ?? [],
+          }}
           onClose={() => setPunchId(undefined)}
-          settings={modalSettings}
         />
       )}
       <div className="grid gap-2 p-2 md:grid-cols-2">
@@ -139,31 +144,79 @@ const ShiftFeed = () => {
           >
             <div className="card-body">
               <div className="card-title capitalize">{x.user.username}</div>
-              <div className="font-medium">Scheduled Shifts Today:</div>
-              {!!x.shifts.length ? (
-                x.shifts.map((s) => (
-                  <div key={s.id} className="flex gap-1">
-                    {dayjs(s.start).format("hh:mm A")}
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="h-4 w-6"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-                      />
-                    </svg>
-                    {dayjs(s.end).format("hh:mm A")}
-                  </div>
-                ))
-              ) : (
-                <div>None</div>
-              )}
+              <div className="grid grid-cols-2">
+                <div>
+                  <div className="font-medium">Scheduled Shifts Today:</div>
+                  {!!x.shifts.length ? (
+                    x.shifts.map((s) => (
+                      <div key={s.id} className="flex items-center gap-1">
+                        {dayjs(s.start).format("hh:mm A")}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                          stroke="currentColor"
+                          className="h-4 w-6"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+                          />
+                        </svg>
+                        {dayjs(s.end).format("h:mm A")}
+                      </div>
+                    ))
+                  ) : (
+                    <div>None</div>
+                  )}
+                </div>
+                <div>
+                  <div className="font-medium">Time Card Punches Today:</div>
+                  {!!x.timeClockEvents.length ? (
+                    x.timeClockEvents.map((t, idx) => (
+                      <div key={t.id} className="flex items-center gap-1">
+                        {dayjs(t.createdAt).format("h:mm A")}
+                        {idx % 2 === 0 ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="h-6 w-6 text-success"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="h-6 w-6 text-error"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div>None</div>
+                  )}
+                </div>
+              </div>
+
               <div className="card-actions justify-end">
                 <button
                   disabled={isLoading || !x.settings?.clockPIN}
@@ -196,20 +249,20 @@ const ShiftFeed = () => {
 };
 
 export default function TimeClockPage() {
-  const getToday = () => dayjs().format("dddd, MMMM D, YYYY - h:mm:ss A");
-  const [title, setTitle] = useState(getToday);
+  // const getToday = () => dayjs().format("dddd, MMMM D, YYYY - h:mm:ss A");
+  // const [title, setTitle] = useState(getToday);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTitle(getToday);
-    }, 2000);
+  // useEffect(() => {
+  //   const timer = setInterval(() => {
+  //     setTitle(getToday);
+  //   }, 2000);
 
-    return () => clearInterval(timer);
-  }, []);
+  //   return () => clearInterval(timer);
+  // }, []);
 
   return (
     <PageLayout>
-      <h1 className="p-3 text-2xl font-semibold">{title}</h1>
+      {/* <h1 className="p-3 text-2xl font-semibold">{title}</h1> */}
       <ShiftFeed />
     </PageLayout>
   );
