@@ -148,7 +148,9 @@ export const reportsRouter = createTRPCRouter({
         totalWorkedMs: number;
         shifts: Shift[];
       }[];
-      const userIdList = new Set(tces.map((s) => s.userId as string));
+      // idk why my local linter gets pissed, but the build fails with an unnecessary assertion
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      const userIdList = new Set(tces.map((t) => t.userId));
       const tcUsers = await clerkClient.users
         .getUserList({ userId: Array.from(userIdList) })
         .then((res) => res.filter(filterUserForClient));
