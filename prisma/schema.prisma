@@ -145,7 +145,8 @@ model UserSettings {
     defaultHourCodeId String?
     defaultHourCode   HourCode? @relation(fields: [defaultHourCodeId], references: [id])
     canModifyHourCode Boolean   @default(false)
-    // todo: when i add roles
+    clockPIN          String?   @unique
+    // todo: when i add roles (double check if need a select v checkbox)
     // isAdmin  Boolean @default(false)
 
     createdBy String

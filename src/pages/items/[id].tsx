@@ -149,7 +149,7 @@ const AdmissionItemForm = (props: {
       )}
       {isSubmitting && (
         <div className="flex items-center justify-center">
-          <LoadingSpinner size={20} />
+          <LoadingSpinner />
         </div>
       )}
     </form>
@@ -277,7 +277,7 @@ const ConcessionItemForm = (props: {
       )}
       {isSubmitting && (
         <div className="flex items-center justify-center">
-          <LoadingSpinner size={20} />
+          <LoadingSpinner />
         </div>
       )}
     </form>

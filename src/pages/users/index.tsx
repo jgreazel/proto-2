@@ -1,9 +1,9 @@
 import { InputNumber, Select } from "antd";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
-import NoData from "~/components/noData";
+import { LoadingPage } from "~/components/loading";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import handleApiError from "~/helpers/handleApiError";
 import moneyMask from "~/helpers/moneyMask";
@@ -288,6 +288,26 @@ const NewUserModal = ({ onClose }: { onClose: () => void }) => {
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div id="modal-content" className="flex flex-col gap-2">
             <h4 className="text-lg font-medium">New User</h4>
+            <div role="alert" className="alert">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-6 w-6 shrink-0 stroke-info"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <span>
+                After creating a new user, you&apos;ll also need to add their
+                permissions from the user table.
+              </span>
+            </div>
+
             <label className="text-xs font-medium">First Name</label>
             <input
               id="firstname"
@@ -451,19 +471,26 @@ const OptionsButton = () => {
   );
 };
 
+type PermissionForm = {
+  defaultHourCodeId: string;
+  canModifyHourCode: boolean;
+  clockPIN: string;
+};
 const UserPermissionsModal = ({
   onClose,
   data,
   userId,
 }: {
   onClose: () => void;
-  data?: { defaultHourCodeId: string; canModifyHourCode: boolean };
+  data?: PermissionForm;
   userId: string;
 }) => {
-  const [select, setSelect] = useState(data?.defaultHourCodeId ?? "");
-  const [canModify, setCanModify] = useState<boolean>(
-    !!data?.canModifyHourCode,
-  );
+  const { reset, register, handleSubmit, formState, control } =
+    useForm<PermissionForm>({
+      defaultValues: {
+        defaultHourCodeId: data?.defaultHourCodeId ?? "",
+      },
+    });
 
   const { data: hcOpts, isLoading: gettingHCs } =
     api.schedules.getHourCodes.useQuery();
@@ -473,6 +500,7 @@ const UserPermissionsModal = ({
     toast.success(msg);
     await utils.profile.getUsers.invalidate();
     onClose();
+    reset();
   };
   const { mutate: create, isLoading } = api.profile.createSettings.useMutation({
     onSuccess: onSuccess("Created!"),
@@ -484,7 +512,7 @@ const UserPermissionsModal = ({
       onError: handleApiError,
     });
 
-  const isGray = isLoading || gettingHCs || isUpdating;
+  const isFetching = isLoading || gettingHCs || isUpdating;
 
   const options = hcOpts?.map((x) => ({
     label: `${x.label} - ${dbUnitToDollars(x.hourlyRate)}`,
@@ -492,11 +520,10 @@ const UserPermissionsModal = ({
   }));
   options?.unshift({ value: "", label: "---" });
 
-  const handleSubmit = () => {
+  const handleGSSubmit = (data: PermissionForm) => {
     const input = {
       userId,
-      defaultHourCodeId: select,
-      canModifyHourCode: canModify,
+      ...data,
     };
     !!data ? update(input) : create(input);
   };
@@ -525,44 +552,91 @@ const UserPermissionsModal = ({
             </svg>
           </button>
         </form>
-        <div id="modal-content" className="flex flex-col gap-2">
-          <h3 className="text-large font-medium">User Permissions</h3>
-          <div>
-            <label className="label w-fit cursor-pointer gap-2">
-              <span className="text-label">
-                May clock in with any hour code
-              </span>
+        <form onSubmit={handleSubmit(handleGSSubmit)}>
+          <div id="modal-content" className="flex flex-col gap-2">
+            <h3 className="text-large font-medium">User Permissions</h3>
+
+            <div>
+              <div className="label-text">Default Hour Code</div>
+
+              <Controller
+                control={control}
+                name="defaultHourCodeId"
+                rules={{
+                  required: true,
+                  // kind of hacky way to make default value ("") invalid
+                  minLength: 1,
+                }}
+                render={({ field }) => (
+                  <Select
+                    className="h-10 w-full"
+                    disabled={isFetching}
+                    options={options}
+                    value={field.value}
+                    onChange={(v) => field.onChange(v)}
+                  />
+                )}
+              />
+            </div>
+            <div>
+              <label className="label w-fit cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  {...register("canModifyHourCode", { required: true })}
+                  disabled={isFetching}
+                />
+                <span className="label-text">
+                  May clock in with any hour code
+                </span>
+              </label>
+            </div>
+            <label className="form-control">
+              <div className="label flex justify-start gap-1">
+                <span className="label-text">Clock PIN</span>
+                <div
+                  className="tooltip tooltip-right"
+                  data-tip="This PIN is required for clocking in/out to verify identity."
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="h-6 w-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                    />
+                  </svg>
+                </div>
+              </div>
               <input
-                type="checkbox"
-                className="checkbox"
-                checked={canModify}
-                onChange={(v) => setCanModify(v.target.checked)}
-                disabled={isGray}
+                className="input input-bordered uppercase"
+                placeholder="0000"
+                minLength={4}
+                maxLength={4}
+                {...register("clockPIN", {
+                  required: true,
+                  maxLength: 4,
+                  minLength: 4,
+                })}
               />
             </label>
           </div>
-          <div>
-            <div className="text-label">Default Hour Code</div>
-            <Select
-              className="h-10 w-full"
-              value={select}
-              onChange={(newValue) => {
-                setSelect(newValue);
-              }}
-              options={options}
-              disabled={isGray}
-            />
+          <div className="modal-action">
+            <button
+              disabled={isFetching || !formState.isValid}
+              className="btn btn-primary"
+              type="submit"
+            >
+              {!data ? "Create" : "Update"}
+            </button>
           </div>
-        </div>
-        <div className="modal-action">
-          <button
-            disabled={isGray || select === ""}
-            className="btn btn-primary"
-            onClick={handleSubmit}
-          >
-            {!data ? "Create" : "Update"}
-          </button>
-        </div>
+        </form>
       </div>
       <form method="dialog" className="modal-backdrop">
         <button onClick={onClose}>close</button>
@@ -585,6 +659,7 @@ const UserTable = ({ filter }: { filter: string }) => {
           ? {
               defaultHourCodeId: ss.defaultHourCodeId ?? "",
               canModifyHourCode: !!ss.canModifyHourCode,
+              clockPIN: ss.clockPIN ?? "",
             }
           : undefined
       }
@@ -595,7 +670,7 @@ const UserTable = ({ filter }: { filter: string }) => {
     val?.toUpperCase().includes(filter.toUpperCase()) ?? false;
 
   return isLoading ? (
-    <span className="loading loading-spinner loading-md"></span>
+    <LoadingPage />
   ) : (
     <>
       <table className="table table-zebra rounded-lg shadow-lg">
