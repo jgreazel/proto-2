@@ -177,7 +177,6 @@ const ShiftFeed = () => {
                   {!!x.timeClockEvents.length ? (
                     x.timeClockEvents.map((t, idx) => (
                       <div key={t.id} className="flex items-center gap-1">
-                        {dayjs(t.createdAt).format("h:mm A")}
                         {idx % 2 === 0 ? (
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -209,6 +208,7 @@ const ShiftFeed = () => {
                             />
                           </svg>
                         )}
+                        {dayjs(t.createdAt).format("h:mm A")}
                       </div>
                     ))
                   ) : (

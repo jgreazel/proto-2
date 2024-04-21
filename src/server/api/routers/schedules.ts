@@ -163,44 +163,6 @@ export const schedulesRouter = createTRPCRouter({
       return result;
     }),
 
-  // old
-  // todo: create new for tc v2, then remove once everything's transferred
-  clockInOrOut: privateProcedure
-    .input(
-      z.object({
-        shiftId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const shift = await ctx.db.shift.findUnique({
-        where: { id: input.shiftId },
-      });
-      if (!shift)
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Shift does not exist",
-        });
-      if (shift.userId !== ctx.userId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "The shift you're trying to clock in/out for is not assigned to you",
-        });
-      }
-      const isClockingIn = !shift.clockIn;
-      // todo don't allow clocking in more than 30 min early
-      const updateData = isClockingIn
-        ? { clockIn: new Date() }
-        : { clockOut: new Date() };
-      const updatedShift = await ctx.db.shift.update({
-        where: {
-          id: input.shiftId,
-        },
-        data: updateData,
-      });
-      return updatedShift;
-    }),
-
   createHourCode: privateProcedure
     .input(
       z.object({
