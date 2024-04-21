@@ -8,7 +8,6 @@ import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
 import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
 import { filterUserForClient } from "../helpers/filterUsersForClient";
-import { RouterOutputs } from "~/utils/api";
 
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
