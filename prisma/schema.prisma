@@ -99,13 +99,13 @@ model AdmissionEvent {
 }
 
 model Shift {
-    id       String    @id @default(cuid())
-    userId   String
-    start    DateTime
-    end      DateTime
+    id     String   @id @default(cuid())
+    userId String
+    start  DateTime
+    end    DateTime
     // todo remove once timeclock v2 is done
-    clockIn  DateTime?
-    clockOut DateTime?
+    // clockIn  DateTime?
+    // clockOut DateTime?
 
     createdBy String
     createdAt DateTime @default(now())

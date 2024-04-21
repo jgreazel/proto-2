@@ -1,7 +1,6 @@
 import { clerkClient } from "@clerk/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { Shift } from "@prisma/client";
 import dayjs from "dayjs";
 
 import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
@@ -9,6 +8,7 @@ import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
 import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
 import { filterUserForClient } from "../helpers/filterUsersForClient";
+import { RouterOutputs } from "~/utils/api";
 
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
@@ -124,49 +124,64 @@ export const reportsRouter = createTRPCRouter({
           .toDate(),
       ];
       // todo modify for tc v2, switch to timeClockEvents, if odd - return flag
-      const shifts = await ctx.db.shift.findMany({
+      const tces = await ctx.db.timeClockEvent.findMany({
         where: {
-          start: {
+          createdAt: {
             gte: start,
-          },
-          end: {
             lte: end,
           },
-          clockIn: { not: null },
-          clockOut: { not: null },
         },
         orderBy: {
-          start: "asc",
+          createdAt: "asc",
         },
       });
+      type Shift = {
+        id: string;
+        userId: string;
+        start: Date;
+        end: Date;
+        clockIn: Date;
+        clockOut: Date;
+      };
       type Timecard = {
         user: { id: string; username: string };
         period: [start: Date, end: Date];
         totalWorkedMs: number;
         shifts: Shift[];
       }[];
+      const userIdList = new Set(tces.map((s) => s.userId as string));
       const tcUsers = await clerkClient.users
-        .getUserList({ userId: shifts.map((s) => s.userId) })
+        .getUserList({ userId: Array.from(userIdList) })
         .then((res) => res.filter(filterUserForClient));
-      const shiftsByUser: Timecard = shifts.reduce((acc, shift) => {
-        const existingUser = acc.find((user) => user.user.id === shift.userId);
-        const timeDiff = dayjs(shift.clockOut).diff(dayjs(shift.clockIn));
+
+      // todo recalculate shifts & totalMsWorked
+      const shiftsByUser: Timecard = tces.reduce((acc, tce) => {
+        const existingUser = acc.find((user) => user.user.id === tce.userId);
+        // const timeDiff = dayjs(shift.clockOut).diff(dayjs(shift.clockIn));
 
         if (existingUser) {
-          existingUser.shifts.push(shift);
-          existingUser.totalWorkedMs += timeDiff;
+          // existingUser.shifts.push(shift);
+          // existingUser.totalWorkedMs += timeDiff;
+          // todo
+          // get latest shift
+          // if!clock in do so
+          // else !clock out add that & calc total ms worked
         } else {
-          acc.push({
-            user: {
-              id: shift.userId,
-              username:
-                tcUsers.find((u) => u.id === shift.userId)?.username ??
-                "Not Found",
-            },
-            shifts: [shift],
-            totalWorkedMs: timeDiff,
-            period: [start, end],
-          });
+          // acc.push({
+          //   user: {
+          //     id: shift.userId,
+          //     username:
+          //       tcUsers.find((u) => u.id === shift.userId)?.username ??
+          //       "Not Found",
+          //   },
+          //   shifts: [shift],
+          //   totalWorkedMs: timeDiff,
+          //   period: [start, end],
+          // });
+          // todo
+          // push user
+          // push first shift with just clock in
+          // add period
         }
         return acc;
       }, [] as Timecard);
