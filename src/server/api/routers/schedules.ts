@@ -4,17 +4,10 @@ import { z } from "zod";
 
 import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
-import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
-import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
 import { filterUserForClient } from "../helpers/filterUsersForClient";
+import inRateWindow from "../helpers/inRateWindow";
 
 const ONEYEARMILLIS = 86400000;
-
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, "1 m"),
-  analytics: true,
-});
 
 export const schedulesRouter = createTRPCRouter({
   getShifts: privateProcedure
@@ -25,6 +18,8 @@ export const schedulesRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
       const shifts = await ctx.db.shift.findMany({
         where: {
           userId: input.userId,
@@ -57,8 +52,7 @@ export const schedulesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(createdById);
 
       const shift = await ctx.db.shift.create({
         data: {
@@ -87,9 +81,7 @@ export const schedulesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
 
       const shift = await ctx.db.shift.update({
         where: { id: input.id },
@@ -110,9 +102,7 @@ export const schedulesRouter = createTRPCRouter({
   deleteShift: privateProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
 
       const result = await ctx.db.shift.delete({
         where: { id: input.id },
@@ -130,9 +120,7 @@ export const schedulesRouter = createTRPCRouter({
   cloneDay: privateProcedure
     .input(z.object({ source: z.date(), target: z.date() }))
     .mutation(async ({ ctx, input }) => {
-      const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
 
       const srcBegin = new Date(input.source);
       srcBegin.setHours(0, 0, 0, 0);
@@ -222,8 +210,7 @@ export const schedulesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
 
       const hc = await ctx.db.hourCode.create({
         data: {
@@ -254,9 +241,7 @@ export const schedulesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
 
       const hc = await ctx.db.hourCode.update({
         where: { id: input.id },
@@ -275,9 +260,7 @@ export const schedulesRouter = createTRPCRouter({
   deleteHourCode: privateProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
 
       const result = await ctx.db.hourCode.delete({
         where: { id: input.id },
@@ -292,31 +275,46 @@ export const schedulesRouter = createTRPCRouter({
     }),
 
   // new
-  // todo: account for PIN
   createTimeClockEvent: privateProcedure
-    .input(z.object({ hourCodeId: z.string() }).optional())
+    .input(
+      z.object({
+        hourCodeId: z.string(),
+        clockPIN: z.string().length(4),
+        userId: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(createdById);
+
+      const userSettings = await ctx.db.userSettings.findFirst({
+        where: { userId: createdById },
+      });
+      if (!userSettings?.defaultHourCodeId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "No default hour code found in user settings. Please add one to the user's permissions.",
+        });
+      }
+
+      if (
+        input.clockPIN.toUpperCase() !== userSettings.clockPIN?.toUpperCase()
+      ) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Incorrect Clock PIN",
+        });
+      }
 
       let workingHourCode = input?.hourCodeId ?? "";
       if (!input) {
-        const userSettings = await ctx.db.userSettings.findFirst({
-          where: { userId: createdById },
-        });
-        if (!userSettings?.defaultHourCodeId) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "No default hour code found in user settings. Please add one to your request.",
-          });
-        }
         workingHourCode = userSettings.defaultHourCodeId;
       }
 
       const tce = await ctx.db.timeClockEvent.create({
         data: {
+          userId: input.userId,
           hourCodeId: workingHourCode,
           createdBy: createdById,
         },
@@ -338,9 +336,7 @@ export const schedulesRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
 
       const shifts = await ctx.db.shift.findMany({
         where: {
@@ -356,12 +352,17 @@ export const schedulesRouter = createTRPCRouter({
         },
       });
       const users = await clerkClient.users.getUserList();
+      const settings = await ctx.db.userSettings.findMany({
+        where: { userId: { in: users.map((u) => u.id) } },
+      });
       const groupedResult = users.map((u) => {
         const fu = filterUserForClient(u);
         const uShifts = shifts.filter((s) => s.userId === u.id);
+        const uSetts = settings.find((s) => s.userId === u.id);
         return {
           user: fu,
           shifts: uShifts,
+          settings: uSetts,
         };
       });
       return groupedResult;

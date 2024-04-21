@@ -131,6 +131,7 @@ model HourCode {
 
 model TimeClockEvent {
     id         String   @id @default(cuid())
+    userId     String   @unique
     hourCodeId String
     hourCode   HourCode @relation(fields: [hourCodeId], references: [id])
     createdBy  String
