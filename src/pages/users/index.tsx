@@ -510,6 +510,8 @@ const UserPermissionsModal = ({
     useForm<PermissionForm>({
       defaultValues: {
         defaultHourCodeId: data?.defaultHourCodeId ?? "",
+        clockPIN: data?.clockPIN ?? "",
+        canModifyHourCode: data?.canModifyHourCode ?? false,
       },
     });
 

@@ -329,6 +329,7 @@ export const schedulesRouter = createTRPCRouter({
       return tce;
     }),
 
+  // todo remove PIN from response
   getShiftsByUser: privateProcedure
     .input(
       z.object({
