@@ -7,6 +7,22 @@ import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 import { filterUserForClient } from "../helpers/filterUsersForClient";
 import inRateWindow from "../helpers/inRateWindow";
 
+const MS_IN_HOUR = 1000 * 60 * 60;
+
+type Shift = {
+  userId: string;
+  clockIn: Date;
+  clockOut?: Date;
+  rate: number;
+};
+type Timecard = {
+  user: { id: string; username: string };
+  period: [start: Date, end: Date];
+  totalWorkedMs: number;
+  totalEarned: number;
+  shifts: Shift[];
+}[];
+
 export const reportsRouter = createTRPCRouter({
   // todo: only query db if input params dictate so
   getNew: privateProcedure
@@ -123,25 +139,18 @@ export const reportsRouter = createTRPCRouter({
           createdAt: "asc",
         },
       });
-      type Shift = {
-        userId: string;
-        clockIn: Date;
-        clockOut?: Date;
-      };
-      type Timecard = {
-        user: { id: string; username: string };
-        period: [start: Date, end: Date];
-        totalWorkedMs: number;
-        shifts: Shift[];
-      }[];
-      const userIdList = new Set(tces.map((t) => t.userId));
-      const tcUsers = await clerkClient.users
-        .getUserList({ userId: Array.from(userIdList) })
-        .then((res) => res.filter(filterUserForClient));
 
-      // todo recalculate shifts & totalMsWorked
+      const userIdList = new Set(tces.map((t) => t.userId));
+      const userIdArr = Array.from(userIdList);
+      const tcUsers = await clerkClient.users
+        .getUserList({ userId: userIdArr })
+        .then((res) => res.filter(filterUserForClient));
+      const hourCodes = await ctx.db.hourCode.findMany();
+
       const shiftsByUser: Timecard = tces.reduce((acc, tce) => {
         const existingUser = acc.find((user) => user.user.id === tce.userId);
+        const hc = hourCodes.find((x) => x.id === tce.hourCodeId);
+        if (!hc) return acc;
 
         if (existingUser) {
           const wrkingShift =
@@ -151,13 +160,17 @@ export const reportsRouter = createTRPCRouter({
             existingUser.shifts.push({
               userId: tce.userId,
               clockIn: tce.createdAt,
+              rate: hc.hourlyRate,
             });
             // last punch opened a shift
           } else {
             wrkingShift!.clockOut = tce.createdAt;
-            existingUser.totalWorkedMs += dayjs(wrkingShift?.clockOut).diff(
+            const shiftDiffMs = dayjs(wrkingShift?.clockOut).diff(
               dayjs(wrkingShift?.clockIn),
             );
+            existingUser.totalWorkedMs += shiftDiffMs;
+            existingUser.totalEarned +=
+              (shiftDiffMs / MS_IN_HOUR) * hc.hourlyRate;
           }
         } else {
           acc.push({
@@ -167,8 +180,15 @@ export const reportsRouter = createTRPCRouter({
                 tcUsers.find((u) => u.id === tce.userId)?.username ??
                 "Not Found",
             },
-            shifts: [{ userId: tce.userId, clockIn: tce.createdAt }],
+            shifts: [
+              {
+                userId: tce.userId,
+                clockIn: tce.createdAt,
+                rate: hc.hourlyRate,
+              },
+            ],
             totalWorkedMs: 0,
+            totalEarned: 0,
             period: [start, end],
           });
         }

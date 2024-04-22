@@ -24,9 +24,12 @@ const TimecardReportTable = (props: {
       {props.data?.shifts.map((x) => (
         <div key={x.user.id} className="card card-compact bg-base-100">
           <div className="card-body">
-            <h3 className="card-title flex flex-row justify-between capitalize">
+            <h3 className="card-title flex flex-row capitalize">
               <span>{x.user.username}</span>
-              <span>
+              <span className="badge badge-success">
+                {dbUnitToDollars(x.totalEarned)}
+              </span>
+              <span className="badge badge-neutral">
                 {dayjs
                   .duration(x.totalWorkedMs)
                   .format("H [Hours], m [Minutes]")}
@@ -43,7 +46,8 @@ const TimecardReportTable = (props: {
                   <th>Day</th>
                   <th>Clock In</th>
                   <th>Clock Out</th>
-                  <th>Total</th>
+                  <th>Time</th>
+                  <th>Rate</th>
                 </tr>
               </thead>
               <tbody>
@@ -61,6 +65,7 @@ const TimecardReportTable = (props: {
                         .duration(dayjs(s.clockOut).diff(dayjs(s.clockIn)))
                         .format("H [Hours], m [Minutes]")}
                     </td>
+                    <td>{dbUnitToDollars(s.rate)}/hr</td>
                   </tr>
                 ))}
               </tbody>
