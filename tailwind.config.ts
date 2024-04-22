@@ -7,7 +7,7 @@ export default {
   // },
   plugins: [require("daisyui")],
   daisyui: {
-    // themes: ["aqua"],
+    // themes: ["emerald"],
     // themes: ["business"],
     // themes: ["corporate"],
     themes: ["fantasy"],

@@ -2,6 +2,7 @@ import { InputNumber, Select } from "antd";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import isAuth from "~/components/isAuth";
 import { PageLayout } from "~/components/layout";
 import { LoadingPage } from "~/components/loading";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
@@ -774,7 +775,7 @@ const UserTable = ({ filter }: { filter: string }) => {
   );
 };
 
-export default function UsersPage() {
+function UsersPage() {
   const [filter, setFilter] = useState("");
 
   return (
@@ -813,3 +814,5 @@ export default function UsersPage() {
     </PageLayout>
   );
 }
+
+export default isAuth(UsersPage);

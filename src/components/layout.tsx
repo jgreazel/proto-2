@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 type LayoutProps = {
   actionRow?: ReactNode;
   hideHeader?: boolean;
+  disabled?: boolean;
 };
 
 const Feedback = ({ onClose }: { onClose: () => void }) => {
@@ -289,7 +290,7 @@ const EndMenu = ({ username }: { username: string }) => {
   );
 };
 
-const FullNav = () => {
+const FullNav = ({ disabled }: { disabled: boolean }) => {
   const { user, isLoaded: userLoaded, isSignedIn } = useUser();
 
   const isDev = process.env.NODE_ENV === "development";
@@ -301,30 +302,32 @@ const FullNav = () => {
     <div className="navbar rounded-lg bg-base-100 shadow">
       {/* // small screens */}
       <div className="navbar-start">
-        <div className="dropdown z-50">
-          <div tabIndex={0} role="button" className="btn btn-ghost">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+        {!disabled && (
+          <div className="dropdown z-50">
+            <div tabIndex={0} role="button" className="btn btn-ghost">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 6h16M4 12h8m-8 6h16"
+                />
+              </svg>
+            </div>
+            <ul
+              tabIndex={0}
+              className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow-xl"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 6h16M4 12h8m-8 6h16"
-              />
-            </svg>
+              <LinkListItems />
+            </ul>
           </div>
-          <ul
-            tabIndex={0}
-            className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow-xl"
-          >
-            <LinkListItems />
-          </ul>
-        </div>
+        )}
         <Link href="/" className="btn btn-ghost text-xl">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -350,7 +353,7 @@ const FullNav = () => {
         </div>
       )}
       <div className="navbar-end">
-        {!!isSignedIn && <EndMenu username={user.username!} />}
+        {!!isSignedIn && !disabled && <EndMenu username={user.username!} />}
       </div>
     </div>
   );
@@ -359,7 +362,7 @@ const FullNav = () => {
 export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
   return (
     <main className="mx-auto flex h-screen w-full flex-col justify-start md:max-w-5xl lg:max-w-6xl">
-      {!props.hideHeader && <FullNav />}
+      {!props.hideHeader && <FullNav disabled={props.disabled ?? false} />}
       {props.actionRow && <div className="p-2">{props.actionRow}</div>}
       <div className="grow overflow-auto">{props.children}</div>
     </main>

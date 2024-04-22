@@ -2,8 +2,9 @@ import { LinkListItems, PageLayout } from "~/components/layout";
 import Link from "next/link";
 import Welcome from "~/components/welcome";
 import { useUser } from "@clerk/nextjs";
+import isAuth from "~/components/isAuth";
 
-export default function HomePage() {
+function HomePage() {
   const { user } = useUser();
   return (
     <PageLayout>
@@ -47,3 +48,5 @@ export default function HomePage() {
     </PageLayout>
   );
 }
+
+export default isAuth(HomePage);

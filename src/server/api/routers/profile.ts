@@ -159,4 +159,15 @@ export const profileRouter = createTRPCRouter({
       }
       return result;
     }),
+
+  getSettingsByUser: privateProcedure
+    .input(z.object({ userId: z.string() }).optional())
+    .query(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
+      const setting = await ctx.db.userSettings.findFirst({
+        where: { userId: input?.userId ?? ctx.userId },
+      });
+      return setting ?? undefined;
+    }),
 });
