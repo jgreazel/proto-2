@@ -59,11 +59,17 @@ const TimecardReportTable = (props: {
                   >
                     <td>{dayjs(s.clockIn).format("MM-DD-YYYY")}</td>
                     <td>{dayjs(s.clockIn).format("h:mm A")}</td>
-                    <td>{dayjs(s.clockOut).format("h:mm A")}</td>
                     <td>
-                      {dayjs
-                        .duration(dayjs(s.clockOut).diff(dayjs(s.clockIn)))
-                        .format("H [Hours], m [Minutes]")}
+                      {!!s.clockOut
+                        ? dayjs(s.clockOut).format("h:mm A")
+                        : "---"}
+                    </td>
+                    <td>
+                      {!!s.clockOut
+                        ? dayjs
+                            .duration(dayjs(s.clockOut).diff(dayjs(s.clockIn)))
+                            .format("H [Hours], m [Minutes]")
+                        : "---"}
                     </td>
                     <td>{dbUnitToDollars(s.rate)}/hr</td>
                   </tr>

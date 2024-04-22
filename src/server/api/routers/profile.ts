@@ -1,8 +1,7 @@
 import { clerkClient } from "@clerk/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { Redis } from "@upstash/redis";
-import { Ratelimit } from "@upstash/ratelimit";
+import { hashSync } from "bcrypt-ts";
 
 import {
   createTRPCRouter,
@@ -11,12 +10,7 @@ import {
 } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
-
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, "1 m"),
-  analytics: true,
-});
+import inRateWindow from "../helpers/inRateWindow";
 
 export const profileRouter = createTRPCRouter({
   getUserByUsername: publicProcedure
@@ -49,9 +43,7 @@ export const profileRouter = createTRPCRouter({
     }),
 
   getUsers: privateProcedure.query(async ({ ctx }) => {
-    const createdById = ctx.userId;
-    const { success } = await ratelimit.limit(createdById);
-    if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+    await inRateWindow(ctx.userId);
 
     const users = await clerkClient.users.getUserList();
     const userSettings = await ctx.db.userSettings.findMany({
@@ -80,18 +72,21 @@ export const profileRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
+
       try {
+        const hashPw = hashSync(input.password, 10);
         const toAdd = {
           username: input.username,
-          password: input.password,
+          // password: input.password,
+          passwordDigest: hashPw,
+          passwordHasher: "bcrypt",
           firstName: input.firstName,
           lastName: input.lastName,
           ...(!!input.email && { emailAddress: [input.email] }),
         };
         const user = await clerkClient.users.createUser(toAdd);
+        // const user = await clerkClient.users.updateUser(ctx.userId, toAdd);
         if (!user) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -99,6 +94,7 @@ export const profileRouter = createTRPCRouter({
           });
         }
         return user;
+        // return await clerkClient.users.getUserList();
       } catch (e) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -117,6 +113,7 @@ export const profileRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
       const result = await ctx.db.userSettings.create({
         data: {
           userId: input.userId,
@@ -145,6 +142,7 @@ export const profileRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
       const result = await ctx.db.userSettings.update({
         where: { userId: input.userId },
         data: {

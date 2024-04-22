@@ -163,7 +163,9 @@ export const reportsRouter = createTRPCRouter({
               rate: hc.hourlyRate,
             });
             // last punch opened a shift
-          } else {
+          } else if (
+            dayjs(wrkingShift?.clockIn).date === dayjs(tce.createdAt).date
+          ) {
             wrkingShift!.clockOut = tce.createdAt;
             const shiftDiffMs = dayjs(wrkingShift?.clockOut).diff(
               dayjs(wrkingShift?.clockIn),

@@ -370,7 +370,7 @@ const NewUserModal = ({ onClose }: { onClose: () => void }) => {
               {...register("password", {
                 required: true,
                 disabled: isLoading,
-                min: 8,
+                minLength: 8,
               })}
             />
             <label className="form-control">
@@ -606,7 +606,7 @@ const UserPermissionsModal = ({
                 <input
                   type="checkbox"
                   className="checkbox"
-                  {...register("canModifyHourCode", { required: true })}
+                  {...register("canModifyHourCode")}
                   disabled={isFetching}
                 />
                 <span className="label-text">
