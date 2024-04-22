@@ -1,19 +1,11 @@
 import { clerkClient } from "@clerk/nextjs";
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import dayjs from "dayjs";
 
 import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
-import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
-import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
 import { filterUserForClient } from "../helpers/filterUsersForClient";
-
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(3, "1 m"),
-  analytics: true,
-});
+import inRateWindow from "../helpers/inRateWindow";
 
 export const reportsRouter = createTRPCRouter({
   // todo: only query db if input params dictate so
@@ -46,10 +38,7 @@ export const reportsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      // Rate Limit check
-      const createdById = ctx.userId;
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(ctx.userId);
 
       // Purchase Report
       const tranItemLinks = await ctx.db.transactionItems
@@ -135,12 +124,9 @@ export const reportsRouter = createTRPCRouter({
         },
       });
       type Shift = {
-        id: string;
         userId: string;
-        start: Date;
-        end: Date;
         clockIn: Date;
-        clockOut: Date;
+        clockOut?: Date;
       };
       type Timecard = {
         user: { id: string; username: string };
@@ -148,8 +134,6 @@ export const reportsRouter = createTRPCRouter({
         totalWorkedMs: number;
         shifts: Shift[];
       }[];
-      // idk why my local linter gets pissed, but the build fails with an unnecessary assertion
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       const userIdList = new Set(tces.map((t) => t.userId));
       const tcUsers = await clerkClient.users
         .getUserList({ userId: Array.from(userIdList) })
@@ -158,31 +142,35 @@ export const reportsRouter = createTRPCRouter({
       // todo recalculate shifts & totalMsWorked
       const shiftsByUser: Timecard = tces.reduce((acc, tce) => {
         const existingUser = acc.find((user) => user.user.id === tce.userId);
-        // const timeDiff = dayjs(shift.clockOut).diff(dayjs(shift.clockIn));
 
         if (existingUser) {
-          // existingUser.shifts.push(shift);
-          // existingUser.totalWorkedMs += timeDiff;
-          // todo
-          // get latest shift
-          // if!clock in do so
-          // else !clock out add that & calc total ms worked
+          const wrkingShift =
+            existingUser.shifts[existingUser.shifts.length - 1];
+          // last punch completed a shift
+          if (!!wrkingShift?.clockOut) {
+            existingUser.shifts.push({
+              userId: tce.userId,
+              clockIn: tce.createdAt,
+            });
+            // last punch opened a shift
+          } else {
+            wrkingShift!.clockOut = tce.createdAt;
+            existingUser.totalWorkedMs += dayjs(wrkingShift?.clockOut).diff(
+              dayjs(wrkingShift?.clockIn),
+            );
+          }
         } else {
-          // acc.push({
-          //   user: {
-          //     id: shift.userId,
-          //     username:
-          //       tcUsers.find((u) => u.id === shift.userId)?.username ??
-          //       "Not Found",
-          //   },
-          //   shifts: [shift],
-          //   totalWorkedMs: timeDiff,
-          //   period: [start, end],
-          // });
-          // todo
-          // push user
-          // push first shift with just clock in
-          // add period
+          acc.push({
+            user: {
+              id: tce.userId,
+              username:
+                tcUsers.find((u) => u.id === tce.userId)?.username ??
+                "Not Found",
+            },
+            shifts: [{ userId: tce.userId, clockIn: tce.createdAt }],
+            totalWorkedMs: 0,
+            period: [start, end],
+          });
         }
         return acc;
       }, [] as Timecard);

@@ -250,7 +250,7 @@ export const schedulesRouter = createTRPCRouter({
       await inRateWindow(createdById);
 
       const userSettings = await ctx.db.userSettings.findFirst({
-        where: { userId: createdById },
+        where: { userId: input.userId },
       });
       if (!userSettings?.defaultHourCodeId) {
         throw new TRPCError({

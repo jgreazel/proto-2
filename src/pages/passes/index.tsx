@@ -1,5 +1,4 @@
 import { PageLayout } from "~/components/layout";
-import { Button } from "~/components/button";
 import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/loading";
 import Link from "next/link";

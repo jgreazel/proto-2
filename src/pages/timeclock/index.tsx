@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import handleApiError from "~/helpers/handleApiError";
+import { LoadingPage } from "~/components/loading";
 
 type TimeClockEvent = {
   hourCodeId: string;
@@ -32,9 +33,11 @@ const ClockInModal = ({
       clockPIN: "",
     },
   });
+  const ctx = api.useUtils();
   const { mutate, isLoading: isMutating } =
     api.schedules.createTimeClockEvent.useMutation({
-      onSuccess: () => {
+      onSuccess: async () => {
+        await ctx.schedules.getShiftsByUser.invalidate();
         toast.success("Time Card Punched!");
         reset();
         onClose();
@@ -117,7 +120,7 @@ const ShiftFeed = () => {
   const [punchId, setPunchId] = useState<string | undefined>(undefined);
 
   if (isLoading) {
-    return <div className="loading loading-spinner loading-md"></div>;
+    return <LoadingPage />;
   }
 
   const punchIdData = !punchId
@@ -249,6 +252,7 @@ const ShiftFeed = () => {
 };
 
 export default function TimeClockPage() {
+  // todo fix clock
   // const getToday = () => dayjs().format("dddd, MMMM D, YYYY - h:mm:ss A");
   // const [title, setTitle] = useState(getToday);
 

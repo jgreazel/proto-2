@@ -10,6 +10,7 @@ import type { RangeValueType } from "../_app";
 import { PageLayout } from "~/components/layout";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import NoData from "~/components/noData";
+import handleApiError from "~/helpers/handleApiError";
 
 const { RangePicker } = DatePicker;
 dayjs.extend(duration);
@@ -39,7 +40,7 @@ const TimecardReportTable = (props: {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Shift</th>
+                  <th>Day</th>
                   <th>Clock In</th>
                   <th>Clock Out</th>
                   <th>Total</th>
@@ -47,12 +48,12 @@ const TimecardReportTable = (props: {
               </thead>
               <tbody>
                 {x.shifts.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      {`${dayjs(s.start).format("dddd, DD h:mm A")} - ${dayjs(
-                        s.end,
-                      ).format("h:mm A")}`}
-                    </td>
+                  <tr
+                    key={
+                      s.userId + s.clockIn.toString() + s.clockOut?.toString()
+                    }
+                  >
+                    <td>{dayjs(s.clockIn).format("MM-DD-YYYY")}</td>
                     <td>{dayjs(s.clockIn).format("h:mm A")}</td>
                     <td>{dayjs(s.clockOut).format("h:mm A")}</td>
                     <td>
@@ -244,6 +245,7 @@ export default function ReportsPage() {
       onSuccess: () => {
         setShowReport(true);
       },
+      onError: handleApiError,
     },
   );
 

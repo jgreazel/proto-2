@@ -119,26 +119,6 @@ const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
           />
-          {/* <div className="flex flex-row gap-1 self-end">
-            {!isUpdating ? (
-              <Button
-                onClick={() => {
-                  mutate({ id: props.patronId, passId: select?.value });
-                }}
-              >
-                Save
-              </Button>
-            ) : (
-              <LoadingSpinner />
-            )}
-            <Button
-              onClick={() => {
-                setShowRemove(true);
-              }}
-            >
-              Cancel
-            </Button>
-          </div> */}
         </div>
       )}
     </div>
