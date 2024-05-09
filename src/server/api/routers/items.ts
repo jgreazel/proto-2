@@ -106,7 +106,7 @@ export const itemsRouter = createTRPCRouter({
   createConcessionItem: privateProcedure
     .input(
       z.object({
-        label: z.string().min(1).max(20, "Too many characters"),
+        label: z.string().min(1).max(50, "Too many characters"),
         sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX),
         purchasePrice: z.number().min(SELL_MIN).max(SELL_MAX),
         inStock: z.number().min(0).max(10000),
@@ -134,7 +134,7 @@ export const itemsRouter = createTRPCRouter({
   createAdmissionItem: privateProcedure
     .input(
       z.object({
-        label: z.string().min(1).max(30, "Too many characters"),
+        label: z.string().min(1).max(50, "Too many characters"),
         sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX),
         isSeasonal: z.boolean(),
         isDay: z.boolean(),
@@ -165,7 +165,7 @@ export const itemsRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
-        label: z.string().min(1).max(20, "Too many characters").optional(),
+        label: z.string().min(1).max(50, "Too many characters").optional(),
         sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         purchasePrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         inStock: z.number().min(0).max(1000).optional(),

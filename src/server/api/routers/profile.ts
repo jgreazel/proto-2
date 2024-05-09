@@ -60,7 +60,6 @@ export const profileRouter = createTRPCRouter({
     return result;
   }),
 
-  // todo WTF is "Unprocessable Entity"
   createUser: privateProcedure
     .input(
       z.object({
@@ -78,7 +77,6 @@ export const profileRouter = createTRPCRouter({
         const hashPw = hashSync(input.password, 10);
         const toAdd = {
           username: input.username,
-          // password: input.password,
           passwordDigest: hashPw,
           passwordHasher: "bcrypt",
           firstName: input.firstName,
@@ -86,7 +84,6 @@ export const profileRouter = createTRPCRouter({
           ...(!!input.email && { emailAddress: [input.email] }),
         };
         const user = await clerkClient.users.createUser(toAdd);
-        // const user = await clerkClient.users.updateUser(ctx.userId, toAdd);
         if (!user) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -94,7 +91,6 @@ export const profileRouter = createTRPCRouter({
           });
         }
         return user;
-        // return await clerkClient.users.getUserList();
       } catch (e) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",

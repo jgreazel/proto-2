@@ -815,4 +815,4 @@ function UsersPage() {
   );
 }
 
-export default isAuth(UsersPage);
+export default isAuth(UsersPage, "admin");

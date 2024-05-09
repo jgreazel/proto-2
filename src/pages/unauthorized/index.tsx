@@ -1,12 +1,20 @@
 import { SignOutButton } from "@clerk/nextjs";
-import isUnAuth from "~/components/isUnAuth";
+import Link from "next/link";
 
 import { PageLayout } from "~/components/layout";
+import { LoadingPage } from "~/components/loading";
+import { api } from "~/utils/api";
 
 function UnauthorizedPage() {
+  const { data, isLoading } = api.profile.getSettingsByUser.useQuery();
+
+  if (isLoading) {
+    return <LoadingPage />;
+  }
+
   return (
     <PageLayout disabled>
-      <div role="alert" className="alert shadow-lg">
+      <div role="alert" className="alert mt-5 shadow-lg">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -21,17 +29,37 @@ function UnauthorizedPage() {
           ></path>
         </svg>
         <div>
-          <h3 className="font-bold">Account Setup Not Finished</h3>
-          <div className="text-xs">
-            Contact an Admin to add User Permissions
+          {!data && (
+            <>
+              <h3 className="font-bold">Account Setup Not Finished</h3>
+              <div className="text-xs">
+                Contact an Admin to add User Permissions
+              </div>
+            </>
+          )}
+          {!!data && !data?.isAdmin && (
+            <>
+              <h3 className="font-bold">Not Authorized to view this page</h3>
+              <div className="text-xs">
+                Contact an Admin if you need permission
+              </div>
+            </>
+          )}
+        </div>
+
+        {!data && (
+          <div className="btn btn-outline btn-accent">
+            <SignOutButton />
           </div>
-        </div>
-        <div className="btn btn-outline btn-accent">
-          <SignOutButton />
-        </div>
+        )}
+        {!!data && !data?.isAdmin && (
+          <Link href="/" className="btn btn-outline btn-accent">
+            Back to Home
+          </Link>
+        )}
       </div>
     </PageLayout>
   );
 }
 
-export default isUnAuth(UnauthorizedPage);
+export default UnauthorizedPage;

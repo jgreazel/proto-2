@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Dropzone } from "~/components/dropzone";
+import isAuth from "~/components/isAuth";
 import { PageLayout } from "~/components/layout";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import NoData from "~/components/noData";
@@ -190,7 +191,7 @@ const FileColumn = (props: { imgKey: string }) => {
   );
 };
 
-export default function FilesPage() {
+function FilesPage() {
   const { data, isLoading } = api.documents.getAll.useQuery();
 
   if (isLoading || !data) {
@@ -237,3 +238,5 @@ export default function FilesPage() {
     </PageLayout>
   );
 }
+
+export default isAuth(FilesPage, "admin");

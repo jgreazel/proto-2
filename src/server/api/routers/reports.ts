@@ -127,7 +127,6 @@ export const reportsRouter = createTRPCRouter({
           .endOf("day")
           .toDate(),
       ];
-      // todo modify for tc v2, switch to timeClockEvents, if odd - return flag
       const tces = await ctx.db.timeClockEvent.findMany({
         where: {
           createdAt: {

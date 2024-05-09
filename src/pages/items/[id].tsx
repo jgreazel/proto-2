@@ -11,6 +11,9 @@ import handleApiError from "~/helpers/handleApiError";
 import { InputNumber } from "antd";
 import moneyMask from "~/helpers/moneyMask";
 import { PageLayout } from "~/components/layout";
+import isAuth from "~/components/isAuth";
+import { useRouter } from "next/router";
+import toast from "react-hot-toast";
 
 type AdmissionFormData = {
   label: string;
@@ -284,22 +287,28 @@ const ConcessionItemForm = (props: {
   );
 };
 
-const mutationOpts = (ctx: {
-  items: { getById: { invalidate: () => void } };
-}) => ({
-  onSuccess: () => {
-    void ctx.items.getById.invalidate();
-  },
-  onError: handleApiError,
-});
-
 const CreateItemWizard = () => {
   // ctx v. api: ctx = server side OR as part of the request... or is it just the react context?
   const ctx = api.useUtils();
+  const router = useRouter();
   const { mutate: concessionMutation, isLoading: isCreating } =
-    api.items.createConcessionItem.useMutation(mutationOpts(ctx));
+    api.items.createConcessionItem.useMutation({
+      onSuccess: async () => {
+        void ctx.items.getById.invalidate();
+        await router.push("/items");
+        toast.success("Item Created!");
+      },
+      onError: handleApiError,
+    });
   const { mutate: admissionMutation, isLoading: isCreatingA } =
-    api.items.createAdmissionItem.useMutation(mutationOpts(ctx));
+    api.items.createAdmissionItem.useMutation({
+      onSuccess: async () => {
+        void ctx.items.getById.invalidate();
+        await router.push("/items");
+        toast.success("Item Created!");
+      },
+      onError: handleApiError,
+    });
 
   const [tab, setTab] = useState<"admission" | "concession">("admission");
 
@@ -353,9 +362,19 @@ const EditItemWizard = (props: { id: string }) => {
 
   const ctx = api.useUtils();
   const { mutate: concessionMutate, isLoading: isUpdating } =
-    api.items.updateConcessionItem.useMutation(mutationOpts(ctx));
+    api.items.updateConcessionItem.useMutation({
+      onSuccess: () => {
+        void ctx.items.getById.invalidate();
+      },
+      onError: handleApiError,
+    });
   const { mutate: admissionMutate, isLoading: isUpdatingA } =
-    api.items.updateAdmissionItem.useMutation(mutationOpts(ctx));
+    api.items.updateAdmissionItem.useMutation({
+      onSuccess: () => {
+        void ctx.items.getById.invalidate();
+      },
+      onError: handleApiError,
+    });
 
   if (isLoading) {
     return (
@@ -403,7 +422,7 @@ const EditItemWizard = (props: { id: string }) => {
   );
 };
 
-export default function SingleItemPage() {
+function SingleItemPage() {
   const params = useParams();
   const id = params?.id ?? "0";
 
@@ -452,3 +471,5 @@ export default function SingleItemPage() {
     </>
   );
 }
+
+export default isAuth(SingleItemPage);

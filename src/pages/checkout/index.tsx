@@ -11,6 +11,7 @@ import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import EmptyCart from "~/components/emptyCart";
 import NoData from "~/components/noData";
+import isAuth from "~/components/isAuth";
 type Item = RouterOutputs["items"]["getAll"][number]["item"];
 
 const ItemFeed = (props: {
@@ -168,7 +169,7 @@ const AdmissionFeed = () => {
   );
 };
 
-export default function CheckoutPage() {
+function CheckoutPage() {
   const [feed, setFeed] = useState<"concession" | "admission" | "passes">(
     "concession",
   );
@@ -376,3 +377,5 @@ export default function CheckoutPage() {
     </PageLayout>
   );
 }
+
+export default isAuth(CheckoutPage, "employee");
