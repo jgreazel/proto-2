@@ -9,7 +9,7 @@ export type PatronFormData = {
   id?: string;
   firstName: string;
   lastName: string;
-  birthDate: Dayjs;
+  birthDate?: Dayjs;
 };
 
 type Props = {

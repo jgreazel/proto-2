@@ -1,14 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import {
-  createTRPCRouter,
-  publicProcedure,
-  privateProcedure,
-} from "~/server/api/trpc";
-
-import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
-import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
+import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
+import inRateWindow from "../helpers/inRateWindow";
 
 const addOneYear = (date: Date) => {
   const dateCopy = new Date(date);
@@ -16,30 +10,25 @@ const addOneYear = (date: Date) => {
   return dateCopy;
 };
 
-// Create a new ratelimiter, that allows 3 req per 1 min
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(3, "1 m"),
-  analytics: true,
-});
-
+// todo add effective dates
+// should account for effective dates
 export const passesRouter = createTRPCRouter({
-  // should account for effective dates
-  getAll: publicProcedure.query(
-    async ({ ctx }) =>
-      await ctx.db.seasonPass.findMany({
-        orderBy: [{ label: "asc" }],
-        include: { patrons: true },
-      }),
-  ),
+  getAll: privateProcedure.query(async ({ ctx }) => {
+    await inRateWindow(ctx.userId);
+    return await ctx.db.seasonPass.findMany({
+      orderBy: [{ label: "asc" }],
+      include: { patrons: true },
+    });
+  }),
 
-  getById: publicProcedure
+  getById: privateProcedure
     .input(
       z.object({
         id: z.string(),
       }),
     )
     .query(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
       const pass = await ctx.db.seasonPass.findUnique({
         where: { id: input.id },
         include: { patrons: true },
@@ -77,8 +66,7 @@ export const passesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
 
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(createdById);
 
       const pass = await ctx.db.seasonPass.create({
         data: {
@@ -121,6 +109,7 @@ export const passesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
       const pass = await ctx.db.seasonPass.update({
         where: { id: input.id },
         data: { ...input },
@@ -135,6 +124,7 @@ export const passesRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
       const patron = await ctx.db.patron.findUnique({
         where: { id: input.id },
       });
@@ -161,6 +151,7 @@ export const passesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdBy = ctx.userId;
+      await inRateWindow(createdBy);
 
       const patron = await ctx.db.patron.create({
         data: { ...input, createdBy },
@@ -180,6 +171,7 @@ export const passesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
       const patron = await ctx.db.patron.update({
         where: { id: input.id },
         data: { ...input },
@@ -194,6 +186,8 @@ export const passesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
       const admission = await ctx.db.admissionEvent.create({
         data: {
           patronId: input.patronId, // ? make sure patron is populated
@@ -212,15 +206,16 @@ export const passesRouter = createTRPCRouter({
         range: z.array(z.date()).refine((data) => data.length === 2),
       }),
     )
-    .query(
-      async ({ ctx, input }) =>
-        await ctx.db.admissionEvent.findMany({
-          where: {
-            createdAt: {
-              lte: input.range[1],
-              gte: input.range[0],
-            },
+    .query(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
+      return await ctx.db.admissionEvent.findMany({
+        where: {
+          createdAt: {
+            lte: input.range[1],
+            gte: input.range[0],
           },
-        }),
-    ),
+        },
+      });
+    }),
 });

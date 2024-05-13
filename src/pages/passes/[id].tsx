@@ -1,5 +1,5 @@
 import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import dayjs from "dayjs";
@@ -11,6 +11,7 @@ import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import handleApiError from "~/helpers/handleApiError";
 import PatronForm, { type PatronFormData } from "~/components/patronForm";
 import { PageLayout } from "~/components/layout";
+import isAuth from "~/components/isAuth";
 
 const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
   const [showRemove, setShowRemove] = useState(true);
@@ -21,6 +22,7 @@ const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
       onError: handleApiError,
       onSuccess: () => {
         setShowRemove(true);
+        toast.success("Patron Moved!");
         props.onSubmit();
       },
     },
@@ -164,7 +166,7 @@ const PatronFormSection = (props: {
       mutate({
         ...data,
         passId: props.passId!,
-        birthDate: data.birthDate.toDate(),
+        birthDate: data.birthDate?.toDate(),
       });
       toast.success(`Success!`);
     } else {
@@ -279,7 +281,7 @@ type SeasonPassFormData = {
   label: string;
 };
 
-export default function SinglePassPage() {
+function SinglePassPage() {
   const params = useParams();
   const id = (id: string | string[] | undefined = params?.id) =>
     id?.toString() ?? "0";
@@ -294,6 +296,8 @@ export default function SinglePassPage() {
   const [patrons, setPatrons] = useState<
     RouterOutputs["passes"]["createPatron"][]
   >([]);
+
+  const router = useRouter();
 
   const { register, handleSubmit, reset, formState } =
     useForm<SeasonPassFormData>();
@@ -311,6 +315,8 @@ export default function SinglePassPage() {
         void ctx.passes.getById.invalidate({
           id: data.id,
         });
+        router.push("/passes");
+        toast.success("Pass Updated!");
       },
       onError: handleApiError,
     });
@@ -320,6 +326,8 @@ export default function SinglePassPage() {
         reset();
         setPatrons([]);
         void ctx.passes.getAll.invalidate();
+        router.push("/passes");
+        toast.success("Pass Created!");
       },
       onError: handleApiError,
     });
@@ -418,3 +426,5 @@ export default function SinglePassPage() {
     </PageLayout>
   );
 }
+
+export default isAuth(SinglePassPage, "admin");

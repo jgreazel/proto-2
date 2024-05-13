@@ -14,6 +14,7 @@ import { PageLayout } from "~/components/layout";
 import isAuth from "~/components/isAuth";
 import { useRouter } from "next/router";
 import toast from "react-hot-toast";
+import { router } from "@trpc/server";
 
 type AdmissionFormData = {
   label: string;
@@ -361,16 +362,21 @@ const EditItemWizard = (props: { id: string }) => {
   const { data, isLoading } = api.items.getById.useQuery({ id: props.id });
 
   const ctx = api.useUtils();
+  const router = useRouter();
   const { mutate: concessionMutate, isLoading: isUpdating } =
     api.items.updateConcessionItem.useMutation({
-      onSuccess: () => {
+      onSuccess: async () => {
+        toast.success("Updates saved!");
+        await router.push("/items");
         void ctx.items.getById.invalidate();
       },
       onError: handleApiError,
     });
   const { mutate: admissionMutate, isLoading: isUpdatingA } =
     api.items.updateAdmissionItem.useMutation({
-      onSuccess: () => {
+      onSuccess: async () => {
+        toast.success("Updates saved!");
+        await router.push("/items");
         void ctx.items.getById.invalidate();
       },
       onError: handleApiError,

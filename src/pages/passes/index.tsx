@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useState } from "react";
 import filterPasses from "~/helpers/filterPasses";
 import PeopleGrid from "~/components/peopleGrid";
+import isAuth from "~/components/isAuth";
 
-export default function PassesPage() {
+function PassesPage() {
   const { data, isLoading } = api.passes.getAll.useQuery();
   const [filter, setFilter] = useState("");
 
@@ -155,3 +156,5 @@ export default function PassesPage() {
     </PageLayout>
   );
 }
+
+export default isAuth(PassesPage, "admin");

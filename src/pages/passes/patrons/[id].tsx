@@ -3,12 +3,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/router";
 import toast from "react-hot-toast";
+import isAuth from "~/components/isAuth";
 import { PageLayout } from "~/components/layout";
 import PatronForm from "~/components/patronForm";
 import handleApiError from "~/helpers/handleApiError";
-import { type RouterOutputs, api } from "~/utils/api";
+import { api } from "~/utils/api";
 
-export default function SinglePatronPage() {
+function SinglePatronPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const { data, isLoading } = api.passes.getPatronById.useQuery({ id });
@@ -19,9 +20,10 @@ export default function SinglePatronPage() {
   const { mutate, isLoading: isUpdating } = api.passes.updatePatron.useMutation(
     {
       onError: handleApiError,
-      onSuccess: () => {
-        toast("Update Successful!");
+      onSuccess: async () => {
+        toast.success("Update Successful!");
         void ctx.passes.getPatronById.invalidate();
+        await router.push("/passes");
       },
     },
   );
@@ -60,7 +62,7 @@ export default function SinglePatronPage() {
               id: data?.id,
               firstName: data?.firstName ?? "",
               lastName: data?.lastName ?? "",
-              birthDate: dayjs(data?.birthDate),
+              birthDate: !!data?.birthDate ? dayjs(data.birthDate) : undefined,
             }}
             disabled={isLoading || isUpdating}
             onCancel={() => {
@@ -74,7 +76,7 @@ export default function SinglePatronPage() {
                 mutate({
                   ...data,
                   id: data.id,
-                  birthDate: data.birthDate.toDate(),
+                  birthDate: data.birthDate?.toDate(),
                 });
               }
             }}
@@ -84,3 +86,5 @@ export default function SinglePatronPage() {
     </PageLayout>
   );
 }
+
+export default isAuth(SinglePatronPage, "admin");

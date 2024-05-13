@@ -53,7 +53,7 @@ function UnauthorizedPage() {
           </div>
         )}
         {!!data && !data?.isAdmin && (
-          <Link href="/" className="btn btn-outline btn-accent">
+          <Link href="/" className="btn btn-outline btn-primary">
             Back to Home
           </Link>
         )}
