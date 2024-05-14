@@ -546,11 +546,12 @@ const UserPermissionsModal = ({
   }));
   options?.unshift({ value: "", label: "---" });
 
-  const handleGSSubmit = (data: PermissionForm) => {
+  const handleGSSubmit = (formData: PermissionForm) => {
     const input = {
       userId,
-      ...data,
+      ...formData,
     };
+    console.log(formData);
     !!data ? update(input) : create(input);
   };
 
@@ -634,7 +635,7 @@ const UserPermissionsModal = ({
                 <span className="label-text">Clock PIN</span>
                 <div
                   className="tooltip tooltip-right"
-                  data-tip="This PIN is required for clocking in/out to verify identity."
+                  data-tip="This PIN is required for clocking in/out to verify identity. Must be unique."
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

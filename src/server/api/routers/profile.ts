@@ -111,6 +111,7 @@ export const profileRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await inRateWindow(ctx.userId);
+
       const result = await ctx.db.userSettings.create({
         data: {
           userId: input.userId,
