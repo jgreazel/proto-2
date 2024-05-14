@@ -4,6 +4,7 @@ import Link from "next/link";
 import { api } from "~/utils/api";
 import handleApiError from "~/helpers/handleApiError";
 import toast from "react-hot-toast";
+import { LoadingSpinner } from "./loading";
 
 type LayoutProps = {
   actionRow?: ReactNode;
@@ -130,25 +131,6 @@ export const LinkListItems = () => {
         </Link>
       </li>
       <li>
-        <Link href="/items">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="h-6 w-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
-            />
-          </svg>
-          Items
-        </Link>
-      </li>
-      <li>
         <Link href="/passes">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -184,6 +166,55 @@ export const LinkListItems = () => {
             />
           </svg>
           Schedules
+        </Link>
+      </li>
+      <li>
+        <Link href="/timeclock">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="h-6 w-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+            />
+          </svg>
+          Time Clock
+        </Link>
+      </li>
+    </>
+  );
+};
+
+const EndMenu = ({ username }: { username: string }) => {
+  const { data, isLoading } = api.profile.getSettingsByUser.useQuery();
+  const [show, setShow] = useState(false);
+
+  const adminLinks = (
+    <>
+      {" "}
+      <li>
+        <Link href="/items">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="h-6 w-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+            />
+          </svg>
+          Items
         </Link>
       </li>
       <li>
@@ -224,8 +255,8 @@ export const LinkListItems = () => {
           Reports
         </Link>
       </li>
-      <li>
-        <Link href="/timeclock">
+      <li className="w-max">
+        <Link href="/users">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -237,18 +268,17 @@ export const LinkListItems = () => {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+              d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
             />
           </svg>
-          Time Clock
+          Manage Users
         </Link>
       </li>
     </>
   );
-};
 
-const EndMenu = ({ username }: { username: string }) => {
-  const [show, setShow] = useState(false);
+  const rightBarLinks = !!data?.isAdmin ? adminLinks : <></>;
+
   return (
     <>
       <div className="dropdown dropdown-end z-50">
@@ -274,13 +304,27 @@ const EndMenu = ({ username }: { username: string }) => {
         >
           <div className="p-1 font-medium capitalize">Hi, {username}</div>
           <div className="divider m-0"></div>
-          <li className="w-max">
-            <Link href="/users">Manage Users</Link>
-          </li>
+          {isLoading ? <LoadingSpinner /> : rightBarLinks}
           <li className="w-max" onClick={() => setShow(true)}>
-            <a>Feedback</a>
+            <a>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.068.157 2.148.279 3.238.364.466.037.893.281 1.153.671L12 21l2.652-3.978c.26-.39.687-.634 1.153-.67 1.09-.086 2.17-.208 3.238-.365 1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
+                />
+              </svg>
+              Leave Feedback
+            </a>
           </li>
-          <li className="w-max text-accent">
+          <li className="w-max self-end text-accent">
             <SignOutButton />
           </li>
         </ul>

@@ -232,14 +232,14 @@ function CheckoutPage() {
           className={`tab ${feed === "concession" && "tab-active"}`}
           onClick={() => setFeed("concession")}
         >
-          Concession
+          Snacks
         </a>
         <a
           role="tab"
           className={`tab ${feed === "admission" && "tab-active"}`}
           onClick={() => setFeed("admission")}
         >
-          Admission
+          Passes
         </a>
         <a
           role="tab"

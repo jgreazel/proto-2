@@ -233,17 +233,23 @@ const CellView = ({
           <div>
             {d.shifts.map((s) =>
               !!onClick ? (
-                <button
-                  key={s.id}
-                  className="btn btn-ghost btn-sm btn-wide capitalize"
-                  onClick={(e) => {
-                    if (!onClick) return;
-                    e.stopPropagation();
-                    onClick(s);
-                  }}
+                <div
+                  key="info-tooltip"
+                  className="tooltip tooltip-right hover:cursor-pointer"
+                  data-tip="Edit"
                 >
-                  {s.username}
-                </button>
+                  <button
+                    key={s.id}
+                    className="btn btn-ghost btn-sm btn-wide capitalize"
+                    onClick={(e) => {
+                      if (!onClick) return;
+                      e.stopPropagation();
+                      onClick(s);
+                    }}
+                  >
+                    {s.username}
+                  </button>
+                </div>
               ) : (
                 <div key={s.id} className="capitalize">
                   {s.username}
@@ -329,7 +335,7 @@ const CloneSection = ({
 const DesktopView = () => {
   const [showModal, setShowModal] = useState(false);
   const [calVal, setCalVal] = useState(() => dayjs());
-  const [singleModalData, setSingleModalData] =
+  const [singleSiftModalData, setSingleShiftModalData] =
     useState<RouterOutputs["schedules"]["getShifts"][number]>();
   const { data, isLoading, refetch } = api.schedules.getShifts.useQuery({
     dateRange: [
@@ -337,6 +343,8 @@ const DesktopView = () => {
       calVal.endOf("month").startOf("day").toDate(),
     ],
   });
+  const { data: perm, isLoading: isGettingPerm } =
+    api.profile.getSettingsByUser.useQuery();
 
   const handleCellClick = (
     value: Dayjs,
@@ -363,10 +371,55 @@ const DesktopView = () => {
     await refetch();
   };
 
+  const shiftList = (
+    <>
+      <div className="items-bottom flex flex-row gap-2">
+        <h3 className="font-md mb-2 text-lg">Scheduled</h3>
+      </div>
+      {data?.some(filterShifts(calVal)) ? (
+        <CellView
+          onClick={
+            !!perm?.isAdmin ? (x) => setSingleShiftModalData(x) : undefined
+          }
+          data={data?.filter(filterShifts(calVal)) ?? []}
+        />
+      ) : (
+        <div role="alert" className="alert">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            className="h-6 w-6 shrink-0 stroke-info"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <span>No shifts scheduled for today</span>
+        </div>
+      )}
+    </>
+  );
+
+  const modalContent = !!perm?.isAdmin ? (
+    <>
+      <ShiftForm day={calVal} onSuccess={handleFormSuccess} />
+      <div className="divider" />
+      {shiftList}
+      <div className="divider" />
+      <CloneSection srcDate={calVal} onSuccess={handleFormSuccess} />
+    </>
+  ) : (
+    <>{shiftList}</>
+  );
+
   return (
     <PageLayout>
       <div className="flex flex-col gap-2 p-2">
-        {data?.length === 0 && (
+        {perm?.isAdmin && data?.length === 0 && (
           <div role="alert" className="alert">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -385,7 +438,7 @@ const DesktopView = () => {
           </div>
         )}
         <Calendar
-          disabledDate={() => isLoading}
+          disabledDate={() => isLoading || isGettingPerm}
           cellRender={cellRenderer}
           className="rounded-xl p-2 shadow-xl"
           value={calVal}
@@ -396,67 +449,18 @@ const DesktopView = () => {
       </div>
       {showModal && (
         <ShiftModal onClose={() => setShowModal(false)}>
-          <ShiftForm day={calVal} onSuccess={handleFormSuccess} />
-          <div className="divider" />
-          <div className="items-bottom flex flex-row gap-2">
-            <h3 className="font-md mb-2 text-lg">Scheduled</h3>
-            <div
-              key="info-tooltip"
-              className="tooltip hover:cursor-pointer"
-              data-tip="Click a shift for editing"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </div>
-          </div>
-          {data?.some(filterShifts(calVal)) ? (
-            <CellView
-              onClick={(x) => setSingleModalData(x)}
-              data={data?.filter(filterShifts(calVal)) ?? []}
-            />
-          ) : (
-            <div role="alert" className="alert">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="h-6 w-6 shrink-0 stroke-info"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-              <span>No shifts scheduled for today</span>
-            </div>
-          )}
-          <div className="divider" />
-          <CloneSection srcDate={calVal} onSuccess={handleFormSuccess} />
+          {modalContent}
         </ShiftModal>
       )}
-      {singleModalData && (
-        <ShiftModal onClose={() => setSingleModalData(undefined)}>
+      {singleSiftModalData && (
+        <ShiftModal onClose={() => setSingleShiftModalData(undefined)}>
           <ShiftForm
             day={calVal}
             onSuccess={async () => {
               await handleFormSuccess();
-              setSingleModalData(undefined);
+              setSingleShiftModalData(undefined);
             }}
-            value={singleModalData}
+            value={singleSiftModalData}
           />
         </ShiftModal>
       )}

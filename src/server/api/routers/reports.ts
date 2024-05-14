@@ -170,8 +170,10 @@ export const reportsRouter = createTRPCRouter({
               dayjs(wrkingShift?.clockIn),
             );
             existingUser.totalWorkedMs += shiftDiffMs;
+            // this really shouldn't use hc as a rate
+            // ideally it multiplies by rate of clock IN
             existingUser.totalEarned +=
-              (shiftDiffMs / MS_IN_HOUR) * hc.hourlyRate;
+              (shiftDiffMs / MS_IN_HOUR) * (wrkingShift?.rate ?? hc.hourlyRate);
           }
         } else {
           acc.push({

@@ -241,8 +241,10 @@ export const schedulesRouter = createTRPCRouter({
     .input(
       z.object({
         hourCodeId: z.string(),
-        clockPIN: z.string().length(4),
+        clockPIN: z.string().length(4).optional(),
         userId: z.string(),
+        manualDateTime: z.date().optional(),
+        adminUserId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -260,12 +262,17 @@ export const schedulesRouter = createTRPCRouter({
         });
       }
 
-      if (
-        input.clockPIN.toUpperCase() !== userSettings.clockPIN?.toUpperCase()
-      ) {
+      const adminUser = await ctx.db.userSettings.findFirst({
+        where: { userId: input.adminUserId },
+      });
+
+      const pinMismatch =
+        input.clockPIN?.toUpperCase() !== userSettings.clockPIN?.toUpperCase();
+      // admin can create manual TC events to make corrections
+      if (pinMismatch && !adminUser?.isAdmin) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Incorrect Clock PIN",
+          message: "Incorrect Clock PIN" + `isadmin: ${userSettings.isAdmin}`,
         });
       }
 
@@ -279,6 +286,7 @@ export const schedulesRouter = createTRPCRouter({
           userId: input.userId,
           hourCodeId: workingHourCode,
           createdBy: createdById,
+          createdAt: input.manualDateTime ?? undefined,
         },
       });
 
