@@ -8,23 +8,15 @@ import {
   privateProcedure,
 } from "~/server/api/trpc";
 
-import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
-import { Redis } from "@upstash/redis"; // see below for cloudflare and fastly adapters
 import { filterUserForClient } from "../helpers/filterUsersForClient";
+import inRateWindow from "../helpers/inRateWindow";
 
 const SELL_MIN = 0;
 // $500.00
 const SELL_MAX = 50000;
 
-// Create a new ratelimiter, that allows 3 req per 1 min
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(5, "1 m"),
-  analytics: true,
-});
-
 export const itemsRouter = createTRPCRouter({
-  getAll: publicProcedure
+  getAll: privateProcedure
     .input(
       z
         .object({
@@ -33,6 +25,7 @@ export const itemsRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
       let items = await ctx.db.inventoryItem.findMany({
         take: 100,
         orderBy: [{ createdAt: "desc" }],
@@ -72,13 +65,15 @@ export const itemsRouter = createTRPCRouter({
       });
     }),
 
-  getById: publicProcedure
+  getById: privateProcedure
     .input(
       z.object({
         id: z.string(),
       }),
     )
     .query(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
       const item = await ctx.db.inventoryItem.findUnique({
         where: { id: input.id },
       });
@@ -115,8 +110,7 @@ export const itemsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
 
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(createdById);
 
       const item = await ctx.db.inventoryItem.create({
         data: {
@@ -143,9 +137,7 @@ export const itemsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-
-      const { success } = await ratelimit.limit(createdById);
-      if (!success) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+      await inRateWindow(createdById);
 
       const item = await ctx.db.inventoryItem.create({
         data: {
@@ -172,6 +164,8 @@ export const itemsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
       const item = await ctx.db.inventoryItem.update({
         where: { id: input.id },
         data: { ...input },
@@ -191,6 +185,8 @@ export const itemsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
       const item = await ctx.db.inventoryItem.update({
         where: { id: input.id },
         data: { ...input },
@@ -208,6 +204,8 @@ export const itemsRouter = createTRPCRouter({
       ),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
       const items = await ctx.db.inventoryItem.findMany({
         where: { id: { in: input.map((i) => i.id) } },
       });
@@ -236,6 +234,8 @@ export const itemsRouter = createTRPCRouter({
       ),
     )
     .mutation(async ({ ctx, input }) => {
+      await inRateWindow(ctx.userId);
+
       const items = await ctx.db.inventoryItem.findMany({
         where: { id: { in: input.map((i) => i.id) } },
       });

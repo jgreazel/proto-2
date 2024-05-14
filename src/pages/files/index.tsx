@@ -13,20 +13,20 @@ const DeleteDialog = (props: { imgKey: string; onClose: () => void }) => {
   const { mutate, isLoading } = api.documents.deleteItem.useMutation();
   const utils = api.useUtils();
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     mutate(
       {
         key: props.imgKey,
       },
       {
         onSuccess: () => {
-          toast.error("Successfully Deleted");
+          toast.success("File Deleted!");
           props.onClose();
+          void utils.documents.getAll.invalidate();
         },
         onError: handleApiError,
       },
     );
-    await utils.documents.getAll.invalidate();
   };
 
   return (
