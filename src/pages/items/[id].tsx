@@ -478,4 +478,4 @@ function SingleItemPage() {
   );
 }
 
-export default isAuth(SingleItemPage);
+export default isAuth(SingleItemPage, "admin");

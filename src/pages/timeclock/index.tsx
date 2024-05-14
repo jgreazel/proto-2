@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import handleApiError from "~/helpers/handleApiError";
 import { LoadingPage } from "~/components/loading";
+import isAuth from "~/components/isAuth";
 
 type TimeClockEvent = {
   hourCodeId: string;
@@ -251,23 +252,25 @@ const ShiftFeed = () => {
   );
 };
 
-export default function TimeClockPage() {
-  // todo fix clock
-  // const getToday = () => dayjs().format("dddd, MMMM D, YYYY - h:mm:ss A");
-  // const [title, setTitle] = useState(getToday);
+function TimeClockPage() {
+  // ? does the clock need fixed
+  const getToday = () => dayjs().format("dddd, MMMM D, YYYY - h:mm:ss A");
+  const [title, setTitle] = useState(getToday);
 
-  // useEffect(() => {
-  //   const timer = setInterval(() => {
-  //     setTitle(getToday);
-  //   }, 2000);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTitle(getToday);
+    }, 1000);
 
-  //   return () => clearInterval(timer);
-  // }, []);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <PageLayout>
-      {/* <h1 className="p-3 text-2xl font-semibold">{title}</h1> */}
+      <h1 className="p-3 text-2xl font-semibold">{title}</h1>
       <ShiftFeed />
     </PageLayout>
   );
 }
+
+export default isAuth(TimeClockPage, "employee");

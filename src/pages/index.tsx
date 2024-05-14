@@ -49,4 +49,4 @@ function HomePage() {
   );
 }
 
-export default isAuth(HomePage);
+export default isAuth(HomePage, "employee");

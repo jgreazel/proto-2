@@ -157,4 +157,4 @@ function PassesPage() {
   );
 }
 
-export default isAuth(PassesPage, "admin");
+export default isAuth(PassesPage, "employee");

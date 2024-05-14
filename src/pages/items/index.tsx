@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PageLayout } from "~/components/layout";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import NoData from "~/components/noData";
+import isAuth from "~/components/isAuth";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
@@ -119,7 +120,7 @@ const ItemList = (props: {
   );
 };
 
-export default function ItemsPage() {
+function ItemsPage() {
   const [filter, setFilter] = useState("");
   const [itemType, setItemType] = useState<"concession" | "admission">(
     "concession",
@@ -242,3 +243,5 @@ export default function ItemsPage() {
     </PageLayout>
   );
 }
+
+export default isAuth(ItemsPage, "admin");

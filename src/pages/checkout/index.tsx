@@ -66,7 +66,7 @@ const AdmissionFeed = () => {
   });
   const { mutate, isLoading: isCreating } = api.passes.admitPatron.useMutation({
     onSuccess: async (data) => {
-      toast.success(`${data.patron.firstName} successfully admitted!`);
+      toast.success(`Enjoy your swim, ${data.patron.firstName}!`);
       await refetch();
     },
     onError: handleApiError,

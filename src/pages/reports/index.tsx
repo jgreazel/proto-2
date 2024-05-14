@@ -11,6 +11,7 @@ import { PageLayout } from "~/components/layout";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import NoData from "~/components/noData";
 import handleApiError from "~/helpers/handleApiError";
+import isAuth from "~/components/isAuth";
 
 const { RangePicker } = DatePicker;
 dayjs.extend(duration);
@@ -219,7 +220,7 @@ type ReportData = {
   timecardDateRange: RangeValueType<Dayjs>;
 };
 
-export default function ReportsPage() {
+function ReportsPage() {
   const [tabName, setTabName] = useState<"purchase" | "admission" | "timecard">(
     "purchase",
   );
@@ -425,3 +426,5 @@ export default function ReportsPage() {
     </PageLayout>
   );
 }
+
+export default isAuth(ReportsPage, "admin");

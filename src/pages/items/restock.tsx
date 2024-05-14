@@ -11,6 +11,7 @@ import handleApiError from "~/helpers/handleApiError";
 import Link from "next/link";
 import { PageLayout } from "~/components/layout";
 import { useRouter } from "next/router";
+import isAuth from "~/components/isAuth";
 
 const SelectionHeader = (props: {
   value: string[];
@@ -136,7 +137,7 @@ const RestockForm = (props: {
   );
 };
 
-export default function RestockPage() {
+function RestockPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const router = useRouter();
   const { data, isLoading } = api.items.getAll.useQuery({
@@ -221,3 +222,5 @@ export default function RestockPage() {
     </>
   );
 }
+
+export default isAuth(RestockPage);

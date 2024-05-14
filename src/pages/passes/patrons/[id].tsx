@@ -87,4 +87,4 @@ function SinglePatronPage() {
   );
 }
 
-export default isAuth(SinglePatronPage, "admin");
+export default isAuth(SinglePatronPage, "employee");

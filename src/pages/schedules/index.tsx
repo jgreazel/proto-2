@@ -10,6 +10,7 @@ import handleApiError from "~/helpers/handleApiError";
 import toast from "react-hot-toast";
 import type { RangeValueType } from "../_app";
 import { type ReactElement, useState } from "react";
+import isAuth from "~/components/isAuth";
 
 type ShiftFormData = {
   userId: string;
@@ -463,6 +464,8 @@ const DesktopView = () => {
   );
 };
 
-export default function SchedulesPage() {
+function SchedulesPage() {
   return <DesktopView />;
 }
+
+export default isAuth(SchedulesPage, "employee");

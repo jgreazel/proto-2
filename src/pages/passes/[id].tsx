@@ -427,4 +427,4 @@ function SinglePassPage() {
   );
 }
 
-export default isAuth(SinglePassPage, "admin");
+export default isAuth(SinglePassPage, "employee");
