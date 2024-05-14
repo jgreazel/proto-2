@@ -176,7 +176,9 @@ const ShiftFeed = () => {
       )}
       <div className="grid gap-2 p-2 md:grid-cols-2">
         {data
-          ?.filter((z) => !!z.settings?.defaultHourCodeId)
+          ?.filter(
+            (z) => !!z.settings?.defaultHourCodeId && !!z.settings?.clockPIN,
+          )
           .map((x) => (
             <div
               className="card card-compact bg-base-100 shadow-lg"
