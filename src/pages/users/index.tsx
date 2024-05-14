@@ -497,6 +497,7 @@ type PermissionForm = {
   defaultHourCodeId: string;
   canModifyHourCode: boolean;
   clockPIN: string;
+  isAdmin: boolean;
 };
 const UserPermissionsModal = ({
   onClose,
@@ -513,6 +514,7 @@ const UserPermissionsModal = ({
         defaultHourCodeId: data?.defaultHourCodeId ?? "",
         clockPIN: data?.clockPIN ?? "",
         canModifyHourCode: data?.canModifyHourCode ?? false,
+        isAdmin: data?.isAdmin ?? false,
       },
     });
 
@@ -581,6 +583,30 @@ const UserPermissionsModal = ({
             <h3 className="text-large font-medium">User Permissions</h3>
 
             <div>
+              <label className="label w-fit cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  {...register("isAdmin")}
+                  disabled={isFetching}
+                />
+                <span className="label-text">Is an Admin User</span>
+              </label>
+            </div>
+            <div>
+              <label className="label w-fit cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  {...register("canModifyHourCode")}
+                  disabled={isFetching}
+                />
+                <span className="label-text">
+                  May clock in with any hour code
+                </span>
+              </label>
+            </div>
+            <div>
               <div className="label-text">Default Hour Code</div>
 
               <Controller
@@ -602,19 +628,7 @@ const UserPermissionsModal = ({
                 )}
               />
             </div>
-            <div>
-              <label className="label w-fit cursor-pointer gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  {...register("canModifyHourCode")}
-                  disabled={isFetching}
-                />
-                <span className="label-text">
-                  May clock in with any hour code
-                </span>
-              </label>
-            </div>
+
             <label className="form-control">
               <div className="label flex justify-start gap-1">
                 <span className="label-text">Clock PIN</span>
@@ -684,6 +698,7 @@ const UserTable = ({ filter }: { filter: string }) => {
               defaultHourCodeId: ss.defaultHourCodeId ?? "",
               canModifyHourCode: !!ss.canModifyHourCode,
               clockPIN: ss.clockPIN ?? "",
+              isAdmin: !!ss.isAdmin,
             }
           : undefined
       }

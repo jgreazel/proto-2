@@ -106,6 +106,7 @@ export const profileRouter = createTRPCRouter({
         defaultHourCodeId: z.string(),
         canModifyHourCode: z.boolean(),
         clockPIN: z.string().length(4),
+        isAdmin: z.boolean(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -117,6 +118,7 @@ export const profileRouter = createTRPCRouter({
           canModifyHourCode: input.canModifyHourCode,
           defaultHourCode: { connect: { id: input.defaultHourCodeId } },
           clockPIN: input.clockPIN,
+          isAdmin: input.isAdmin,
         },
       });
       if (!result) {
@@ -135,6 +137,7 @@ export const profileRouter = createTRPCRouter({
         defaultHourCodeId: z.string(),
         canModifyHourCode: z.boolean(),
         clockPIN: z.string().length(4),
+        isAdmin: z.boolean(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -145,6 +148,7 @@ export const profileRouter = createTRPCRouter({
           canModifyHourCode: input.canModifyHourCode,
           clockPIN: input.clockPIN,
           defaultHourCode: { connect: { id: input.defaultHourCodeId } },
+          isAdmin: input.isAdmin,
         },
       });
       if (!result) {

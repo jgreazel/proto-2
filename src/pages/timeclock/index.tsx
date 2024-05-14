@@ -110,7 +110,7 @@ const ClockInModal = ({
               />
             </label>
 
-            {!!userData?.isAdmin && (
+            {!!userData?.canModifyHourCode && (
               <div>
                 <div className="label-text">Role</div>
                 <Controller
@@ -496,12 +496,12 @@ const ManualAddButton = () => {
 
 function TimeClockPage() {
   // ? does the clock need fixed
-  const getToday = () => dayjs().format("dddd, MMMM D, YYYY - h:mm:ss A");
-  const [title, setTitle] = useState(getToday);
+  const getToday = () => dayjs().format("h:mm:ss A");
+  const [time, setTime] = useState(getToday);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTitle(getToday);
+      setTime(getToday);
     }, 1000);
 
     return () => clearInterval(timer);
@@ -511,8 +511,13 @@ function TimeClockPage() {
 
   return (
     <PageLayout>
-      <h1 className="flex justify-between p-3 text-2xl font-semibold">
-        {title}
+      <h1 className="m-2 flex justify-between gap-2 p-2">
+        <div className="flex flex-row gap-2">
+          <div className="badge badge-neutral">
+            {dayjs().format("dddd, MMMM D, YYYY ")}
+          </div>
+          <div className="badge badge-secondary">{time}</div>
+        </div>
         {!!data?.isAdmin && <ManualAddButton />}
       </h1>
       <ShiftFeed />

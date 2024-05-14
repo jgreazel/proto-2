@@ -5,6 +5,7 @@ import { api } from "~/utils/api";
 import handleApiError from "~/helpers/handleApiError";
 import toast from "react-hot-toast";
 import { LoadingSpinner } from "./loading";
+import { useRouter } from "next/router";
 
 type LayoutProps = {
   actionRow?: ReactNode;
@@ -336,11 +337,33 @@ const EndMenu = ({ username }: { username: string }) => {
 
 const FullNav = ({ disabled }: { disabled: boolean }) => {
   const { user, isLoaded: userLoaded, isSignedIn } = useUser();
-
-  const isDev = process.env.NODE_ENV === "development";
+  const router = useRouter();
+  const breadcrumbs = router.pathname.split("/").slice(1);
 
   // user should load fast, just return empty until then
   if (!userLoaded) return <div></div>;
+
+  console.log(breadcrumbs);
+
+  const home = (
+    <Link href="/" className="btn btn-ghost text-xl">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="h-6 w-6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+        />
+      </svg>
+      Guard Shack
+    </Link>
+  );
 
   return (
     <div className="navbar rounded-lg bg-base-100 shadow">
@@ -372,30 +395,22 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
             </ul>
           </div>
         )}
-        <Link href="/" className="btn btn-ghost text-xl">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="h-6 w-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
-            />
-          </svg>
-          Guard Shack
-        </Link>
-      </div>
-      {/* // full width */}
-      {isDev && (
-        <div className="navbar-center">
-          <div className="badge badge-accent badge-outline">Development</div>
+
+        <div className="breadcrumbs w-full text-sm">
+          <ul>
+            <li>{home}</li>
+            {breadcrumbs
+              .filter((x) => !!x)
+              .map((x) => (
+                <li key={x}>
+                  <span className="badge capitalize">{`${
+                    x === "[id]" ? "Details" : x
+                  }`}</span>
+                </li>
+              ))}
+          </ul>
         </div>
-      )}
+      </div>
       <div className="navbar-end">
         {!!isSignedIn && !disabled && <EndMenu username={user.username!} />}
       </div>
@@ -409,6 +424,9 @@ export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
       {!props.hideHeader && <FullNav disabled={props.disabled ?? false} />}
       {props.actionRow && <div className="p-2">{props.actionRow}</div>}
       <div className="grow overflow-auto">{props.children}</div>
+      <div className="absolute bottom-0 right-0 font-mono text-xs">
+        Software by Jonathan Greazel
+      </div>
     </main>
   );
 };
