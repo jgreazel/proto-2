@@ -207,7 +207,7 @@ function CheckoutPage() {
                   />
                 </svg>
               </button>
-              Action Required: {r.action?.message}
+              {r.action?.message}
               <Link
                 className="btn btn-square btn-primary btn-sm"
                 href={r.action?.href ?? ""}

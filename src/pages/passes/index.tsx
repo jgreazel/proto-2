@@ -45,7 +45,7 @@ function PassesPage() {
                 />
               </svg>
             </label>
-            <div className="tooltip tooltip-bottom" data-tip="New Pass">
+            <div className="tooltip tooltip-left" data-tip="New Season Pass">
               <Link href="passes/0" className="btn btn-circle btn-ghost">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

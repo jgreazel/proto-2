@@ -302,7 +302,7 @@ export const itemsRouter = createTRPCRouter({
         total,
         action: includedSeasonPass
           ? {
-              message: "Add new pass to the Passes tab?",
+              message: "Please create a new Season Pass",
               href: "/passes/0",
             }
           : null,
