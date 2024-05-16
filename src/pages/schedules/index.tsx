@@ -226,7 +226,7 @@ const CellView = ({
   return (
     <ul>
       {dataByHours.map((d) => (
-        <li key={d.day}>
+        <li key={d.day + d.shifts[0]?.id}>
           <div className="badge badge-outline badge-sm">
             {d.start + " - " + d.end}
           </div>
@@ -340,7 +340,7 @@ const DesktopView = () => {
   const { data, isLoading, refetch } = api.schedules.getShifts.useQuery({
     dateRange: [
       calVal.startOf("month").startOf("day").toDate(),
-      calVal.endOf("month").startOf("day").toDate(),
+      calVal.endOf("month").endOf("day").toDate(),
     ],
   });
   const { data: perm, isLoading: isGettingPerm } =

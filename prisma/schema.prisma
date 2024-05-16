@@ -103,9 +103,6 @@ model Shift {
     userId String
     start  DateTime
     end    DateTime
-    // todo remove once timeclock v2 is done
-    // clockIn  DateTime?
-    // clockOut DateTime?
 
     createdBy String
     createdAt DateTime @default(now())
