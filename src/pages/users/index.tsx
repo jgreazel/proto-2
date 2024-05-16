@@ -496,6 +496,7 @@ const OptionsButton = () => {
 type PermissionForm = {
   defaultHourCodeId: string;
   canModifyHourCode: boolean;
+  canSchedule: boolean;
   clockPIN: string;
   isAdmin: boolean;
 };
@@ -514,6 +515,7 @@ const UserPermissionsModal = ({
         defaultHourCodeId: data?.defaultHourCodeId ?? "",
         clockPIN: data?.clockPIN ?? "",
         canModifyHourCode: data?.canModifyHourCode ?? false,
+        canSchedule: data?.canSchedule ?? false,
         isAdmin: data?.isAdmin ?? false,
       },
     });
@@ -551,7 +553,6 @@ const UserPermissionsModal = ({
       userId,
       ...formData,
     };
-    console.log(formData);
     !!data ? update(input) : create(input);
   };
 
@@ -605,6 +606,17 @@ const UserPermissionsModal = ({
                 <span className="label-text">
                   May clock in with any hour code
                 </span>
+              </label>
+            </div>
+            <div>
+              <label className="label w-fit cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  {...register("canSchedule")}
+                  disabled={isFetching}
+                />
+                <span className="label-text">Can create schedules</span>
               </label>
             </div>
             <div>
@@ -687,7 +699,6 @@ const UserPermissionsModal = ({
 const UserTable = ({ filter }: { filter: string }) => {
   const { data, isLoading } = api.profile.getUsers.useQuery();
   const [modalId, setModalId] = useState<string | undefined>(undefined);
-
   const ss = data?.find((u) => u.id === modalId)?.settings;
   const modal = (
     <UserPermissionsModal
@@ -698,6 +709,7 @@ const UserTable = ({ filter }: { filter: string }) => {
           ? {
               defaultHourCodeId: ss.defaultHourCodeId ?? "",
               canModifyHourCode: !!ss.canModifyHourCode,
+              canSchedule: !!ss.canSchedule,
               clockPIN: ss.clockPIN ?? "",
               isAdmin: !!ss.isAdmin,
             }

@@ -145,6 +145,7 @@ model UserSettings {
     canModifyHourCode Boolean   @default(false)
     clockPIN          String?   @unique
     isAdmin           Boolean   @default(false)
+    canSchedule       Boolean   @default(false)
 
     createdBy String
     createdAt DateTime @default(now())

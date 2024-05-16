@@ -45,7 +45,7 @@ export const profileRouter = createTRPCRouter({
   getUsers: privateProcedure.query(async ({ ctx }) => {
     await inRateWindow(ctx.userId);
 
-    const users = await clerkClient.users.getUserList();
+    const users = await clerkClient.users.getUserList({ limit: 300 });
     const userSettings = await ctx.db.userSettings.findMany({
       where: { userId: { in: users.map((u) => u.id) } },
     });
@@ -105,6 +105,7 @@ export const profileRouter = createTRPCRouter({
         userId: z.string(),
         defaultHourCodeId: z.string(),
         canModifyHourCode: z.boolean(),
+        canSchedule: z.boolean(),
         clockPIN: z.string().length(4),
         isAdmin: z.boolean(),
       }),
@@ -117,6 +118,7 @@ export const profileRouter = createTRPCRouter({
           userId: input.userId,
           createdBy: ctx.userId,
           canModifyHourCode: input.canModifyHourCode,
+          canSchedule: input.canSchedule,
           defaultHourCode: { connect: { id: input.defaultHourCodeId } },
           clockPIN: input.clockPIN,
           isAdmin: input.isAdmin,
@@ -137,6 +139,7 @@ export const profileRouter = createTRPCRouter({
         userId: z.string(),
         defaultHourCodeId: z.string(),
         canModifyHourCode: z.boolean(),
+        canSchedule: z.boolean(),
         clockPIN: z.string().length(4),
         isAdmin: z.boolean(),
       }),
@@ -147,6 +150,7 @@ export const profileRouter = createTRPCRouter({
         where: { userId: input.userId },
         data: {
           canModifyHourCode: input.canModifyHourCode,
+          canSchedule: input.canSchedule,
           clockPIN: input.clockPIN,
           defaultHourCode: { connect: { id: input.defaultHourCodeId } },
           isAdmin: input.isAdmin,

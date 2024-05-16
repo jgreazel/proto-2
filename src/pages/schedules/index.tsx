@@ -371,6 +371,8 @@ const DesktopView = () => {
     await refetch();
   };
 
+  const canSchedule = !!perm?.isAdmin || !!perm?.canSchedule;
+
   const shiftList = (
     <>
       <div className="items-bottom flex flex-row gap-2">
@@ -378,9 +380,7 @@ const DesktopView = () => {
       </div>
       {data?.some(filterShifts(calVal)) ? (
         <CellView
-          onClick={
-            !!perm?.isAdmin ? (x) => setSingleShiftModalData(x) : undefined
-          }
+          onClick={canSchedule ? (x) => setSingleShiftModalData(x) : undefined}
           data={data?.filter(filterShifts(calVal)) ?? []}
         />
       ) : (
@@ -404,7 +404,7 @@ const DesktopView = () => {
     </>
   );
 
-  const modalContent = !!perm?.isAdmin ? (
+  const modalContent = canSchedule ? (
     <>
       <ShiftForm day={calVal} onSuccess={handleFormSuccess} />
       <div className="divider" />
@@ -419,7 +419,7 @@ const DesktopView = () => {
   return (
     <PageLayout>
       <div className="flex flex-col gap-2 p-2">
-        {perm?.isAdmin && data?.length === 0 && (
+        {canSchedule && data?.length === 0 && (
           <div role="alert" className="alert">
             <svg
               xmlns="http://www.w3.org/2000/svg"
