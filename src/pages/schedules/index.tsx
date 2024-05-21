@@ -28,14 +28,15 @@ const ShiftForm = ({
 }) => {
   const { data, isLoading: isGettingUsers } = api.profile.getUsers.useQuery();
 
-  const { register, handleSubmit, control, reset } = useForm<ShiftFormData>({
-    defaultValues: !!value
-      ? {
-          userId: value?.userId,
-          timeRange: [dayjs(value?.start), dayjs(value?.end)],
-        }
-      : undefined,
-  });
+  const { register, handleSubmit, control, reset, formState } =
+    useForm<ShiftFormData>({
+      defaultValues: !!value
+        ? {
+            userId: value?.userId,
+            timeRange: [dayjs(value?.start), dayjs(value?.end)],
+          }
+        : undefined,
+    });
 
   const onMutate = {
     onError: handleApiError,
@@ -112,6 +113,9 @@ const ShiftForm = ({
       <Controller
         control={control}
         name="timeRange"
+        rules={{
+          required: true,
+        }}
         render={({ field }) => (
           <label className="form-control w-full max-w-xs">
             <div className="label">
@@ -141,7 +145,11 @@ const ShiftForm = ({
             Delete
           </button>
         )}
-        <button type="submit" className="btn btn-primary" disabled={isDisabled}>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={isDisabled || !formState.isValid}
+        >
           {!!value ? "Save" : "Create"}
         </button>
       </div>
