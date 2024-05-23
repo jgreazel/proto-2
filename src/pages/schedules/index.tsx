@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import type { RangeValueType } from "../_app";
 import { type ReactElement, useState } from "react";
 import isAuth from "~/components/isAuth";
+import { LoadingSpinner } from "~/components/loading";
 
 type ShiftFormData = {
   userId: string;
@@ -204,6 +205,7 @@ const CellView = ({
   data: RouterOutputs["schedules"]["getShifts"];
   onClick?: (shift: RouterOutputs["schedules"]["getShifts"][number]) => void;
 }) => {
+  const { user } = useUser();
   const dataByHours = data.reduce(
     (acc, d) => {
       const dataIdx = acc.findIndex(
@@ -235,7 +237,12 @@ const CellView = ({
     <ul>
       {dataByHours.map((d) => (
         <li key={d.day + d.shifts[0]?.id}>
-          <div className="badge badge-outline badge-sm">
+          <div
+            className={`badge badge-outline badge-sm ${
+              d.shifts.some((x) => x.userId === user?.id ?? "") &&
+              "badge-secondary"
+            }`}
+          >
             {d.start + " - " + d.end}
           </div>
           <div>
@@ -337,6 +344,44 @@ const CloneSection = ({
         </button>
       </div>
     </>
+  );
+};
+
+const UpcomingSchedulesSection = () => {
+  const { user } = useUser();
+
+  const { data, isLoading } = api.schedules.getShifts.useQuery({
+    userId: user?.id,
+    dateRange: [
+      dayjs().startOf("day").toDate(),
+      dayjs().add(2, "weeks").endOf("day").toDate(),
+    ],
+  });
+
+  const body = (
+    <div className="card-body">
+      <div className="card-title">Next 2 Weeks&apos; Shifts:</div>
+      {data?.map((s) => (
+        <div key={s.id} className="text-md pl-2 font-medium">
+          {dayjs(s.start).format("MMMM DD, ddd: h:mm a") +
+            " - " +
+            dayjs(s.end).format("h:mm a")}
+        </div>
+      ))}
+      <div id="upcoming-shift-list"></div>
+    </div>
+  );
+
+  return (
+    <div className="card card-compact rounded-xl p-2 shadow-lg">
+      {isLoading ? (
+        <div className="w-100 flex justify-center p-2">
+          <LoadingSpinner />
+        </div>
+      ) : (
+        body
+      )}
+    </div>
   );
 };
 
@@ -445,6 +490,7 @@ const DesktopView = () => {
             <span>Click a date to begin adding shifts</span>
           </div>
         )}
+        <UpcomingSchedulesSection />
         <Calendar
           disabledDate={() => isLoading || isGettingPerm}
           cellRender={cellRenderer}

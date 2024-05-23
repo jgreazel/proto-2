@@ -38,6 +38,8 @@ model InventoryItem {
     isSeasonal      Boolean?
     isDay           Boolean?
     patronLimit     Int?
+    // todo uncomment if need to connect
+    // seasonPasses    SeasonPass[]
 }
 
 model SeasonPass {
@@ -45,10 +47,15 @@ model SeasonPass {
     createdAt DateTime @default(now())
     createdBy String
     patrons   Patron[]
+    // todo uncomment if need to connect
+    // invItem   InventoryItem @relation(fields: [invItemId], references: [id])
+    // invItemId String
 
     label              String    @default("Unlabeled Season Pass") @db.VarChar(255)
     effectiveStartDate DateTime  @default(now())
     effectiveEndDate   DateTime?
+
+    // @@index([invItemId])
 }
 
 model Patron {
