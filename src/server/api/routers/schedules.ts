@@ -322,10 +322,10 @@ export const schedulesRouter = createTRPCRouter({
           start: "asc",
         },
       });
-      const users = await clerkClient.users.getUserList();
-      const settings = await ctx.db.userSettings.findMany({
-        where: { userId: { in: users.map((u) => u.id) } },
+      const users = await clerkClient.users.getUserList({
+        limit: 500,
       });
+      const settings = await ctx.db.userSettings.findMany();
       const tces = await ctx.db.timeClockEvent.findMany({
         where: {
           createdAt: {
