@@ -6,6 +6,7 @@ import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
 import inRateWindow from "../helpers/inRateWindow";
+import dayjs from "dayjs";
 
 const ONEYEARMILLIS = 86400000;
 
@@ -350,6 +351,38 @@ export const schedulesRouter = createTRPCRouter({
           timeClockEvents: uTces,
         };
       });
-      return groupedResult;
+      const sortedResult = groupedResult.sort((a, b) => {
+        // Extract the start dates, handling possible null/undefined values
+        const aStart = a.shifts?.[0]?.start
+          ? new Date(a.shifts[0].start)
+          : null;
+        const bStart = b.shifts?.[0]?.start
+          ? new Date(b.shifts[0].start)
+          : null;
+
+        // Convert dates to timestamps (number)
+        const aTime = aStart ? aStart.getTime() : null;
+        const bTime = bStart ? bStart.getTime() : null;
+
+        // If both starts are null, they are considered equal
+        if (aTime === null && bTime === null) {
+          return 0;
+        }
+
+        // If aTime is null, place b before a
+        if (aTime === null) {
+          return 1;
+        }
+
+        // If bTime is null, place a before b
+        if (bTime === null) {
+          return -1;
+        }
+
+        // If both start dates exist, compare them
+        return aTime - bTime;
+      });
+
+      return sortedResult;
     }),
 });
