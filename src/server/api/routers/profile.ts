@@ -45,7 +45,7 @@ export const profileRouter = createTRPCRouter({
   getUsers: privateProcedure.query(async ({ ctx }) => {
     await inRateWindow(ctx.userId);
 
-    const users = await clerkClient.users.getUserList({ limit: 300 });
+    const users = await clerkClient.users.getUserList({ limit: 500 });
     const userSettings = await ctx.db.userSettings.findMany({
       where: { userId: { in: users.map((u) => u.id) } },
     });

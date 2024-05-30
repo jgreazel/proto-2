@@ -361,8 +361,6 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
   // user should load fast, just return empty until then
   if (!userLoaded) return <div></div>;
 
-  console.log(breadcrumbs);
-
   const home = (
     <Link href="/" className="btn btn-ghost text-xl">
       <svg

@@ -80,7 +80,10 @@ export const reportsRouter = createTRPCRouter({
         );
 
       const users = await clerkClient.users
-        .getUserList({ userId: tranItemLinks.map((l) => l.createdBy) })
+        .getUserList({
+          userId: tranItemLinks.map((l) => l.createdBy),
+          limit: 500,
+        })
         .then((res) => res.filter(filterUserForClient));
 
       let admissionTotal = 0;
@@ -142,7 +145,7 @@ export const reportsRouter = createTRPCRouter({
       const userIdList = new Set(tces.map((t) => t.userId));
       const userIdArr = Array.from(userIdList);
       const tcUsers = await clerkClient.users
-        .getUserList({ userId: userIdArr })
+        .getUserList({ userId: userIdArr, limit: 500 })
         .then((res) => res.filter(filterUserForClient));
       const hourCodes = await ctx.db.hourCode.findMany();
 
