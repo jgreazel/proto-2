@@ -55,8 +55,6 @@ const ClockInModal = ({
     value: x.id,
   }));
 
-  const { data: userData } = api.profile.getSettingsByUser.useQuery();
-
   const handleForm = (data: TimeClockEvent) => {
     mutate(data);
   };
@@ -110,7 +108,7 @@ const ClockInModal = ({
               />
             </label>
 
-            {!!userData?.canModifyHourCode && (
+            {!!user.settings?.canModifyHourCode && (
               <div>
                 <div className="label-text">Role</div>
                 <Controller
