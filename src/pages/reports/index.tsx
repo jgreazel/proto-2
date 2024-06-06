@@ -278,7 +278,8 @@ function ReportsPage() {
     };
   const timecardReport: RouterInputs["reports"]["getNew"]["timecardReport"] = {
     startDate: formVals.timecardDateRange?.[0]?.toDate() ?? new Date(),
-    endDate: formVals.timecardDateRange?.[1]?.toDate() ?? new Date(),
+    endDate:
+      formVals.timecardDateRange?.[1]?.endOf("day").toDate() ?? new Date(),
   };
 
   const { data, refetch } = api.reports.getNew.useQuery(
