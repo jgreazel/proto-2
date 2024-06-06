@@ -124,10 +124,10 @@ export const reportsRouter = createTRPCRouter({
       // Timecard Report
       const [start, end] = [
         dayjs(input.timecardReport?.startDate)
-          .startOf("day")
+          // .startOf("day")
           .toDate(),
         dayjs(input.timecardReport?.endDate)
-          .endOf("day")
+          // .endOf("day")
           .toDate(),
       ];
       const tces = await ctx.db.timeClockEvent.findMany({
