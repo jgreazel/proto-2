@@ -17,12 +17,17 @@ import Link from "next/link";
 const { RangePicker } = DatePicker;
 dayjs.extend(duration);
 
-export const TimecardReportTable = (props: {
+type TimeRptTableProps = {
   data: RouterOutputs["reports"]["getNew"]["timecardReport"];
   children?: ReactElement[] | ReactElement;
-}) => {
+};
+
+export const TimecardReportTable = forwardRef(function TimecardReportTable(
+  props: TimeRptTableProps,
+  ref: Ref<HTMLDivElement>,
+) {
   return (
-    <div className="p-2">
+    <div className="p-2" ref={ref}>
       <div className="flex justify-between">
         <h2 className="card-title">Timecard Report</h2>
         {props.children}
@@ -87,16 +92,24 @@ export const TimecardReportTable = (props: {
       ))}
     </div>
   );
-};
+});
 
-const PurchaseReportTable = (props: {
+type PurchReportTableProps = {
   data: RouterOutputs["reports"]["getNew"]["purchaseReport"];
   children?: ReactElement[] | ReactElement;
-}) => {
+};
+
+export const PurchaseReportTable = forwardRef<
+  HTMLDivElement,
+  PurchReportTableProps
+>(function PurchaseReportTable(
+  props: PurchReportTableProps,
+  ref: Ref<HTMLDivElement>,
+) {
   const { data } = props;
 
   return (
-    <div className="p-2">
+    <div className="p-2" ref={ref}>
       <div className="flex justify-between">
         <div>
           <h2 className="card-title">Purchase Report</h2>
@@ -177,7 +190,7 @@ const PurchaseReportTable = (props: {
       </div>
     </div>
   );
-};
+});
 
 type AdmsRptTableProps = {
   data: RouterOutputs["reports"]["getNew"]["admissionReport"];
@@ -447,7 +460,9 @@ export function ReportsPage() {
                     pathname: "/reports/print/purchase",
                     query: {
                       start: formVals.purchaseReportDateRange[0]?.toISOString(),
-                      end: formVals.purchaseReportDateRange[1]?.toISOString(),
+                      end: formVals.purchaseReportDateRange[1]
+                        ?.endOf("day")
+                        .toISOString(),
                       includeAdmissions: formVals.pIncludeAdmissions,
                       includeConcessions: formVals.pIncludeConcessions,
                     },
@@ -480,7 +495,9 @@ export function ReportsPage() {
                     pathname: "/reports/print/admission",
                     query: {
                       start: formVals.admissionDataDateRange[0]?.toISOString(),
-                      end: formVals.admissionDataDateRange[1]?.toISOString(),
+                      end: formVals.admissionDataDateRange[1]
+                        ?.endOf("day")
+                        .toISOString(),
                     },
                   }}
                   className="btn btn-circle btn-sm p-1"
@@ -511,7 +528,9 @@ export function ReportsPage() {
                     pathname: "/reports/print/timecard",
                     query: {
                       start: formVals.timecardDateRange[0]?.toISOString(),
-                      end: formVals.timecardDateRange[1]?.toISOString(),
+                      end: formVals.timecardDateRange[1]
+                        ?.endOf("day")
+                        .toISOString(),
                     },
                   }}
                   className="btn btn-circle btn-sm p-1"
