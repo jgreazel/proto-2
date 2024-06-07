@@ -9,7 +9,7 @@ import {
 } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
-import inRateWindow from "../helpers/inRateWindow";
+// import inRateWindow from "../helpers/inRateWindow";
 
 const SELL_MIN = 0;
 // $500.00
@@ -25,7 +25,7 @@ export const itemsRouter = createTRPCRouter({
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
       let items = await ctx.db.inventoryItem.findMany({
         take: 100,
         orderBy: [{ createdAt: "desc" }],
@@ -72,7 +72,7 @@ export const itemsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const item = await ctx.db.inventoryItem.findUnique({
         where: { id: input.id },
@@ -110,7 +110,7 @@ export const itemsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
 
-      await inRateWindow(createdById);
+      // await inRateWindow(createdById);
 
       const item = await ctx.db.inventoryItem.create({
         data: {
@@ -137,7 +137,7 @@ export const itemsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      await inRateWindow(createdById);
+      // await inRateWindow(createdById);
 
       const item = await ctx.db.inventoryItem.create({
         data: {
@@ -164,7 +164,7 @@ export const itemsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const item = await ctx.db.inventoryItem.update({
         where: { id: input.id },
@@ -185,7 +185,7 @@ export const itemsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const item = await ctx.db.inventoryItem.update({
         where: { id: input.id },
@@ -204,7 +204,7 @@ export const itemsRouter = createTRPCRouter({
       ),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const items = await ctx.db.inventoryItem.findMany({
         where: { id: { in: input.map((i) => i.id) } },
@@ -234,7 +234,7 @@ export const itemsRouter = createTRPCRouter({
       ),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const items = await ctx.db.inventoryItem.findMany({
         where: { id: { in: input.map((i) => i.id) } },
