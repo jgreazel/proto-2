@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactElement, type Ref, forwardRef, useState } from "react";
 import { DatePicker } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration";
@@ -17,12 +17,16 @@ import Link from "next/link";
 const { RangePicker } = DatePicker;
 dayjs.extend(duration);
 
-const TimecardReportTable = (props: {
+export const TimecardReportTable = (props: {
   data: RouterOutputs["reports"]["getNew"]["timecardReport"];
+  children?: ReactElement[] | ReactElement;
 }) => {
   return (
     <div className="p-2">
-      <h2 className="card-title">Timecard Report</h2>
+      <div className="flex justify-between">
+        <h2 className="card-title">Timecard Report</h2>
+        {props.children}
+      </div>
       {props.data?.shifts.map((x) => (
         <div key={x.user.id} className="card card-compact bg-base-100">
           <div className="card-body">
@@ -87,16 +91,9 @@ const TimecardReportTable = (props: {
 
 const PurchaseReportTable = (props: {
   data: RouterOutputs["reports"]["getNew"]["purchaseReport"];
-  params: RouterInputs["reports"]["getNew"];
+  children?: ReactElement[] | ReactElement;
 }) => {
   const { data } = props;
-  const { purchaseReport: queryData } = props.params;
-  const query = {
-    start: queryData?.startDate.toISOString(),
-    end: queryData?.endDate.toISOString(),
-    admission: queryData?.includeAdmissions,
-    concession: queryData?.includeConcessions,
-  };
 
   return (
     <div className="p-2">
@@ -109,27 +106,7 @@ const PurchaseReportTable = (props: {
               dayjs(data?.endDate).format("MMMM DD, YYYY")}
           </div>
         </div>
-        <div className="tooltip tooltip-left" data-tip="Print Report">
-          <Link
-            href={{ pathname: "/reports/print/purchase", query: query }}
-            className="btn btn-circle btn-sm p-1"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="size-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
-              />
-            </svg>
-          </Link>
-        </div>
+        {props.children}
       </div>
       <div className="card card-compact bg-base-100">
         <div className="card-body">
@@ -202,18 +179,32 @@ const PurchaseReportTable = (props: {
   );
 };
 
-const AdmissionReportTable = (props: {
+type AdmsRptTableProps = {
   data: RouterOutputs["reports"]["getNew"]["admissionReport"];
-}) => {
+  children?: ReactElement[] | ReactElement;
+};
+
+export const AdmissionReportTable = forwardRef<
+  HTMLDivElement,
+  AdmsRptTableProps
+>(function AdmissionReportTable(
+  props: AdmsRptTableProps,
+  ref: Ref<HTMLDivElement>,
+) {
   const { data } = props;
 
   return (
-    <div className="p-2">
-      <h2 className="card-title">Admission Report</h2>
-      <div className="text-sm">
-        {dayjs(data?.startDate).format("MMMM DD, YYYY") +
-          " - " +
-          dayjs(data?.endDate).format("MMMM DD, YYYY")}
+    <div className="p-2" ref={ref}>
+      <div className="flex justify-between">
+        <div>
+          <h2 className="card-title">Admission Report</h2>
+          <div className="text-sm">
+            {dayjs(data?.startDate).format("MMMM DD, YYYY") +
+              " - " +
+              dayjs(data?.endDate).format("MMMM DD, YYYY")}
+          </div>
+        </div>
+        {props.children}
       </div>
       <div className="card card-compact bg-base-100">
         <div className="card-body">
@@ -242,7 +233,7 @@ const AdmissionReportTable = (props: {
       </div>
     </div>
   );
-};
+});
 
 type ReportData = {
   purchaseReportDateRange: RangeValueType<Dayjs>;
@@ -254,7 +245,7 @@ type ReportData = {
   timecardDateRange: RangeValueType<Dayjs>;
 };
 
-function ReportsPage() {
+export function ReportsPage() {
   const [tabName, setTabName] = useState<"purchase" | "admission" | "timecard">(
     "purchase",
   );
@@ -449,25 +440,99 @@ function ReportsPage() {
             </div>
           )}
           {showReport && data?.purchaseReport && (
-            <PurchaseReportTable
-              data={data.purchaseReport}
-              params={{
-                purchaseReport: {
-                  startDate:
-                    formVals.purchaseReportDateRange[0]?.toDate() ?? new Date(),
-                  endDate:
-                    formVals.purchaseReportDateRange[1]?.toDate() ?? new Date(),
-                  includeAdmissions: formVals.pIncludeAdmissions,
-                  includeConcessions: formVals.pIncludeConcessions,
-                },
-              }}
-            />
+            <PurchaseReportTable data={data.purchaseReport}>
+              <div className="tooltip tooltip-left" data-tip="Print Report">
+                <Link
+                  href={{
+                    pathname: "/reports/print/purchase",
+                    query: {
+                      start: formVals.purchaseReportDateRange[0]?.toISOString(),
+                      end: formVals.purchaseReportDateRange[1]?.toISOString(),
+                      includeAdmissions: formVals.pIncludeAdmissions,
+                      includeConcessions: formVals.pIncludeConcessions,
+                    },
+                  }}
+                  className="btn btn-circle btn-sm p-1"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="size-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
+                    />
+                  </svg>
+                </Link>
+              </div>
+            </PurchaseReportTable>
           )}
           {showReport && data?.admissionReport && (
-            <AdmissionReportTable data={data.admissionReport} />
+            <AdmissionReportTable data={data.admissionReport}>
+              <div className="tooltip tooltip-left" data-tip="Print Report">
+                <Link
+                  href={{
+                    pathname: "/reports/print/admission",
+                    query: {
+                      start: formVals.admissionDataDateRange[0]?.toISOString(),
+                      end: formVals.admissionDataDateRange[1]?.toISOString(),
+                    },
+                  }}
+                  className="btn btn-circle btn-sm p-1"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="size-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
+                    />
+                  </svg>
+                </Link>
+              </div>
+            </AdmissionReportTable>
           )}
           {showReport && data?.timecardReport && (
-            <TimecardReportTable data={data.timecardReport} />
+            <TimecardReportTable data={data.timecardReport}>
+              <div className="tooltip tooltip-left" data-tip="Print Report">
+                <Link
+                  href={{
+                    pathname: "/reports/print/timecard",
+                    query: {
+                      start: formVals.timecardDateRange[0]?.toISOString(),
+                      end: formVals.timecardDateRange[1]?.toISOString(),
+                    },
+                  }}
+                  className="btn btn-circle btn-sm p-1"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="size-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
+                    />
+                  </svg>
+                </Link>
+              </div>
+            </TimecardReportTable>
           )}
         </div>
       </div>
