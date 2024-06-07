@@ -9,7 +9,7 @@ import { TRPCError } from "@trpc/server";
 const inRateWindow = async (createdById: string) => {
   const ratelimit = new Ratelimit({
     redis: Redis.fromEnv(),
-    limiter: Ratelimit.slidingWindow(100, "1 m"),
+    limiter: Ratelimit.slidingWindow(250, "1 m"),
     analytics: true,
   });
 
