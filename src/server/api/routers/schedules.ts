@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
-import inRateWindow from "../helpers/inRateWindow";
+// import inRateWindow from "../helpers/inRateWindow";
 import dayjs from "dayjs";
 
 const ONEYEARMILLIS = 86400000;
@@ -19,7 +19,7 @@ export const schedulesRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const shifts = await ctx.db.shift.findMany({
         where: {
@@ -53,7 +53,7 @@ export const schedulesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      await inRateWindow(createdById);
+      // await inRateWindow(createdById);
 
       const shift = await ctx.db.shift.create({
         data: {
@@ -82,7 +82,7 @@ export const schedulesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const shift = await ctx.db.shift.update({
         where: { id: input.id },
@@ -103,7 +103,7 @@ export const schedulesRouter = createTRPCRouter({
   deleteShift: privateProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const result = await ctx.db.shift.delete({
         where: { id: input.id },
@@ -121,7 +121,7 @@ export const schedulesRouter = createTRPCRouter({
   cloneDay: privateProcedure
     .input(z.object({ source: z.date(), target: z.date() }))
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const srcBegin = new Date(input.source);
       srcBegin.setHours(0, 0, 0, 0);
@@ -173,7 +173,7 @@ export const schedulesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const hc = await ctx.db.hourCode.create({
         data: {
@@ -204,7 +204,7 @@ export const schedulesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const hc = await ctx.db.hourCode.update({
         where: { id: input.id },
@@ -223,7 +223,7 @@ export const schedulesRouter = createTRPCRouter({
   deleteHourCode: privateProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const result = await ctx.db.hourCode.delete({
         where: { id: input.id },
@@ -250,7 +250,7 @@ export const schedulesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      await inRateWindow(createdById);
+      // await inRateWindow(createdById);
 
       const userSettings = await ctx.db.userSettings.findFirst({
         where: { userId: input.userId },
@@ -308,7 +308,7 @@ export const schedulesRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const shifts = await ctx.db.shift.findMany({
         where: {
