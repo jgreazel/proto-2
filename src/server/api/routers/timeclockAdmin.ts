@@ -27,4 +27,28 @@ export const timeclockAdminRouter = createTRPCRouter({
       }
       return tces;
     }),
+
+  updateTimeclockEvent: privateProcedure
+    .input(
+      z.object({
+        eventId: z.string(),
+        hourCodeId: z.string(),
+        time: z.date(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const updatedEvent = await ctx.db.timeClockEvent.update({
+          where: { id: input.eventId },
+          data: {
+            hourCodeId: input.hourCodeId,
+            createdAt: input.time,
+          },
+        });
+        return updatedEvent;
+      } catch (error) {
+        console.error("Error updating timeclock event:", error);
+        throw error;
+      }
+    }),
 });
