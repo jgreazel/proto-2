@@ -28,27 +28,49 @@ export const timeclockAdminRouter = createTRPCRouter({
       return tces;
     }),
 
-  updateTimeclockEvent: privateProcedure
+  upsertTimeclockEvent: privateProcedure
     .input(
       z.object({
-        eventId: z.string(),
+        eventId: z.string().optional(),
         hourCodeId: z.string(),
         time: z.date(),
+        userId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        const updatedEvent = await ctx.db.timeClockEvent.update({
-          where: { id: input.eventId },
-          data: {
+        const upsertedEvent = await ctx.db.timeClockEvent.upsert({
+          where: { id: input.eventId ?? "" },
+          update: {
             hourCodeId: input.hourCodeId,
             createdAt: input.time,
           },
+          create: {
+            hourCodeId: input.hourCodeId,
+            createdAt: input.time,
+            createdBy: ctx.userId,
+            userId: input.userId ?? "undefined",
+          },
         });
-        return updatedEvent;
+        return upsertedEvent;
       } catch (error) {
-        console.error("Error updating timeclock event:", error);
+        console.error("Error upserting timeclock event:", error);
         throw error;
       }
+    }),
+
+  deleteTimeclockEvent: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db.timeClockEvent.delete({
+        where: { id: input.id },
+      });
+      if (!result) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to delete time clock event",
+        });
+      }
+      return result;
     }),
 });
