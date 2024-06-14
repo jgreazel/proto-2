@@ -23,7 +23,7 @@ const MyApp: AppType = ({ Component, pageProps }) => {
         />
         <link rel="icon" href="/LOGO.png" />
       </Head>
-      <Toaster position="bottom-center" />
+      <Toaster position="top-right" />
       <Component {...pageProps} />
     </ClerkProvider>
   );
