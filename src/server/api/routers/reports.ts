@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
-import inRateWindow from "../helpers/inRateWindow";
+// import inRateWindow from "../helpers/inRateWindow";
 
 const MS_IN_HOUR = 1000 * 60 * 60;
 
@@ -54,7 +54,7 @@ export const reportsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       // Purchase Report
       const tranItemLinks = await ctx.db.transactionItems

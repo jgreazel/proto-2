@@ -10,7 +10,7 @@ import {
 } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
-import inRateWindow from "../helpers/inRateWindow";
+// import inRateWindow from "../helpers/inRateWindow";
 
 export const profileRouter = createTRPCRouter({
   getUserByUsername: publicProcedure
@@ -43,7 +43,7 @@ export const profileRouter = createTRPCRouter({
     }),
 
   getUsers: privateProcedure.query(async ({ ctx }) => {
-    await inRateWindow(ctx.userId);
+    // await inRateWindow(ctx.userId);
 
     const users = await clerkClient.users.getUserList({ limit: 500 });
     const userSettings = await ctx.db.userSettings.findMany({
@@ -71,7 +71,7 @@ export const profileRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       try {
         const hashPw = hashSync(input.password, 10);
@@ -111,7 +111,7 @@ export const profileRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const result = await ctx.db.userSettings.create({
         data: {
@@ -145,7 +145,7 @@ export const profileRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
       const result = await ctx.db.userSettings.update({
         where: { userId: input.userId },
         data: {
@@ -168,7 +168,7 @@ export const profileRouter = createTRPCRouter({
   getSettingsByUser: privateProcedure
     .input(z.object({ userId: z.string() }).optional())
     .query(async ({ ctx, input }) => {
-      await inRateWindow(ctx.userId);
+      // await inRateWindow(ctx.userId);
 
       const setting = await ctx.db.userSettings.findFirst({
         where: { userId: input?.userId ?? ctx.userId },

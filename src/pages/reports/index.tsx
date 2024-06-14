@@ -1,5 +1,5 @@
 import { type ReactElement, type Ref, forwardRef, useState } from "react";
-import { DatePicker } from "antd";
+import { DatePicker, Drawer } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { useForm, Controller } from "react-hook-form";
@@ -13,6 +13,8 @@ import NoData from "~/components/noData";
 import handleApiError from "~/helpers/handleApiError";
 import isAuth from "~/components/isAuth";
 import Link from "next/link";
+import { AdminTimeClock } from "../timeclock/admin";
+import toast from "react-hot-toast";
 
 const { RangePicker } = DatePicker;
 dayjs.extend(duration);
@@ -303,6 +305,7 @@ export function ReportsPage() {
 
   const [showReport, setShowReport] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
 
   const submit = async () => {
     // isLoading on query was being weird with being disabled
@@ -313,6 +316,34 @@ export function ReportsPage() {
 
   return (
     <PageLayout>
+      <Drawer
+        title="Timecard Edit"
+        onClose={async () => {
+          await refetch();
+          setShowDrawer(false);
+          toast("Re-generate your report for changes to take effect", {
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="h-6 w-6 shrink-0 stroke-info"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+            ),
+          });
+        }}
+        open={showDrawer}
+        width={650}
+      >
+        <AdminTimeClock />
+      </Drawer>
       <div className="flex flex-col gap-3 p-2">
         <div role="tablist" className="tabs-boxed tabs max-w-lg">
           <a
@@ -522,34 +553,57 @@ export function ReportsPage() {
           )}
           {showReport && data?.timecardReport && (
             <TimecardReportTable data={data.timecardReport}>
-              <div className="tooltip tooltip-left" data-tip="Print Report">
-                <Link
-                  href={{
-                    pathname: "/reports/print/timecard",
-                    query: {
-                      start: formVals.timecardDateRange[0]?.toISOString(),
-                      end: formVals.timecardDateRange[1]
-                        ?.endOf("day")
-                        .toISOString(),
-                    },
-                  }}
-                  className="btn btn-circle btn-sm p-1"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="size-6"
+              <div className="flex flex-row gap-1">
+                <div className="tooltip tooltip-left" data-tip="Edit Timecard">
+                  <button
+                    className="btn btn-circle btn-sm p-1"
+                    onClick={() => setShowDrawer(true)}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
-                    />
-                  </svg>
-                </Link>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-6 w-6"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <div className="tooltip tooltip-left" data-tip="Print Report">
+                  <Link
+                    href={{
+                      pathname: "/reports/print/timecard",
+                      query: {
+                        start: formVals.timecardDateRange[0]?.toISOString(),
+                        end: formVals.timecardDateRange[1]
+                          ?.endOf("day")
+                          .toISOString(),
+                      },
+                    }}
+                    className="btn btn-circle btn-sm p-1"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-6 w-6"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
+                      />
+                    </svg>
+                  </Link>
+                </div>
               </div>
             </TimecardReportTable>
           )}
