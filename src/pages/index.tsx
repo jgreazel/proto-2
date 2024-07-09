@@ -1,4 +1,4 @@
-import { LinkListItems, PageLayout } from "~/components/layout";
+import { PageLayout } from "~/components/layout";
 import Link from "next/link";
 import Welcome from "~/components/welcome";
 import { useUser } from "@clerk/nextjs";
@@ -53,9 +53,9 @@ function HomePage() {
         <LoadingPage />
       ) : (
         <div className="p-4">
-          <ul className="menu flex flex-row justify-evenly gap-2">
+          {/* <ul className="menu flex flex-row justify-evenly gap-2">
             <LinkListItems />
-          </ul>
+          </ul> */}
           <div className="divider"></div>
           <div className="flex flex-col gap-4 p-2 md:flex-row">
             <div className="card card-compact w-full shadow-lg ">
