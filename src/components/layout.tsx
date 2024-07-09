@@ -115,6 +115,11 @@ const items: MenuItem[] = [
       "users",
       <UserSwitchOutlined />,
     ),
+    getItem(
+      <LinkWithQP href="/timeclock/admin">Alter Time Clock</LinkWithQP>,
+      "timeclock-admin",
+      <ClockCircleOutlined />,
+    ),
   ]),
   getItem(
     <LinkWithQP href="/feedback">Leave Feedback</LinkWithQP>,
