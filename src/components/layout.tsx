@@ -7,18 +7,22 @@ import toast from "react-hot-toast";
 import { LoadingSpinner } from "./loading";
 import { useRouter } from "next/router";
 import {
+  ArrowLeftOutlined,
   BarChartOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
   ContactsOutlined,
   DollarOutlined,
+  EditOutlined,
   FileOutlined,
   HomeOutlined,
   LogoutOutlined,
   MessageOutlined,
+  PlusOutlined,
   PoweroffOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
+  TruckOutlined,
   UnorderedListOutlined,
   UserSwitchOutlined,
 } from "@ant-design/icons";
@@ -56,14 +60,33 @@ const items: MenuItem[] = [
       <ShoppingCartOutlined />,
     ),
     getItem(
-      <LinkWithQP href={"/passes"}>Season Passes</LinkWithQP>,
+      <LinkWithQP href={"/passes"}>Passes</LinkWithQP>,
       "passes",
       <ContactsOutlined />,
+      [
+        getItem(
+          <LinkWithQP href="/passes/0">New</LinkWithQP>,
+          "new-pass",
+          <PlusOutlined />,
+        ),
+      ],
     ),
     getItem(
       <LinkWithQP href="/items">Items</LinkWithQP>,
       "items",
       <UnorderedListOutlined />,
+      [
+        getItem(
+          <LinkWithQP href="/items/0">New</LinkWithQP>,
+          "new-item",
+          <PlusOutlined />,
+        ),
+        getItem(
+          <LinkWithQP href="/items/restock">Restock</LinkWithQP>,
+          "restock",
+          <TruckOutlined />,
+        ),
+      ],
     ),
   ]),
   getItem(
@@ -116,7 +139,7 @@ const getLabel = (val?: string) => {
     case "items":
       return "Inventory";
     case "[id]":
-      return "New";
+      return <EditOutlined />;
     default:
       return <div className="capitalize">{val}</div>;
   }
@@ -130,10 +153,12 @@ const SideNavLayout = (props: PropsWithChildren) => {
     token: { colorBgContainer, borderRadiusLG, colorPrimary },
   } = theme.useToken();
   const router = useRouter();
+
   const highlightedMenuItem = router.pathname.split("/")[1];
   const bc = router.pathname
     .split("/")
     .slice(1)
+    // todo add a menu for dd breadcrumbs for nested paths
     .map((x) => ({
       title: <LinkWithQP href={`/${x}`}>{getLabel(x)}</LinkWithQP>,
     }));
@@ -172,6 +197,7 @@ const SideNavLayout = (props: PropsWithChildren) => {
             display: "flex",
           }}
         >
+          {/* // todo maybe put logo here */}
           <h1
             style={{ color: colorPrimary }}
             className="text-2xl font-semibold"
@@ -188,7 +214,13 @@ const SideNavLayout = (props: PropsWithChildren) => {
           )}
         </Header>
         <Content style={{ margin: "0 16px" }}>
-          <Breadcrumb style={{ margin: "16px 0" }} items={bc}></Breadcrumb>
+          <div className="flex flex-row items-center gap-2">
+            <ArrowLeftOutlined
+              onClick={() => router.back()}
+              className="btn btn-circle btn-sm"
+            />
+            <Breadcrumb style={{ margin: "16px 0" }} items={bc}></Breadcrumb>
+          </div>
           <div
             style={{
               padding: 24,

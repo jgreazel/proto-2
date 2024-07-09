@@ -15,55 +15,37 @@ function PassesPage() {
 
   return (
     <PageLayout>
+      <h1 className="p-2 text-xl font-medium">Season Passes</h1>
       {isLoading ? (
         <LoadingPage />
       ) : (
         <div className="flex h-full flex-col gap-3 p-4">
-          <div className="flex w-full flex-row items-center justify-between gap-2 p-2">
-            <label
-              htmlFor="pass-filter"
-              className="input input-bordered m-1 flex grow items-center gap-2"
+          <label
+            htmlFor="pass-filter"
+            className="input input-bordered m-1 flex grow items-center gap-2"
+          >
+            <input
+              id="pass-filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              type="text"
+              className="grow"
+              placeholder="Search"
+            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="h-4 w-4 opacity-70"
             >
-              <input
-                id="pass-filter"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                type="text"
-                className="grow"
-                placeholder="Search"
+              <path
+                fillRule="evenodd"
+                d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                clipRule="evenodd"
               />
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-                className="h-4 w-4 opacity-70"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </label>
-            <div className="tooltip tooltip-left" data-tip="New Season Pass">
-              <Link href="passes/0" className="btn btn-circle btn-ghost">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-6 w-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
-                  />
-                </svg>
-              </Link>
-            </div>
-          </div>
+            </svg>
+          </label>
+
           {!!filteredPasses?.length ? (
             filteredPasses.map((pass) => (
               <div

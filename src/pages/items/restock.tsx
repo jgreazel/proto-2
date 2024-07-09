@@ -25,7 +25,7 @@ const SelectionHeader = (props: {
       {props.isLoading ? (
         <LoadingPage />
       ) : (
-        <div className="grid w-full grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid w-full grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {props.data?.map((i) => (
             <div key={i.item.id} className="form-control">
               <label className="label w-fit cursor-pointer gap-2">
@@ -126,13 +126,15 @@ const RestockForm = (props: {
             </label>
           </div>
         ))}
-      <Button
-        primary
-        type="submit"
-        disabled={!selected.length || !formState.isValid}
-      >
-        Submit
-      </Button>
+      <div className="flex flex-row justify-end">
+        <Button
+          primary
+          type="submit"
+          disabled={!selected.length || !formState.isValid}
+        >
+          Submit
+        </Button>
+      </div>
     </form>
   );
 };
@@ -155,71 +157,38 @@ function RestockPage() {
   });
 
   return (
-    <>
-      <Head>
-        <title>Guard Shack - Restock</title>
-      </Head>
-      <PageLayout>
-        <dialog id="restock-modal" className="modal modal-open">
-          <form method="dialog" className="modal-backdrop">
-            <Link href="/items">close</Link>
-          </form>
-          <div className="modal-box h-full max-w-4xl">
-            <form method="dialog">
-              <Link
-                href="/items"
-                className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-6 w-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18 18 6M6 6l12 12"
-                  />
-                </svg>
-              </Link>
-            </form>
-            <SelectionHeader
-              data={data}
-              isLoading={isLoading || isUpdating}
-              value={selected}
-              setValue={setSelected}
-            />
-            {selected.length ? (
-              <RestockForm
-                data={data as { item: InventoryItem }[]}
-                selected={selected}
-                onSubmit={mutate}
-              />
-            ) : (
-              <div role="alert" className="alert">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  className="h-6 w-6 shrink-0 stroke-info"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
-                <span>No items selected.</span>
-              </div>
-            )}
-          </div>
-        </dialog>
-      </PageLayout>
-    </>
+    <PageLayout>
+      <SelectionHeader
+        data={data}
+        isLoading={isLoading || isUpdating}
+        value={selected}
+        setValue={setSelected}
+      />
+      {selected.length ? (
+        <RestockForm
+          data={data as { item: InventoryItem }[]}
+          selected={selected}
+          onSubmit={mutate}
+        />
+      ) : (
+        <div role="alert" className="alert">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            className="h-6 w-6 shrink-0 stroke-info"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <span>No items selected.</span>
+        </div>
+      )}
+    </PageLayout>
   );
 }
 
