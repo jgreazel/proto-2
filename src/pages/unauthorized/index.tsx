@@ -13,7 +13,7 @@ function UnauthorizedPage() {
   }
 
   return (
-    <PageLayout disabled>
+    <PageLayout>
       <div role="alert" className="alert mt-5 shadow-lg">
         <svg
           xmlns="http://www.w3.org/2000/svg"
