@@ -1,5 +1,10 @@
 import { SignOutButton, useUser } from "@clerk/nextjs";
-import { useState, type PropsWithChildren, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type PropsWithChildren,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { api } from "~/utils/api";
 import handleApiError from "~/helpers/handleApiError";
@@ -14,8 +19,11 @@ import {
   ContactsOutlined,
   DollarOutlined,
   EditOutlined,
+  FileDoneOutlined,
+  FileExclamationOutlined,
   FileOutlined,
   HomeOutlined,
+  IssuesCloseOutlined,
   MessageOutlined,
   PlusOutlined,
   PoweroffOutlined,
@@ -136,16 +144,23 @@ const items: MenuItem[] = [
       <PlusOutlined />,
     ),
   ]),
-  getItem(
-    <LinkWithQP href="/schedules">Schedules</LinkWithQP>,
-    "schedules",
-    <CalendarOutlined />,
-  ),
-  getItem(
-    <LinkWithQP href="/timeclock">Time Clock</LinkWithQP>,
-    "timeclock",
-    <ClockCircleOutlined />,
-  ),
+  getItem("Time", "time", <ClockCircleOutlined />, [
+    getItem(
+      <LinkWithQP href="/schedules">Schedules</LinkWithQP>,
+      "schedules",
+      <CalendarOutlined />,
+    ),
+    getItem(
+      <LinkWithQP href="/timeclock">Time Clock</LinkWithQP>,
+      "timeclock",
+      <FileDoneOutlined />,
+    ),
+    getItem(
+      <LinkWithQP href="/timeclock/admin">Edit Time Clock</LinkWithQP>,
+      "timeclock-admin",
+      <IssuesCloseOutlined />,
+    ),
+  ]),
   getItem("Settings", "settings", <SettingOutlined />, [
     getItem(
       <LinkWithQP href="/files">Files</LinkWithQP>,
@@ -161,11 +176,6 @@ const items: MenuItem[] = [
       <LinkWithQP href="/users">Manage Users</LinkWithQP>,
       "users",
       <UserSwitchOutlined />,
-    ),
-    getItem(
-      <LinkWithQP href="/timeclock/admin">Alter Time Clock</LinkWithQP>,
-      "timeclock-admin",
-      <ClockCircleOutlined />,
     ),
 
     getItem(
@@ -200,8 +210,8 @@ const getLabel = (val?: string) => {
 
 const SideNavLayout = (props: PropsWithChildren) => {
   const sp = useSearchParams();
-  const menu = sp.get("menu");
-  const [collapsed, setCollapsed] = useState(menu === "min");
+  const isCollapsedMenu = sp.get("min");
+  const [collapsed, setCollapsed] = useState(isCollapsedMenu === "1");
   const {
     token: { colorBgContainer, borderRadiusLG, colorPrimary },
   } = theme.useToken();
@@ -220,17 +230,17 @@ const SideNavLayout = (props: PropsWithChildren) => {
   });
   const { user, isSignedIn } = useUser();
   const avatarLetter = user?.username?.[0] ?? user?.firstName?.[0] ?? "";
-  const [openKeys, setOpenKeys] = useState<string[]>(() => {
-    if (localStorage.getItem("gs-side-nav-open-keys")) {
-      const storedKeys = localStorage.getItem("gs-side-nav-open-keys");
-      return storedKeys ? (JSON.parse(storedKeys) as string[]) : [];
-    }
-    return [];
-  });
+  const openSPs = sp.getAll("open");
+  const [openKeys, setOpenKeys] = useState<string[]>(
+    openSPs.length > 0 ? openSPs : [],
+  );
 
   const onOpenChange = (keys: string[]) => {
     setOpenKeys(keys);
-    localStorage.setItem("gs-side-nav-open-keys", JSON.stringify(keys));
+    void router.push({
+      pathname: router.pathname,
+      query: { ...router.query, open: keys },
+    });
   };
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -238,9 +248,10 @@ const SideNavLayout = (props: PropsWithChildren) => {
         collapsible
         collapsed={collapsed}
         onCollapse={(value) => {
+          console.log("collapse ", value);
           void router.push({
             pathname: router.pathname,
-            query: { ...router.query, menu: value ? "min" : "max" },
+            query: { ...router.query, min: value ? "1" : "0" },
           });
           setCollapsed(value);
         }}
