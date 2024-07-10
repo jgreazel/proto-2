@@ -16,7 +16,6 @@ import {
   EditOutlined,
   FileOutlined,
   HomeOutlined,
-  LogoutOutlined,
   MessageOutlined,
   PlusOutlined,
   PoweroffOutlined,
@@ -30,7 +29,6 @@ import type { MenuProps } from "antd";
 import { Avatar, Breadcrumb, Layout, Menu, theme } from "antd";
 import { useSearchParams } from "next/navigation";
 import { LinkWithQP } from "./LinkWithQP";
-import generateRandomHexColor from "~/helpers/genRandHex";
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -50,43 +48,92 @@ function getItem(
   } as MenuItem;
 }
 
+// sales:
+// - concession, admission (buy, admit)
+// -- sales desk, items, new, restock (for concession)
+
 // todo trim by permissions
 const items: MenuItem[] = [
   getItem(<LinkWithQP href={"/"}>Home</LinkWithQP>, "", <HomeOutlined />),
-  getItem("Operations", "operations", <DollarOutlined />, [
+  getItem("Sales", "sales", <DollarOutlined />, [
+    getItem("Concessions", "concessions", "", [
+      getItem(
+        <LinkWithQP href={"/sales/concessions/sales-desk"}>
+          Sales Desk
+        </LinkWithQP>,
+        "concessions-sales-desk",
+        <ShoppingCartOutlined />,
+      ),
+      getItem(
+        <LinkWithQP href={"/sales/concessions/items"}>Items</LinkWithQP>,
+        "concessions-items",
+        <UnorderedListOutlined />,
+      ),
+      getItem(
+        <LinkWithQP href="/sales/concessions/0">New</LinkWithQP>,
+        "concessions-new",
+        <PlusOutlined />,
+      ),
+      getItem(
+        <LinkWithQP href="/items/restock">Restock</LinkWithQP>,
+        "restock",
+        <TruckOutlined />,
+      ),
+    ]),
+
+    getItem("Admissions", "admissions", "", [
+      getItem(
+        <LinkWithQP href={"/sales/admissions/sales-desk"}>
+          Sales Desk
+        </LinkWithQP>,
+        "admissions-sales-desk",
+        <ShoppingCartOutlined />,
+      ),
+      getItem(
+        <LinkWithQP href={"/sales/admissions/items"}>Items</LinkWithQP>,
+        "admissions-items",
+        <UnorderedListOutlined />,
+      ),
+      getItem(
+        <LinkWithQP href="/sales/admissions/0">New</LinkWithQP>,
+        "admissions-new",
+        <PlusOutlined />,
+      ),
+    ]),
+    // todo replace
+    // getItem(
+    //   <LinkWithQP href={"/checkout"}>Sales Desk</LinkWithQP>,
+    //   "checkout",
+    //   <ShoppingCartOutlined />,
+    // ),
+    // getItem(
+    //   <LinkWithQP href="/items">Items</LinkWithQP>,
+    //   "items",
+    //   <UnorderedListOutlined />,
+    //   [
+    //     getItem(
+    //       <LinkWithQP href="/items/0">New</LinkWithQP>,
+    //       "new-item",
+    //       <PlusOutlined />,
+    //     ),
+    //     getItem(
+    //       <LinkWithQP href="/items/restock">Restock</LinkWithQP>,
+    //       "restock",
+    //       <TruckOutlined />,
+    //     ),
+    //   ],
+    // ),
+  ]),
+  getItem("Passes", "passes", <ContactsOutlined />, [
     getItem(
-      <LinkWithQP href={"/checkout"}>Sales Desk</LinkWithQP>,
-      "checkout",
-      <ShoppingCartOutlined />,
-    ),
-    getItem(
-      <LinkWithQP href={"/passes"}>Passes</LinkWithQP>,
-      "passes",
-      <ContactsOutlined />,
-      [
-        getItem(
-          <LinkWithQP href="/passes/0">New</LinkWithQP>,
-          "new-pass",
-          <PlusOutlined />,
-        ),
-      ],
-    ),
-    getItem(
-      <LinkWithQP href="/items">Items</LinkWithQP>,
-      "items",
+      <LinkWithQP href={"/passes"}>List</LinkWithQP>,
+      "passes-list",
       <UnorderedListOutlined />,
-      [
-        getItem(
-          <LinkWithQP href="/items/0">New</LinkWithQP>,
-          "new-item",
-          <PlusOutlined />,
-        ),
-        getItem(
-          <LinkWithQP href="/items/restock">Restock</LinkWithQP>,
-          "restock",
-          <TruckOutlined />,
-        ),
-      ],
+    ),
+    getItem(
+      <LinkWithQP href="/passes/0">New</LinkWithQP>,
+      "new-pass",
+      <PlusOutlined />,
     ),
   ]),
   getItem(
@@ -99,7 +146,7 @@ const items: MenuItem[] = [
     "timeclock",
     <ClockCircleOutlined />,
   ),
-  getItem("Admin", "admin", <SettingOutlined />, [
+  getItem("Settings", "settings", <SettingOutlined />, [
     getItem(
       <LinkWithQP href="/files">Files</LinkWithQP>,
       "files",
@@ -120,17 +167,18 @@ const items: MenuItem[] = [
       "timeclock-admin",
       <ClockCircleOutlined />,
     ),
+
+    getItem(
+      <LinkWithQP href="/feedback">Leave Feedback</LinkWithQP>,
+      "feedback",
+      <MessageOutlined />,
+    ),
+    getItem(
+      <SignOutButton>Sign Out</SignOutButton>,
+      "sign-out",
+      <PoweroffOutlined />,
+    ),
   ]),
-  getItem(
-    <LinkWithQP href="/feedback">Leave Feedback</LinkWithQP>,
-    "feedback",
-    <MessageOutlined />,
-  ),
-  getItem(
-    <SignOutButton>Sign Out</SignOutButton>,
-    "sign-out",
-    <PoweroffOutlined />,
-  ),
 ];
 
 const getLabel = (val?: string) => {
@@ -172,6 +220,18 @@ const SideNavLayout = (props: PropsWithChildren) => {
   });
   const { user, isSignedIn } = useUser();
   const avatarLetter = user?.username?.[0] ?? user?.firstName?.[0] ?? "";
+  const [openKeys, setOpenKeys] = useState<string[]>(() => {
+    if (localStorage.getItem("gs-side-nav-open-keys")) {
+      const storedKeys = localStorage.getItem("gs-side-nav-open-keys");
+      return storedKeys ? (JSON.parse(storedKeys) as string[]) : [];
+    }
+    return [];
+  });
+
+  const onOpenChange = (keys: string[]) => {
+    setOpenKeys(keys);
+    localStorage.setItem("gs-side-nav-open-keys", JSON.stringify(keys));
+  };
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider
@@ -190,6 +250,8 @@ const SideNavLayout = (props: PropsWithChildren) => {
           defaultSelectedKeys={[highlightedMenuItem ?? "home"]}
           mode="inline"
           items={items}
+          openKeys={openKeys}
+          onOpenChange={onOpenChange}
         />
       </Sider>
       <Layout>
@@ -210,10 +272,7 @@ const SideNavLayout = (props: PropsWithChildren) => {
             Guard Shack
           </h1>
           {isSignedIn && (
-            <Avatar
-              style={{ background: generateRandomHexColor(user.id) }}
-              className="capitalize"
-            >
+            <Avatar style={{ background: colorPrimary }} className="capitalize">
               {avatarLetter}
             </Avatar>
           )}
