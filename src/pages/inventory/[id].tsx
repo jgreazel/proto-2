@@ -212,7 +212,7 @@ const ConcessionItemForm = (props: {
       <div className="tooltip w-full" data-tip="Cannot modify stock from here.">
         {quantityInput}
       </div>
-      <Link href="/items/restock" className="btn btn-ghost">
+      <Link href="/inventory/restock" className="btn btn-ghost">
         Restock
       </Link>
     </div>

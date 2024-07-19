@@ -33,7 +33,7 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
       </td>
       <td>
         <Link
-          href={`/items/${item.id}`}
+          href={`/inventory/${item.id}`}
           className="btn btn-circle btn-ghost btn-sm"
         >
           <svg

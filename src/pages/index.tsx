@@ -13,7 +13,7 @@ function HomePage() {
 
   const adminLinks = (
     <>
-      <Link className="btn btn-ghost btn-wide" href="items/restock">
+      <Link className="btn btn-ghost btn-wide" href="inventory/restock">
         Receive a Shipment
       </Link>
       <Link className="btn btn-ghost btn-wide" href="reports">
