@@ -13,7 +13,7 @@ import NoData from "~/components/noData";
 import handleApiError from "~/helpers/handleApiError";
 import isAuth from "~/components/isAuth";
 import Link from "next/link";
-import { AdminTimeClock } from "../timeclock/admin";
+import { AdminTimeClock } from "../time/edit-timeclock";
 import toast from "react-hot-toast";
 
 const { RangePicker } = DatePicker;

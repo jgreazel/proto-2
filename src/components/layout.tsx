@@ -17,12 +17,14 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   ContactsOutlined,
+  DatabaseOutlined,
   DollarOutlined,
   EditOutlined,
   FileDoneOutlined,
   FileExclamationOutlined,
   FileOutlined,
   HomeOutlined,
+  InboxOutlined,
   IssuesCloseOutlined,
   MessageOutlined,
   PlusOutlined,
@@ -56,81 +58,32 @@ function getItem(
   } as MenuItem;
 }
 
-// sales:
-// - concession, admission (buy, admit)
-// -- sales desk, items, new, restock (for concession)
-
+// Items will eventually have configurable types, sales & inventory pages will have tabs for each
+// eventually move admission to passes list (if i make passes configurable: as a salesman i want to create new passes automatically)
 // todo trim by permissions
 const items: MenuItem[] = [
   getItem(<LinkWithQP href={"/"}>Home</LinkWithQP>, "", <HomeOutlined />),
-  getItem("Sales", "sales", <DollarOutlined />, [
-    getItem("Concessions", "concessions", "", [
-      getItem(
-        <LinkWithQP href={"/sales/concessions/sales-desk"}>
-          Sales Desk
-        </LinkWithQP>,
-        "concessions-sales-desk",
-        <ShoppingCartOutlined />,
-      ),
-      getItem(
-        <LinkWithQP href={"/sales/concessions/items"}>Items</LinkWithQP>,
-        "concessions-items",
-        <UnorderedListOutlined />,
-      ),
-      getItem(
-        <LinkWithQP href="/sales/concessions/0">New</LinkWithQP>,
-        "concessions-new",
-        <PlusOutlined />,
-      ),
-      getItem(
-        <LinkWithQP href="/items/restock">Restock</LinkWithQP>,
-        "restock",
-        <TruckOutlined />,
-      ),
-    ]),
-
-    getItem("Admissions", "admissions", "", [
-      getItem(
-        <LinkWithQP href={"/sales/admissions/sales-desk"}>
-          Sales Desk
-        </LinkWithQP>,
-        "admissions-sales-desk",
-        <ShoppingCartOutlined />,
-      ),
-      getItem(
-        <LinkWithQP href={"/sales/admissions/items"}>Items</LinkWithQP>,
-        "admissions-items",
-        <UnorderedListOutlined />,
-      ),
-      getItem(
-        <LinkWithQP href="/sales/admissions/0">New</LinkWithQP>,
-        "admissions-new",
-        <PlusOutlined />,
-      ),
-    ]),
-    // todo replace
-    // getItem(
-    //   <LinkWithQP href={"/checkout"}>Sales Desk</LinkWithQP>,
-    //   "checkout",
-    //   <ShoppingCartOutlined />,
-    // ),
-    // getItem(
-    //   <LinkWithQP href="/items">Items</LinkWithQP>,
-    //   "items",
-    //   <UnorderedListOutlined />,
-    //   [
-    //     getItem(
-    //       <LinkWithQP href="/items/0">New</LinkWithQP>,
-    //       "new-item",
-    //       <PlusOutlined />,
-    //     ),
-    //     getItem(
-    //       <LinkWithQP href="/items/restock">Restock</LinkWithQP>,
-    //       "restock",
-    //       <TruckOutlined />,
-    //     ),
-    //   ],
-    // ),
+  getItem(
+    <LinkWithQP href={"/sales-desk"}>Sales Desk</LinkWithQP>,
+    "sales-desk",
+    <DollarOutlined />,
+  ),
+  getItem("Inventory", "inventory", <InboxOutlined />, [
+    getItem(
+      <LinkWithQP href={"/inventory"}>List</LinkWithQP>,
+      "inventory-list",
+      <UnorderedListOutlined />,
+    ),
+    getItem(
+      <LinkWithQP href="/inventory/0">New</LinkWithQP>,
+      "new-item",
+      <PlusOutlined />,
+    ),
+    getItem(
+      <LinkWithQP href={"/inventory/restock"}>Restock</LinkWithQP>,
+      "restock",
+      <TruckOutlined />,
+    ),
   ]),
   getItem("Passes", "passes", <ContactsOutlined />, [
     getItem(
@@ -146,17 +99,17 @@ const items: MenuItem[] = [
   ]),
   getItem("Time", "time", <ClockCircleOutlined />, [
     getItem(
-      <LinkWithQP href="/schedules">Schedules</LinkWithQP>,
+      <LinkWithQP href="/time/schedules">Schedules</LinkWithQP>,
       "schedules",
       <CalendarOutlined />,
     ),
     getItem(
-      <LinkWithQP href="/timeclock">Time Clock</LinkWithQP>,
+      <LinkWithQP href="/time/timeclock">Time Clock</LinkWithQP>,
       "timeclock",
       <FileDoneOutlined />,
     ),
     getItem(
-      <LinkWithQP href="/timeclock/admin">Edit Time Clock</LinkWithQP>,
+      <LinkWithQP href="/time/edit-timeclock">Edit Time Clock</LinkWithQP>,
       "timeclock-admin",
       <IssuesCloseOutlined />,
     ),
@@ -193,18 +146,14 @@ const items: MenuItem[] = [
 
 const getLabel = (val?: string) => {
   switch (val) {
-    case "checkout":
-      return "Sales Desk";
     case "passes":
       return "Season Passes";
     case "timeclock":
       return "Time Clock";
-    case "items":
-      return "Inventory";
     case "[id]":
       return <EditOutlined />;
     default:
-      return <div className="capitalize">{val}</div>;
+      return <div className="capitalize">{val?.replace("-", " ")}</div>;
   }
 };
 
@@ -237,6 +186,7 @@ const SideNavLayout = (props: PropsWithChildren) => {
 
   const onOpenChange = (keys: string[]) => {
     setOpenKeys(keys);
+    if (collapsed) return;
     void router.push({
       pathname: router.pathname,
       query: { ...router.query, open: keys },
@@ -247,11 +197,15 @@ const SideNavLayout = (props: PropsWithChildren) => {
       <Sider
         collapsible
         collapsed={collapsed}
-        onCollapse={(value) => {
+        onCollapse={async (value) => {
           console.log("collapse ", value);
-          void router.push({
+          const query = { ...router.query, min: value ? "1" : "0" };
+          if ("open" in query) {
+            delete query.open;
+          }
+          await router.push({
             pathname: router.pathname,
-            query: { ...router.query, min: value ? "1" : "0" },
+            query,
           });
           setCollapsed(value);
         }}
