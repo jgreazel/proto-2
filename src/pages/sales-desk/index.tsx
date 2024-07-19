@@ -12,6 +12,7 @@ import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import EmptyCart from "~/components/emptyCart";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
+import { Tabs } from "antd";
 type Item = RouterOutputs["items"]["getAll"][number]["item"];
 
 const ItemFeed = (props: {
@@ -170,9 +171,9 @@ const AdmissionFeed = () => {
 };
 
 function CheckoutPage() {
-  const [feed, setFeed] = useState<"concession" | "admission" | "passes">(
-    "concession",
-  );
+  // const [feed, setFeed] = useState<"concession" | "admission" | "passes">(
+  //   "concession",
+  // );
   const [cart, setCart] = useState<Item[]>([]);
   const cartTotal = cart.reduce((acc, x) => (acc += x.sellingPrice), 0);
   const { mutate, isLoading } = api.items.checkout.useMutation({
@@ -224,156 +225,163 @@ function CheckoutPage() {
     },
   });
 
-  const shoppingList = (
-    <>
-      <div role="tablist" className="tabs-boxed tabs">
-        <a
-          role="tab"
-          className={`tab ${feed === "concession" && "tab-active"}`}
-          onClick={() => setFeed("concession")}
+  const cartDiv = (
+    <div className="rounded-lg bg-base-100 p-2 shadow-xl">
+      <div className="flex flex-row items-center gap-1 p-2 text-xl font-medium">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-6 w-6"
         >
-          Snacks
-        </a>
-        <a
-          role="tab"
-          className={`tab ${feed === "admission" && "tab-active"}`}
-          onClick={() => setFeed("admission")}
-        >
-          Passes
-        </a>
-        <a
-          role="tab"
-          className={`tab ${feed === "passes" && "tab-active"}`}
-          onClick={() => setFeed("passes")}
-        >
-          Patrons
-        </a>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+          />
+        </svg>
+        Cart
       </div>
-      {feed === "passes" ? (
-        <AdmissionFeed />
+      {cart.length > 0 ? (
+        cart.map((i, idx) => (
+          <div
+            className="my-1 flex flex-row items-center justify-between rounded-lg bg-base-100 p-2 shadow-xl"
+            key={`${i.id}-${idx}`}
+          >
+            <div className="flex flex-col">
+              <div className="font-medium">{i.label}</div>
+              <div className="text-sm">{dbUnitToDollars(i.sellingPrice)}</div>
+            </div>
+            <div className="tooltip tooltip-left" data-tip="Remove">
+              <button
+                className="btn btn-circle btn-ghost btn-sm"
+                onClick={() => {
+                  const copy = [...cart];
+                  copy.splice(idx, 1);
+                  setCart(copy);
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-6 w-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ))
       ) : (
-        <ItemFeed
-          onClick={(data) => {
-            setCart((prev) => [...prev, data]);
-          }}
-          category={feed}
-        />
+        <div className="max-w-sm p-12">
+          <EmptyCart />
+        </div>
       )}
+      <div id="section-footer" className="flex flex-row justify-end gap-2 p-2">
+        <button
+          className="btn btn-ghost"
+          disabled={!cart.length}
+          onClick={() => {
+            setCart([]);
+          }}
+        >
+          Empty
+        </button>
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : (
+          <Button
+            primary
+            disabled={!cart.length}
+            onClick={() => {
+              const uniq = new Set(cart.map((c) => c.id));
+              let input: RouterInputs["items"]["checkout"];
+              uniq.forEach((x) => {
+                const toAdd = {
+                  id: x,
+                  amountSold: cart.filter((c) => c.id === x).length,
+                };
+
+                if (!input) {
+                  input = [toAdd];
+                } else {
+                  input.push(toAdd);
+                }
+              });
+              mutate(input!);
+            }}
+          >
+            Checkout: {dbUnitToDollars(cartTotal)}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const getSellTab = (feed: "concession" | "admission") => (
+    <>
+      <div className="md:hidden">{cartDiv}</div>
+      <div className="grid grid-cols-4 gap-2">
+        <div className="col-span-4 md:col-span-3">
+          <ItemFeed
+            onClick={(data) => {
+              setCart((prev) => [...prev, data]);
+            }}
+            category={feed}
+          />
+        </div>
+        <div className="hidden md:col-span-1 md:block">{cartDiv}</div>
+      </div>
     </>
+  );
+
+  const shoppingList = (
+    <Tabs
+      defaultActiveKey="concession"
+      size="small"
+      items={[
+        {
+          label: "Concession",
+          key: "concession",
+          children: getSellTab("concession"),
+        },
+        {
+          label: "Admission",
+          key: "admission",
+          children: getSellTab("admission"),
+        },
+      ]}
+    />
   );
 
   return (
     <PageLayout>
-      <div className="flex flex-col gap-2 md:flex-row">
-        <div className="hidden p-2 md:block md:w-2/3">{shoppingList}</div>
-        <div className="p-2 md:w-1/3">
-          <div className="rounded-lg bg-base-100 p-2 shadow-xl">
-            <div className="flex flex-row items-center gap-1 p-2 text-xl font-medium">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-                />
-              </svg>
-              Cart
-            </div>
-            {cart.length > 0 ? (
-              cart.map((i, idx) => (
-                <div
-                  className="my-1 flex flex-row items-center justify-between rounded-lg bg-base-100 p-2 shadow-xl"
-                  key={`${i.id}-${idx}`}
-                >
-                  <div className="flex flex-col">
-                    <div className="font-medium">{i.label}</div>
-                    <div className="text-sm">
-                      {dbUnitToDollars(i.sellingPrice)}
-                    </div>
-                  </div>
-                  <div className="tooltip tooltip-left" data-tip="Remove">
-                    <button
-                      className="btn btn-circle btn-ghost btn-sm"
-                      onClick={() => {
-                        const copy = [...cart];
-                        copy.splice(idx, 1);
-                        setCart(copy);
-                      }}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="h-6 w-6"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="max-w-sm p-12">
-                <EmptyCart />
-              </div>
-            )}
-            <div
-              id="section-footer"
-              className="flex flex-row justify-end gap-2 p-2"
-            >
-              <button
-                className="btn btn-ghost"
-                disabled={!cart.length}
-                onClick={() => {
-                  setCart([]);
-                }}
-              >
-                Empty
-              </button>
-              {isLoading ? (
-                <LoadingSpinner />
-              ) : (
-                <Button
-                  primary
-                  disabled={!cart.length}
-                  onClick={() => {
-                    const uniq = new Set(cart.map((c) => c.id));
-                    let input: RouterInputs["items"]["checkout"];
-                    uniq.forEach((x) => {
-                      const toAdd = {
-                        id: x,
-                        amountSold: cart.filter((c) => c.id === x).length,
-                      };
-
-                      if (!input) {
-                        input = [toAdd];
-                      } else {
-                        input.push(toAdd);
-                      }
-                    });
-                    mutate(input!);
-                  }}
-                >
-                  Checkout: {dbUnitToDollars(cartTotal)}
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="block p-2 md:hidden">{shoppingList}</div>
-      </div>
+      <h1 className="text-lg font-medium">Sales Desk</h1>
+      <Tabs
+        defaultActiveKey="inventory"
+        size="large"
+        items={[
+          {
+            label: "Inventory",
+            key: "inventory",
+            children: shoppingList,
+          },
+          {
+            label: "Passes",
+            key: "passes",
+            children: <AdmissionFeed />,
+          },
+        ]}
+      />
     </PageLayout>
   );
 }
