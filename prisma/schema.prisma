@@ -159,3 +159,56 @@ model UserSettings {
 
     @@index([defaultHourCodeId])
 }
+
+model User_Role {
+    // can be the user id of the clerk user
+    userId String
+    roleId String
+
+    role Role @relation(fields: [roleId], references: [id])
+
+    @@id([userId, roleId])
+    @@unique([userId, roleId])
+    @@index([roleId])
+}
+
+model Role {
+    id   String @id @default(cuid())
+    name String
+
+    permissions Role_Permission[]
+    User_Role   User_Role[]
+    createdBy   String
+    createdAt   DateTime          @default(now())
+    modifiedBy  String
+    modifiedAt  DateTime          @default(now())
+}
+
+model Role_Permission {
+    roleId       String
+    permissionId String
+
+    role       Role       @relation(fields: [roleId], references: [id])
+    permission Permission @relation(fields: [permissionId], references: [id])
+
+    createdBy  String
+    createdAt  DateTime @default(now())
+    modifiedBy String
+    modifiedAt DateTime @default(now())
+
+    @@id([roleId, permissionId])
+    @@unique([roleId, permissionId])
+    @@index([permissionId])
+}
+
+model Permission {
+    id            String  @id @default(cuid())
+    description   String
+    isOverridable Boolean
+
+    roles      Role_Permission[]
+    createdBy  String
+    createdAt  DateTime          @default(now())
+    modifiedBy String
+    modifiedAt DateTime          @default(now())
+}

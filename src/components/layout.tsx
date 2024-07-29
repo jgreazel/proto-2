@@ -166,6 +166,10 @@ const SideNavLayout = (props: PropsWithChildren) => {
   } = theme.useToken();
   const router = useRouter();
 
+  // todo get nav permissions to know which to show, which can be over ridden
+  // ? might need a wrapper component for over riding with the popup, maybe same component just handles not displaying too
+  // todo START HERE, need to move log out to avatar so settings can be permission driven
+
   const highlightedMenuItem = router.pathname.split("/")[1];
   const bc = router.pathname
     .split("/")
