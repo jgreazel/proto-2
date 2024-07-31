@@ -188,8 +188,8 @@ model Role_Permission {
     roleId       String
     permissionId String
 
-    role       Role       @relation(fields: [roleId], references: [id])
-    permission Permission @relation(fields: [permissionId], references: [id])
+    role Role @relation(fields: [roleId], references: [id])
+    // permission Permission @relation(fields: [permissionId], references: [id])
 
     createdBy  String
     createdAt  DateTime @default(now())
@@ -201,14 +201,15 @@ model Role_Permission {
     @@index([permissionId])
 }
 
-model Permission {
-    id            String  @id @default(cuid())
-    description   String
-    isOverridable Boolean
+// too much work to make configurable
+// model Permission {
+//     id            String  @id @default(cuid())
+//     description   String
+//     isOverridable Boolean @default(false)
 
-    roles      Role_Permission[]
-    createdBy  String
-    createdAt  DateTime          @default(now())
-    modifiedBy String
-    modifiedAt DateTime          @default(now())
-}
+//     roles      Role_Permission[]
+//     createdBy  String
+//     createdAt  DateTime          @default(now())
+//     modifiedBy String
+//     modifiedAt DateTime          @default(now())
+// }
