@@ -36,7 +36,7 @@ import {
   UserSwitchOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
-import { Avatar, Breadcrumb, Layout, Menu, theme } from "antd";
+import { Avatar, Breadcrumb, Dropdown, Layout, Menu, theme } from "antd";
 import { useSearchParams } from "next/navigation";
 import { LinkWithQP } from "./LinkWithQP";
 
@@ -130,16 +130,10 @@ const items: MenuItem[] = [
       "users",
       <UserSwitchOutlined />,
     ),
-
     getItem(
       <LinkWithQP href="/feedback">Leave Feedback</LinkWithQP>,
       "feedback",
       <MessageOutlined />,
-    ),
-    getItem(
-      <SignOutButton>Sign Out</SignOutButton>,
-      "sign-out",
-      <PoweroffOutlined />,
     ),
   ]),
 ];
@@ -168,7 +162,9 @@ const SideNavLayout = (props: PropsWithChildren) => {
 
   // todo get nav permissions to know which to show, which can be over ridden
   // ? might need a wrapper component for over riding with the popup, maybe same component just handles not displaying too
+  // fetching a nav object from server may be better, no auth logic needed in view
   // todo START HERE, need to move log out to avatar so settings can be permission driven
+  // think user PINS have to be unique for this to work with over ride
 
   const highlightedMenuItem = router.pathname.split("/")[1];
   const bc = router.pathname
@@ -241,9 +237,24 @@ const SideNavLayout = (props: PropsWithChildren) => {
             Guard Shack
           </h1>
           {isSignedIn && (
-            <Avatar style={{ background: colorPrimary }} className="capitalize">
-              {avatarLetter}
-            </Avatar>
+            <Dropdown
+              menu={{
+                items: [
+                  getItem(
+                    <SignOutButton>Sign Out</SignOutButton>,
+                    "sign-out",
+                    <PoweroffOutlined />,
+                  ),
+                ],
+              }}
+            >
+              <Avatar
+                style={{ background: colorPrimary }}
+                className="capitalize"
+              >
+                {avatarLetter}
+              </Avatar>
+            </Dropdown>
           )}
         </Header>
         <Content style={{ margin: "0 16px" }}>
