@@ -18,10 +18,13 @@
     "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "lib/*": ["./src/server/api/lib/*"],
+      "domain/*": ["./src/server/api/domain/*"]
     },
     "plugins": [{ "name": "next" }]
   },
+  "exclude": ["node_modules"],
   "include": [
     ".eslintrc.cjs",
     "next-env.d.ts",
@@ -29,7 +32,8 @@
     "**/*.tsx",
     "**/*.cjs",
     "**/*.mjs",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": ["node_modules"]
+    ".next/types/**/*.ts",
+    "tests/**/*.test.ts",
+    "src/**/*.ts"
+  ]
 }

@@ -149,10 +149,10 @@ model UserSettings {
     userId            String    @unique
     defaultHourCodeId String?
     defaultHourCode   HourCode? @relation(fields: [defaultHourCodeId], references: [id])
-    canModifyHourCode Boolean   @default(false)
+    canModifyHourCode Boolean   @default(false) // move to perm
     clockPIN          String?   @unique
-    isAdmin           Boolean   @default(false)
-    canSchedule       Boolean   @default(false)
+    isAdmin           Boolean   @default(false) // move to perm / remove
+    canSchedule       Boolean   @default(false) // move to perm
 
     createdBy String
     createdAt DateTime @default(now())
