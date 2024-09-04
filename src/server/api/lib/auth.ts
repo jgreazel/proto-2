@@ -16,6 +16,10 @@
  * will need to check inside router functions for permissions if necessary
  * UI differences (nav options) will be returned from server side to client as dto
  * things involving a session check should happen optimistically with getServerSideProps (or next equiv)
+ * next js middleware will need to utilize this to check for auth every request & place important things in context
+ * needs client side functions for storing session in browser, auto adding to request, check session exp - logic lives here, comp/hooks live in react project
+ * client flow: no/expired cookie in browser? login page. extract and store session from response. auto append it on every request if not expired
+ * delete cookie from browser if bad response received / logout
  *
  * ? dependencies:
  * db access, userRepo
@@ -23,7 +27,9 @@
  *
  * current implementation plan:
  * pure functions with call back params to manage dependencies
+ * need DTOs for i/o
  * mock callbacks with jest
+ * example interface to follow along: https://chatgpt.com/c/90dc69db-260c-459a-8c4f-b133806006e2
  *
  * conceptually:
  * avoid calling this a service/manager anything. Want auth to be outside of service hierarchy, able to be called from anywhere
