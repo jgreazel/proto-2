@@ -36,6 +36,8 @@ export function signUp(): User {
   // store user with callback
   // with default role? (or dont mess with role/claims yet just figure out jwt session)
   // in that case, generate session token, append it to User obj to return
+  // not sure if it needs added to User entity or just added to contexts/headers automatically?
+  // is there a way to hide all this header/context setting? or should I intentionally place it here with intent to be used by framework
 
   return {
     firstName: "jon",
