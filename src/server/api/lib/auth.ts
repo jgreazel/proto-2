@@ -31,26 +31,73 @@
  * mock callbacks with jest
  * example interface to follow along: https://chatgpt.com/c/90dc69db-260c-459a-8c4f-b133806006e2
  *
+ * plan to implement as-is module with idea for connection string-esque configuration, rather than inserting every depend-function
+ *
  * conceptually:
  * avoid calling this a service/manager anything. Want auth to be outside of service hierarchy, able to be called from anywhere
  */
 
-import { type User } from "domain/user";
+import { PrismaClient, User } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
-export function signUp(): User {
-  // ensure valid user data
-  // store user with callback
-  // with default role? (or dont mess with role/claims yet just figure out jwt session)
-  // in that case, generate session token, append it to User obj to return
-  // not sure if it needs added to User entity or just added to contexts/headers automatically?
-  // is there a way to hide all this header/context setting? or should I intentionally place it here with intent to be used by framework
+let prisma: PrismaClient | null = null;
 
-  return {
-    firstName: "jon",
-    lastName: "greazel",
-  } as User;
+export const configurePrismaClient = (client?: PrismaClient) => {
+  prisma = client ?? new PrismaClient();
+  return prisma;
+};
+
+export const getPrismaClient = () => {
+  if (!prisma) {
+    throw new Error(
+      "PrismaClient is not configured. Call configurePrismaClient first.",
+    );
+  }
+  return prisma;
+};
+
+export type Permission =
+  | "SALES_DESK"
+  | "INVENTORY"
+  | "PASSES"
+  | "TIME"
+  | "SETTINGS";
+export interface Role {
+  id: string;
+  name: string;
+  permissions: Permission[];
+}
+export interface User {
+  id: string;
+  username: string;
+  email?: string;
+  password: string;
+  roles: Role[];
 }
 
-export function logIn(): User {
-  throw new Error("not implemented");
+export async function hashPassword(password: string): Promise<string> {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
 }
+
+export async function signUp(
+  prisma: PrismaClient,
+  username: string,
+  password: string,
+): Promise<User> {
+  const hashedPassword = await hashPassword(password);
+
+  const user = await prisma.user.create({
+    data: {
+      username,
+      password: hashedPassword,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  return user;
+}
+
+// todo resume per this conversation: https://chatgpt.com/share/b120680a-1e39-48ae-ad22-79f2c3ff59c6

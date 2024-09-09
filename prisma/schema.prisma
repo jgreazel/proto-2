@@ -160,56 +160,65 @@ model UserSettings {
     @@index([defaultHourCodeId])
 }
 
-model User_Role {
-    // can be the user id of the clerk user
-    userId String
-    roleId String
+// --- AUTH --- 
+model User {
+    id        String     @id @default(uuid())
+    username  String     @unique
+    password  String
+    firstName String?
+    lastName  String?
+    email     String?    @unique
+    roles     UserRole[] // Many-to-many relationship with Role through UserRole join table
 
-    role Role @relation(fields: [roleId], references: [id])
-
-    @@id([userId, roleId])
-    @@unique([userId, roleId])
-    @@index([roleId])
+    // Audit fields
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    deletedAt DateTime? // Nullable for soft deletes
+    createdBy String? // Nullable if no user is logged in
+    updatedBy String?
+    deletedBy String?
 }
 
 model Role {
-    id   String @id @default(cuid())
-    name String
-
-    permissions Role_Permission[]
-    User_Role   User_Role[]
-    createdBy   String
-    createdAt   DateTime          @default(now())
-    modifiedBy  String
-    modifiedAt  DateTime          @default(now())
-}
-
-model Role_Permission {
-    roleId       String
-    permissionId String
-
-    role Role @relation(fields: [roleId], references: [id])
-    // permission Permission @relation(fields: [permissionId], references: [id])
+    id          String           @id @default(cuid())
+    name        String
+    users       UserRole[] // Many-to-many relationship with User through UserRole join table
+    permissions RolePermission[] // Many-to-many relationship with Permission through RolePermission join table
 
     createdBy  String
     createdAt  DateTime @default(now())
     modifiedBy String
     modifiedAt DateTime @default(now())
-
-    @@id([roleId, permissionId])
-    @@unique([roleId, permissionId])
-    @@index([permissionId])
 }
 
-// too much work to make configurable
-// model Permission {
-//     id            String  @id @default(cuid())
-//     description   String
-//     isOverridable Boolean @default(false)
+model Permission {
+    id    String           @id @default(cuid())
+    roles RolePermission[] // Many-to-many relationship with Role through RolePermission join table
 
-//     roles      Role_Permission[]
-//     createdBy  String
-//     createdAt  DateTime          @default(now())
-//     modifiedBy String
-//     modifiedAt DateTime          @default(now())
-// }
+    createdBy  String
+    createdAt  DateTime @default(now())
+    modifiedBy String
+    modifiedAt DateTime @default(now())
+}
+
+model UserRole {
+    userId String
+    roleId String
+    user   User   @relation(fields: [userId], references: [id])
+    role   Role   @relation(fields: [roleId], references: [id])
+
+    @@id([userId, roleId]) // Composite primary key
+    @@unique([userId, roleId]) // Ensure unique pairs
+    @@index([roleId])
+}
+
+model RolePermission {
+    roleId       String
+    permissionId String
+    role         Role       @relation(fields: [roleId], references: [id])
+    permission   Permission @relation(fields: [permissionId], references: [id])
+
+    @@id([roleId, permissionId]) // Composite primary key
+    @@unique([roleId, permissionId]) // Ensure unique pairs
+    @@index([permissionId])
+}

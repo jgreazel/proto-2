@@ -28,7 +28,9 @@
     "antd": "^5.15.2",
     "axios": "^1.6.8",
     "bcrypt-ts": "^5.0.2",
+    "bcryptjs": "^2.4.3",
     "dayjs": "^1.11.10",
+    "jsonwebtoken": "^9.0.2",
     "next": "^13.5.4",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -40,8 +42,10 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/eslint": "^8.44.2",
     "@types/jest": "^29.5.12",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^18.16.0",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
