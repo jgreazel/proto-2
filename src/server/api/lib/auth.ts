@@ -37,7 +37,7 @@
  * avoid calling this a service/manager anything. Want auth to be outside of service hierarchy, able to be called from anywhere
  */
 
-import { PrismaClient, User } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -68,13 +68,13 @@ export interface Role {
   name: string;
   permissions: Permission[];
 }
-export interface User {
-  id: string;
-  username: string;
-  email?: string;
-  password: string;
-  roles: Role[];
-}
+// export interface User {
+//   id: string;
+//   username: string;
+//   email?: string;
+//   password: string;
+//   roles: Role[];
+// }
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);
