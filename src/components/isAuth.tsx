@@ -11,6 +11,8 @@ type Role = "employee" | "admin";
 // Auth settings steps:
 // user (board member or manager) signs up for the app
 // admin user (me or board member) goes to "UserManagement" module in app
+// (user management is an admin feature like future events, announcements)
+// (reports, user mgmt, etc access all sep permissions. maybe "admin" is just UI sections for grouping)
 // admin user clicks to create an employee profile -> when complete, redirect to employee management module
 // admin user assigns a title (from setup titles) and other settings/permissions
 // (employee profile will contain title & permissions, claims should not overlap between the two categories)
