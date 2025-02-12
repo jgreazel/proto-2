@@ -9,6 +9,7 @@ type Role = "employee" | "admin";
 // ? context and hook w/ check___ fns?
 
 // Auth settings steps:
+// old user.role -> FE HOC comp -> url based perm
 // user (board member or manager) signs up for the app
 // admin user (me or board member) goes to "UserManagement" module in app
 // (user management is an admin feature like future events, announcements)
