@@ -144,6 +144,8 @@ model TimeClockEvent {
     @@index([hourCodeId])
 }
 
+// keep old coll for now. need plan to migrate to new coll
+// ? unless they match needs exactly
 model UserSettings {
     id                String    @id @default(cuid())
     userId            String    @unique
@@ -160,7 +162,11 @@ model UserSettings {
     @@index([defaultHourCodeId])
 }
 
+// todo add new EmployeeProfile collection
+// create mermaid ERD for collections
+
 // --- AUTH --- 
+// basically get rid of all this -> employeeManager / employeeProfile
 model User {
     id        String     @id @default(uuid())
     username  String     @unique
