@@ -31,16 +31,6 @@ export const itemsRouter = createTRPCRouter({
         orderBy: [{ createdAt: "desc" }],
       });
 
-      // likely remove later
-      // just example of intermediate request for supplementary data
-      // if need ALL req to have user data, middleware might be better place
-      const users = await clerkClient.users
-        .getUserList({
-          userId: items.map((i) => i.createdBy),
-          limit: 100,
-        })
-        .then((res) => res.filter(filterUserForClient));
-
       if (input?.category) {
         items = items.filter((i) => {
           return (
@@ -51,16 +41,9 @@ export const itemsRouter = createTRPCRouter({
       }
 
       return items.map((i) => {
-        const createdBy = users.find((u) => u.id === i.createdBy);
-        if (!createdBy)
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "User data not found",
-          });
-
         return {
           item: i,
-          createdBy,
+          // createdBy,
         };
       });
     }),
@@ -85,16 +68,8 @@ export const itemsRouter = createTRPCRouter({
         });
       }
 
-      // likely remove later
-      // just example of intermediate request for supplementary data
-      // if need ALL req to have user data, middleware might be better place
-      const user = await clerkClient.users
-        .getUser(item.createdBy)
-        .then((res) => filterUserForClient(res));
-
       return {
         item,
-        createdBy: user,
       };
     }),
 
@@ -173,6 +148,24 @@ export const itemsRouter = createTRPCRouter({
       return item;
     }),
 
+  deleteConcessionItem: privateProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.transactionItems.deleteMany({
+        where: { itemId: input.id },
+      });
+      const deletedItem = await ctx.db.inventoryItem.delete({
+        where: { id: input.id },
+        include: { transactions: true },
+      });
+
+      return deletedItem;
+    }),
+
   updateAdmissionItem: privateProcedure
     .input(
       z.object({
@@ -199,7 +192,7 @@ export const itemsRouter = createTRPCRouter({
       z.array(
         z.object({
           id: z.string(),
-          restockAmount: z.number().min(1).max(200),
+          restockAmount: z.number().min(-10000).max(10000),
         }),
       ),
     )
