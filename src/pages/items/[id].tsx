@@ -172,6 +172,7 @@ const ConcessionItemForm = (props: {
   isSubmitting: boolean;
   isLoading: boolean;
   data?: ConcessionFormData;
+  onDelete?: () => void;
 }) => {
   const { onSubmit, isSubmitting, isLoading, data } = props;
 
@@ -189,6 +190,8 @@ const ConcessionItemForm = (props: {
   useEffect(() => {
     if (data) reset(data);
   }, [data, reset]);
+
+  const [areYouSure, setAreYouSure] = useState(false);
 
   const quantityInput = (
     <input
@@ -217,6 +220,13 @@ const ConcessionItemForm = (props: {
       </Link>
     </div>
   );
+
+  const handleDelete = () => {
+    console.log("delete");
+    if (props.onDelete) {
+      props.onDelete();
+    }
+  };
 
   return (
     <form
@@ -271,13 +281,44 @@ const ConcessionItemForm = (props: {
       </label>
       {quantityRow}
       {!isSubmitting && (
-        <Button
-          primary
-          disabled={isSubmitting || !formState.isValid}
-          type="submit"
-        >
-          {data ? "Save" : "Create"}
-        </Button>
+        <div className="flex gap-1">
+          <button
+            className="btn btn-primary w-4/5"
+            disabled={isSubmitting || !formState.isValid}
+            type="submit"
+          >
+            {data ? "Save" : "Create"}
+          </button>
+          {!!data && (
+            <button
+              onClick={() => setAreYouSure(true)}
+              type="button"
+              className="btn btn-outline btn-error w-1/5"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      )}
+      {areYouSure && (
+        <dialog id="delete_modal" className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="text-lg font-bold">Are you sure?</h3>
+            <p className="py-4">This action cannot be undone.</p>
+            <div className="modal-action">
+              <button
+                onClick={handleDelete}
+                type="button"
+                className="btn btn-error"
+              >
+                Yes
+              </button>
+              <button onClick={() => setAreYouSure(false)} className="btn">
+                No
+              </button>
+            </div>
+          </div>
+        </dialog>
       )}
       {isSubmitting && (
         <div className="flex items-center justify-center">
@@ -381,6 +422,15 @@ const EditItemWizard = (props: { id: string }) => {
       },
       onError: handleApiError,
     });
+  const { mutate: deleteItem, isLoading: isDeleting } =
+    api.items.deleteConcessionItem.useMutation({
+      onSuccess: async () => {
+        void ctx.items.getById.invalidate();
+        await router.push("/items");
+        toast.success("Item Deleted!");
+      },
+      onError: handleApiError,
+    });
 
   if (isLoading) {
     return (
@@ -396,8 +446,9 @@ const EditItemWizard = (props: { id: string }) => {
         <ConcessionItemForm
           data={data?.item as ConcessionFormData}
           isLoading={isLoading}
-          isSubmitting={isUpdating}
+          isSubmitting={isUpdating || isDeleting}
           onSubmit={(data) => concessionMutate({ ...data, id: props.id })}
+          onDelete={() => deleteItem({ id: data?.item.id })}
         />
       ) : (
         <AdmissionItemForm

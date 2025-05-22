@@ -148,6 +148,24 @@ export const itemsRouter = createTRPCRouter({
       return item;
     }),
 
+  deleteConcessionItem: privateProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.transactionItems.deleteMany({
+        where: { itemId: input.id },
+      });
+      const deletedItem = await ctx.db.inventoryItem.delete({
+        where: { id: input.id },
+        include: { transactions: true },
+      });
+
+      return deletedItem;
+    }),
+
   updateAdmissionItem: privateProcedure
     .input(
       z.object({
