@@ -120,86 +120,39 @@ export const reportsRouter = createTRPCRouter({
         e.createdBy =
           users.find((u) => u.id === e.createdBy)?.username ?? e.createdBy;
       });
-
-      // Timecard Report
-      const [start, end] = [
-        dayjs(input.timecardReport?.startDate)
-          // .startOf("day")
-          .toDate(),
-        dayjs(input.timecardReport?.endDate)
-          // .endOf("day")
-          .toDate(),
-      ];
-      const tces = await ctx.db.timeClockEvent.findMany({
-        where: {
-          createdAt: {
-            gte: start,
-            lte: end,
-          },
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      });
-
-      const userIdList = new Set(tces.map((t) => t.userId));
-      const userIdArr = Array.from(userIdList);
-      const tcUsers = await clerkClient.users
-        .getUserList({ userId: userIdArr, limit: 500 })
-        .then((res) => res.filter(filterUserForClient));
-      const hourCodes = await ctx.db.hourCode.findMany();
-
-      const shiftsByUser: Timecard = tces.reduce((acc, tce) => {
-        const existingUser = acc.find((user) => user.user.id === tce.userId);
-        const hc = hourCodes.find((x) => x.id === tce.hourCodeId);
-        if (!hc) return acc;
-
-        if (existingUser) {
-          const wrkingShift =
-            existingUser.shifts[existingUser.shifts.length - 1];
-          // last punch completed a shift
-          if (!!wrkingShift?.clockOut) {
-            existingUser.shifts.push({
-              userId: tce.userId,
-              clockIn: tce.createdAt,
-              rate: hc.hourlyRate,
-            });
-            // last punch opened a shift
-          } else if (
-            dayjs(wrkingShift?.clockIn).date === dayjs(tce.createdAt).date
-          ) {
-            wrkingShift!.clockOut = tce.createdAt;
-            const shiftDiffMs = dayjs(wrkingShift?.clockOut).diff(
-              dayjs(wrkingShift?.clockIn),
-            );
-            existingUser.totalWorkedMs += shiftDiffMs;
-            // this really shouldn't use hc as a rate
-            // ideally it multiplies by rate of clock IN
-            existingUser.totalEarned +=
-              (shiftDiffMs / MS_IN_HOUR) * (wrkingShift?.rate ?? hc.hourlyRate);
-          }
-        } else {
-          acc.push({
-            user: {
-              id: tce.userId,
-              username:
-                tcUsers.find((u) => u.id === tce.userId)?.username ??
-                "Not Found",
+      const nonMemberTransLinks = await ctx.db.transactionItems
+        .findMany({
+          where: {
+            createdAt: {
+              gte: input.admissionReport?.startDate,
+              lte: input.admissionReport?.endDate,
             },
-            shifts: [
-              {
-                userId: tce.userId,
-                clockIn: tce.createdAt,
-                rate: hc.hourlyRate,
-              },
-            ],
-            totalWorkedMs: 0,
-            totalEarned: 0,
-            period: [start, end],
-          });
-        }
-        return acc;
-      }, [] as Timecard);
+          },
+          include: {
+            item: true,
+          },
+        })
+        .then((dbLinks) => dbLinks.filter((l) => l.item.isAdmissionItem));
+      nonMemberTransLinks.forEach((l) => {
+        l.createdBy =
+          users.find((u) => u.id === l.createdBy)?.username ?? l.createdBy;
+      });
+      type AdmissionWithTag = (typeof adEvents)[number] & { type: "admission" };
+      type TransactionWithTag = (typeof nonMemberTransLinks)[number] & {
+        type: "transaction";
+      };
+
+      type CombinedAdmission = AdmissionWithTag | TransactionWithTag;
+      const combinedAdmissionEvents: CombinedAdmission[] = [
+        ...adEvents.map((e) => ({ ...e, type: "admission" as const })),
+        ...nonMemberTransLinks.map((l) => ({
+          ...l,
+          type: "transaction" as const,
+        })),
+      ].sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
 
       return {
         purchaseReport: !!input.purchaseReport
@@ -219,11 +172,8 @@ export const reportsRouter = createTRPCRouter({
           ? {
               startDate: input.admissionReport?.startDate,
               endDate: input.admissionReport?.endDate,
-              admissionEvents: adEvents,
+              admissionEvents: combinedAdmissionEvents,
             }
-          : null,
-        timecardReport: !!input.timecardReport
-          ? { shifts: shiftsByUser }
           : null,
       };
     }),
