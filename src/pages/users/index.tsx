@@ -10,252 +10,6 @@ import handleApiError from "~/helpers/handleApiError";
 import moneyMask from "~/helpers/moneyMask";
 import { type RouterOutputs, api } from "~/utils/api";
 
-type HourCodeFormData = {
-  id: string;
-  label: string;
-  hourlyRate: number;
-};
-
-const HourCodeFormModal = ({
-  onClose,
-  data,
-}: {
-  onClose: () => void;
-  data?: HourCodeFormData;
-}) => {
-  const utils = api.useUtils();
-  const onSuccess = (msg: string) => async () => {
-    toast.success(msg);
-    await utils.schedules.getHourCodes.invalidate();
-    onClose();
-  };
-  const { mutate, isLoading } = api.schedules.createHourCode.useMutation({
-    onSuccess: onSuccess("Created!"),
-    onError: handleApiError,
-  });
-  const { mutate: update, isLoading: isUpdating } =
-    api.schedules.editHourCode.useMutation({
-      onSuccess: onSuccess("Updated!"),
-      onError: handleApiError,
-    });
-  const { mutate: apiDelete, isLoading: isDeleting } =
-    api.schedules.deleteHourCode.useMutation({
-      onSuccess: onSuccess("Deleted!"),
-      onError: handleApiError,
-    });
-
-  const [title, setTitle] = useState(data?.label ?? "");
-  const [rate, setRate] = useState(data?.hourlyRate ?? 0);
-
-  const handleClick = () => {
-    const toSubmit = {
-      label: title,
-      hourlyRate: rate,
-    };
-    !!data ? update({ ...toSubmit, id: data.id }) : mutate(toSubmit);
-  };
-
-  const cantSubmit =
-    title === "" || rate === 0 || isLoading || isUpdating || isDeleting;
-  const primaryText = !!data ? "Update" : "Create";
-
-  return (
-    <dialog id="new-hour-code-modal" className="modal modal-open">
-      <div className="modal-box">
-        <form method="dialog">
-          <button
-            onClick={onClose}
-            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </form>
-        <div id="modal-content">
-          <h4 className="text-lg font-medium">New Hour Code</h4>
-          <div className="flex items-center gap-1">
-            <label htmlFor="title" className="label">
-              Title
-            </label>
-            <input
-              id="title"
-              type="text"
-              className="input input-sm input-bordered grow"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={isLoading}
-            />
-            <label htmlFor="title" className="label">
-              Hourly Rate
-            </label>
-            <InputNumber
-              {...moneyMask}
-              placeholder="$0.00"
-              min={0}
-              value={rate}
-              onChange={(v) => setRate(v ?? 0)}
-              disabled={isLoading}
-            />
-          </div>
-        </div>
-        <div className="modal-action">
-          {!!data && (
-            <button
-              onClick={() => apiDelete({ id: data.id })}
-              // todo disabled if used by any users
-              disabled={cantSubmit}
-              className="btn btn-outline btn-accent"
-            >
-              Delete
-            </button>
-          )}
-          <button
-            disabled={cantSubmit}
-            className="btn btn-primary"
-            onClick={handleClick}
-          >
-            {primaryText}
-          </button>
-        </div>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={onClose}>close</button>
-      </form>
-    </dialog>
-  );
-};
-
-const HourCodeListModal = ({ onClose }: { onClose: () => void }) => {
-  const [showNew, setShowNew] = useState(false);
-  const [modalData, setModalData] = useState<
-    RouterOutputs["schedules"]["getHourCodes"][number] | undefined
-  >(undefined);
-  const { data, isLoading } = api.schedules.getHourCodes.useQuery();
-
-  return (
-    <>
-      <dialog id="hour-code-modal" className="modal modal-open">
-        <div className="modal-box">
-          <form method="dialog">
-            <button
-              onClick={onClose}
-              className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18 18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </form>
-          <div id="modal-content">
-            <span className="flex items-center gap-2">
-              <h4 className="text-lg font-medium">Hour Codes</h4>
-              <div
-                className="tooltip tooltip-right"
-                data-tip="Hour codes are used to assign employee titles and pay rates."
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-6 w-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                  />
-                </svg>
-              </div>
-            </span>
-            {isLoading ? (
-              <span className="loading loading-spinner loading-md"></span>
-            ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Label</th>
-                    <th>Hourly Rate</th>
-                    <th>Edit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data?.map((x) => (
-                    <tr key={x.id}>
-                      <td className="capitalize">{x.label}</td>
-                      <td>{dbUnitToDollars(x.hourlyRate)}</td>
-                      <td>
-                        <button
-                          className="btn btn-circle btn-ghost btn-sm"
-                          onClick={() => setModalData(x)}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="h-6 w-6"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-                            />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          <div className="modal-action justify-start">
-            <button className="btn" onClick={() => setShowNew(true)}>
-              New Hour Code
-            </button>
-          </div>
-        </div>
-        <form method="dialog" className="modal-backdrop">
-          <button onClick={onClose}>close</button>
-        </form>
-      </dialog>
-      {showNew && <HourCodeFormModal onClose={() => setShowNew(false)} />}
-      {!!modalData && (
-        <HourCodeFormModal
-          onClose={() => setModalData(undefined)}
-          data={modalData}
-        />
-      )}
-    </>
-  );
-};
-
 type UserFormData = {
   username: string;
   firstName: string;
@@ -419,12 +173,10 @@ const NewUserModal = ({ onClose }: { onClose: () => void }) => {
 };
 
 const OptionsButton = () => {
-  const [showHC, setShowHC] = useState(false);
   const [showUser, setShowUser] = useState(false);
 
   return (
     <>
-      {showHC && <HourCodeListModal onClose={() => setShowHC(false)} />}
       {showUser && <NewUserModal onClose={() => setShowUser(false)} />}
       <details className="dropdown dropdown-end">
         <summary className="btn btn-circle btn-ghost m-1">
@@ -449,25 +201,6 @@ const OptionsButton = () => {
           </svg>
         </summary>
         <ul className="menu dropdown-content z-[1] w-max rounded-box bg-base-200 p-2 shadow-xl">
-          <li>
-            <span onClick={() => setShowHC(true)}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                />
-              </svg>
-              Manage Hour Codes
-            </span>
-          </li>
           <li>
             <span onClick={() => setShowUser(true)}>
               <svg
@@ -494,10 +227,7 @@ const OptionsButton = () => {
 };
 
 type PermissionForm = {
-  defaultHourCodeId: string;
-  canModifyHourCode: boolean;
   canSchedule: boolean;
-  clockPIN: string;
   isAdmin: boolean;
 };
 const UserPermissionsModal = ({
@@ -509,16 +239,12 @@ const UserPermissionsModal = ({
   data?: PermissionForm;
   userId: string;
 }) => {
-  const { reset, register, handleSubmit, formState, control } =
-    useForm<PermissionForm>({
-      defaultValues: {
-        defaultHourCodeId: data?.defaultHourCodeId ?? "",
-        clockPIN: data?.clockPIN ?? "",
-        canModifyHourCode: data?.canModifyHourCode ?? false,
-        canSchedule: data?.canSchedule ?? false,
-        isAdmin: data?.isAdmin ?? false,
-      },
-    });
+  const { reset, register, handleSubmit, formState } = useForm<PermissionForm>({
+    defaultValues: {
+      canSchedule: data?.canSchedule ?? false,
+      isAdmin: data?.isAdmin ?? false,
+    },
+  });
 
   const { data: hcOpts, isLoading: gettingHCs } =
     api.schedules.getHourCodes.useQuery();
@@ -600,83 +326,12 @@ const UserPermissionsModal = ({
                 <input
                   type="checkbox"
                   className="checkbox"
-                  {...register("canModifyHourCode")}
-                  disabled={isFetching}
-                />
-                <span className="label-text">
-                  May clock in with any hour code
-                </span>
-              </label>
-            </div>
-            <div>
-              <label className="label w-fit cursor-pointer gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox"
                   {...register("canSchedule")}
                   disabled={isFetching}
                 />
                 <span className="label-text">Can create schedules</span>
               </label>
             </div>
-            <div>
-              <div className="label-text">Default Hour Code</div>
-
-              <Controller
-                control={control}
-                name="defaultHourCodeId"
-                rules={{
-                  required: true,
-                  // kind of hacky way to make default value ("") invalid
-                  minLength: 1,
-                }}
-                render={({ field }) => (
-                  <Select
-                    className="h-10 w-full"
-                    disabled={isFetching}
-                    options={options}
-                    value={field.value}
-                    onChange={(v) => field.onChange(v)}
-                  />
-                )}
-              />
-            </div>
-
-            <label className="form-control">
-              <div className="label flex justify-start gap-1">
-                <span className="label-text">Clock PIN</span>
-                <div
-                  className="tooltip tooltip-right"
-                  data-tip="This PIN is required for clocking in/out to verify identity. Must be unique."
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="h-6 w-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <input
-                className="input input-bordered uppercase"
-                placeholder="0000"
-                minLength={4}
-                maxLength={4}
-                {...register("clockPIN", {
-                  required: true,
-                  maxLength: 4,
-                  minLength: 4,
-                })}
-              />
-            </label>
           </div>
           <div className="modal-action">
             <button
@@ -707,10 +362,7 @@ const UserTable = ({ filter }: { filter: string }) => {
       data={
         !!ss
           ? {
-              defaultHourCodeId: ss.defaultHourCodeId ?? "",
-              canModifyHourCode: !!ss.canModifyHourCode,
               canSchedule: !!ss.canSchedule,
-              clockPIN: ss.clockPIN ?? "",
               isAdmin: !!ss.isAdmin,
             }
           : undefined
