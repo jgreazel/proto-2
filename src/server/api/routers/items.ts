@@ -136,15 +136,60 @@ export const itemsRouter = createTRPCRouter({
         sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         purchasePrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         inStock: z.number().min(0).max(1000).optional(),
+        changeNote: z.string().max(500, "Note too long").optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
 
+      // Get the current item to store old values
+      const currentItem = await ctx.db.inventoryItem.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!currentItem) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Item not found",
+        });
+      }
+
+      // Extract the update data (excluding changeNote)
+      const { changeNote, ...updateData } = input;
+
+      // Update the item
       const item = await ctx.db.inventoryItem.update({
         where: { id: input.id },
-        data: { ...input },
+        data: updateData,
       });
+
+      // Create change log entry for concession item
+      if (Object.keys(updateData).filter((key) => key !== "id").length > 0) {
+        try {
+          await ctx.db.itemChangeLog.create({
+            data: {
+              itemId: input.id,
+              userId: ctx.userId,
+              changeNote: changeNote ?? null,
+              oldValues: {
+                label: currentItem.label,
+                sellingPrice: currentItem.sellingPrice,
+                purchasePrice: currentItem.purchasePrice,
+                inStock: currentItem.inStock,
+              },
+              newValues: {
+                label: item.label,
+                sellingPrice: item.sellingPrice,
+                purchasePrice: item.purchasePrice,
+                inStock: item.inStock,
+              },
+            },
+          });
+        } catch (error) {
+          console.warn("Change log creation failed:", error);
+        }
+      }
+
       return item;
     }),
 
@@ -175,15 +220,62 @@ export const itemsRouter = createTRPCRouter({
         isSeasonal: z.boolean().optional(),
         isDay: z.boolean().optional(),
         patronLimit: z.number().min(1).max(100).optional(),
+        changeNote: z.string().max(500, "Note too long").optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
 
+      // Get the current item to store old values
+      const currentItem = await ctx.db.inventoryItem.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!currentItem) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Item not found",
+        });
+      }
+
+      // Extract the update data (excluding changeNote)
+      const { changeNote, ...updateData } = input;
+
+      // Update the item
       const item = await ctx.db.inventoryItem.update({
         where: { id: input.id },
-        data: { ...input },
+        data: updateData,
       });
+
+      // Create change log entry for admission item
+      if (Object.keys(updateData).filter((key) => key !== "id").length > 0) {
+        try {
+          await ctx.db.itemChangeLog.create({
+            data: {
+              itemId: input.id,
+              userId: ctx.userId,
+              changeNote: changeNote ?? null,
+              oldValues: {
+                label: currentItem.label,
+                sellingPrice: currentItem.sellingPrice,
+                isSeasonal: currentItem.isSeasonal,
+                isDay: currentItem.isDay,
+                patronLimit: currentItem.patronLimit,
+              },
+              newValues: {
+                label: item.label,
+                sellingPrice: item.sellingPrice,
+                isSeasonal: item.isSeasonal,
+                isDay: item.isDay,
+                patronLimit: item.patronLimit,
+              },
+            },
+          });
+        } catch (error) {
+          console.warn("Change log creation failed:", error);
+        }
+      }
+
       return item;
     }),
 

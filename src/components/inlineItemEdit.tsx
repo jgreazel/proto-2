@@ -14,12 +14,14 @@ type ConcessionFormData = {
   purchasePrice: number;
   sellingPrice: number;
   inStock: number;
+  changeNote?: string;
 };
 
 type AdmissionFormData = {
   label: string;
   sellingPrice: number;
   patronLimit?: number;
+  changeNote?: string;
 };
 
 interface InlineItemEditProps {
@@ -109,18 +111,38 @@ const ConcessionItemEdit = ({
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (show: boolean) => void;
 }) => {
-  const { register, handleSubmit, control, formState } =
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [pendingData, setPendingData] = useState<ConcessionFormData | null>(
+    null,
+  );
+
+  const { register, handleSubmit, control, formState, setValue } =
     useForm<ConcessionFormData>({
       defaultValues: {
         label: item.item.label,
         purchasePrice: item.item.purchasePrice ?? 0,
         sellingPrice: item.item.sellingPrice,
         inStock: item.item.inStock ?? 0,
+        changeNote: "",
       },
     });
 
-  const handleSave = (data: ConcessionFormData) => {
-    onSave(data);
+  const handleSaveClick = (data: ConcessionFormData) => {
+    setPendingData(data);
+    setShowNoteDialog(true);
+  };
+
+  const handleFinalSave = () => {
+    if (pendingData) {
+      onSave(pendingData);
+      setShowNoteDialog(false);
+      setPendingData(null);
+    }
+  };
+
+  const handleNoteCancel = () => {
+    setShowNoteDialog(false);
+    setPendingData(null);
   };
 
   return (
@@ -186,7 +208,7 @@ const ConcessionItemEdit = ({
       <td>
         <div className="flex gap-1">
           <button
-            onClick={handleSubmit(handleSave)}
+            onClick={handleSubmit(handleSaveClick)}
             className="btn btn-circle btn-ghost btn-sm"
             disabled={isLoading || !formState.isValid}
           >
@@ -270,6 +292,37 @@ const ConcessionItemEdit = ({
           </div>
         </dialog>
       )}
+      {showNoteDialog && pendingData && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="text-lg font-bold">Add Change Note</h3>
+            <p className="py-2 text-sm text-gray-600">
+              Please provide a note describing this change for accountability:
+            </p>
+            <textarea
+              className="textarea textarea-bordered w-full"
+              placeholder="Describe what changed and why..."
+              value={pendingData.changeNote ?? ""}
+              onChange={(e) =>
+                setPendingData({ ...pendingData, changeNote: e.target.value })
+              }
+              rows={3}
+            />
+            <div className="modal-action">
+              <button
+                onClick={handleFinalSave}
+                className="btn btn-primary"
+                disabled={isLoading}
+              >
+                Save Changes
+              </button>
+              <button onClick={handleNoteCancel} className="btn">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
     </>
   );
 };
@@ -285,17 +338,37 @@ const AdmissionItemEdit = ({
   onCancel: () => void;
   isLoading: boolean;
 }) => {
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [pendingData, setPendingData] = useState<AdmissionFormData | null>(
+    null,
+  );
+
   const { register, handleSubmit, control, formState } =
     useForm<AdmissionFormData>({
       defaultValues: {
         label: item.item.label,
         sellingPrice: item.item.sellingPrice,
         patronLimit: item.item.patronLimit ?? undefined,
+        changeNote: "",
       },
     });
 
-  const handleSave = (data: AdmissionFormData) => {
-    onSave(data);
+  const handleSaveClick = (data: AdmissionFormData) => {
+    setPendingData(data);
+    setShowNoteDialog(true);
+  };
+
+  const handleFinalSave = () => {
+    if (pendingData) {
+      onSave(pendingData);
+      setShowNoteDialog(false);
+      setPendingData(null);
+    }
+  };
+
+  const handleNoteCancel = () => {
+    setShowNoteDialog(false);
+    setPendingData(null);
   };
 
   return (
@@ -337,7 +410,7 @@ const AdmissionItemEdit = ({
       <td>
         <div className="flex gap-1">
           <button
-            onClick={handleSubmit(handleSave)}
+            onClick={handleSubmit(handleSaveClick)}
             className="btn btn-circle btn-ghost btn-sm"
             disabled={isLoading || !formState.isValid}
           >
@@ -378,6 +451,37 @@ const AdmissionItemEdit = ({
           </button>
         </div>
       </td>
+      {showNoteDialog && pendingData && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="text-lg font-bold">Add Change Note</h3>
+            <p className="py-2 text-sm text-gray-600">
+              Please provide a note describing this change for accountability:
+            </p>
+            <textarea
+              className="textarea textarea-bordered w-full"
+              placeholder="Describe what changed and why..."
+              value={pendingData.changeNote ?? ""}
+              onChange={(e) =>
+                setPendingData({ ...pendingData, changeNote: e.target.value })
+              }
+              rows={3}
+            />
+            <div className="modal-action">
+              <button
+                onClick={handleFinalSave}
+                className="btn btn-primary"
+                disabled={isLoading}
+              >
+                Save Changes
+              </button>
+              <button onClick={handleNoteCancel} className="btn">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
     </>
   );
 };

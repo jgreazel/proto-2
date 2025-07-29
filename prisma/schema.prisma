@@ -27,6 +27,7 @@ model InventoryItem {
     label        String             @default("Unlabeled Inventory Item") @db.VarChar(255)
     sellingPrice Int                @default(0)
     transactions TransactionItems[]
+    changeLogs   ItemChangeLog[]
 
     // concession items
     isConcessionItem Boolean @default(false)
@@ -158,4 +159,21 @@ model UserSettings {
     createdAt DateTime @default(now())
 
     @@index([defaultHourCodeId])
+}
+
+model ItemChangeLog {
+    id         String        @id @default(cuid())
+    itemId     String
+    item       InventoryItem @relation(fields: [itemId], references: [id])
+    userId     String
+    changeNote String?       @db.Text
+
+    // Store the changes as JSON or specific fields
+    oldValues Json?
+    newValues Json?
+
+    createdAt DateTime @default(now())
+
+    @@index([itemId])
+    @@index([userId])
 }
