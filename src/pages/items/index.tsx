@@ -7,36 +7,68 @@ import { PageLayout } from "~/components/layout";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
+import { InlineItemEdit } from "~/components/inlineItemEdit";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
-const ItemView = (props: { item: ItemWithCreatedBy }) => {
-  const { item } = props.item;
+const ItemView = (props: {
+  item: ItemWithCreatedBy;
+  editingItemId: string | null;
+  setEditingItemId: (id: string | null) => void;
+}) => {
+  const { item, editingItemId, setEditingItemId } = props;
+  const isEditing = editingItemId === item.item.id;
+
+  const handleEdit = () => {
+    setEditingItemId(item.item.id);
+  };
+
+  const handleSave = () => {
+    setEditingItemId(null);
+  };
+
+  const handleCancel = () => {
+    setEditingItemId(null);
+  };
+
+  if (isEditing) {
+    return (
+      <tr>
+        <InlineItemEdit
+          item={item}
+          onSave={handleSave}
+          onCancel={handleCancel}
+        />
+      </tr>
+    );
+  }
 
   return (
     <tr>
-      <td className="font-medium">{item.label}</td>
+      <td className="font-medium">{item.item.label}</td>
       <td>
         <div className="badge badge-outline">
-          {item.isConcessionItem ? "Concession" : "Admission"}
+          {item.item.isConcessionItem ? "Concession" : "Admission"}
         </div>
       </td>
       <td>
-        {item.purchasePrice ? dbUnitToDollars(item.purchasePrice) : "N/A"}
+        {item.item.purchasePrice
+          ? dbUnitToDollars(item.item.purchasePrice)
+          : "N/A"}
       </td>
-      <td>{dbUnitToDollars(item.sellingPrice)}</td>
+      <td>{dbUnitToDollars(item.item.sellingPrice)}</td>
       <td>
-        {item.isConcessionItem ? (
-          item.inStock
-        ) : item.isDay ? (
+        {item.item.isConcessionItem ? (
+          item.item.inStock
+        ) : item.item.isDay ? (
           <div className="badge badge-secondary badge-outline">Day</div>
         ) : (
           <div className="badge badge-accent badge-outline">Seasonal</div>
         )}
       </td>
       <td>
-        <Link
-          href={`/items/${item.id}`}
+        <button
+          onClick={handleEdit}
           className="btn btn-circle btn-ghost btn-sm"
         >
           <svg
@@ -53,7 +85,7 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
               d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
             />
           </svg>
-        </Link>
+        </button>
       </td>
     </tr>
   );
@@ -62,6 +94,8 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
 const ItemList = (props: {
   filter: string;
   category?: "concession" | "admission";
+  editingItemId: string | null;
+  setEditingItemId: (id: string | null) => void;
 }) => {
   const { data, isLoading } = api.items.getAll.useQuery();
 
@@ -91,7 +125,12 @@ const ItemList = (props: {
         </thead>
         <tbody>
           {filterItems.map((itemWithCreator) => (
-            <ItemView key={itemWithCreator.item.id} item={itemWithCreator} />
+            <ItemView
+              key={itemWithCreator.item.id}
+              item={itemWithCreator}
+              editingItemId={props.editingItemId}
+              setEditingItemId={props.setEditingItemId}
+            />
           ))}
         </tbody>
       </table>
@@ -129,6 +168,7 @@ function ItemsPage() {
   const [itemType, setItemType] = useState<"concession" | "admission">(
     "concession",
   );
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   api.items.getAll.useQuery();
 
@@ -242,7 +282,12 @@ function ItemsPage() {
             </ul>
           </details>
         </div>
-        <ItemList filter={filter} category={itemType} />
+        <ItemList
+          filter={filter}
+          category={itemType}
+          editingItemId={editingItemId}
+          setEditingItemId={setEditingItemId}
+        />
       </div>
     </PageLayout>
   );
