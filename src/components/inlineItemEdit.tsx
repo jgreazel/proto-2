@@ -13,6 +13,7 @@ type ConcessionFormData = {
   label: string;
   purchasePrice: number;
   sellingPrice: number;
+  inStock: number;
 };
 
 type AdmissionFormData = {
@@ -114,6 +115,7 @@ const ConcessionItemEdit = ({
         label: item.item.label,
         purchasePrice: item.item.purchasePrice ?? 0,
         sellingPrice: item.item.sellingPrice,
+        inStock: item.item.inStock ?? 0,
       },
     });
 
@@ -165,7 +167,22 @@ const ConcessionItemEdit = ({
           )}
         />
       </td>
-      <td>{item.item.inStock}</td>
+      <td>
+        <Controller
+          control={control}
+          name="inStock"
+          render={({ field }) => (
+            <InputNumber
+              size="small"
+              className="w-full"
+              disabled={isLoading}
+              min={0}
+              value={field.value}
+              onChange={(v) => field.onChange(v)}
+            />
+          )}
+        />
+      </td>
       <td>
         <div className="flex gap-1">
           <button
