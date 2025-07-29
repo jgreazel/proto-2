@@ -136,7 +136,7 @@ export const itemsRouter = createTRPCRouter({
         sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         purchasePrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         inStock: z.number().min(0).max(1000).optional(),
-        changeNote: z.string().max(500, "Note too long").optional(),
+        changeNote: z.string().max(750, "Note too long").optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -220,7 +220,7 @@ export const itemsRouter = createTRPCRouter({
         isSeasonal: z.boolean().optional(),
         isDay: z.boolean().optional(),
         patronLimit: z.number().min(1).max(100).optional(),
-        changeNote: z.string().max(500, "Note too long").optional(),
+        changeNote: z.string().max(750, "Note too long").optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
