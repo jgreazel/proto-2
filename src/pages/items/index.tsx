@@ -21,6 +21,9 @@ const ItemView = (props: { item: ItemWithCreatedBy }) => {
           {item.isConcessionItem ? "Concession" : "Admission"}
         </div>
       </td>
+      <td>
+        {item.purchasePrice ? dbUnitToDollars(item.purchasePrice) : "N/A"}
+      </td>
       <td>{dbUnitToDollars(item.sellingPrice)}</td>
       <td>
         {item.isConcessionItem ? (
@@ -80,6 +83,7 @@ const ItemList = (props: {
           <tr>
             <th>Label</th>
             <th>Category</th>
+            <th>Purchase Price</th>
             <th>Selling Price</th>
             <th>{props.category === "concession" ? "In Stock" : "Type"}</th>
             <th>Edit</th>
