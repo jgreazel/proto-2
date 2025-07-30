@@ -120,72 +120,45 @@ const RecentSales = () => {
 
       {/* Sales List */}
       {completedSales && completedSales.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {completedSales.map((sale) => (
             <div
               key={sale.id}
-              className="rounded-lg border border-base-300 bg-base-100 p-4 shadow-sm transition-shadow hover:shadow-md"
+              className="rounded-lg border border-base-300 bg-base-100 p-3 shadow-sm transition-shadow hover:shadow-md"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  {/* Header */}
-                  <div className="mb-3 flex items-center gap-3">
+                  <div className="mb-2 flex items-center gap-3">
                     <div className="rounded bg-base-200 px-2 py-1 font-mono text-xs text-base-content/60">
                       #{sale.id.slice(-8)}
                     </div>
                     <div className="text-sm text-base-content/70">
-                      {dayjs(sale.createdAt).format("MMM DD, YYYY h:mm A")}
+                      {dayjs(sale.createdAt).format("MMM DD, h:mm A")}
                     </div>
-                    <div className="badge badge-success badge-sm">
+                    <div className="badge badge-success badge-xs">
                       Completed
                     </div>
                   </div>
 
-                  {/* Items */}
-                  <div className="mb-3">
-                    <div className="mb-1 text-sm font-medium text-base-content/80">
-                      {sale.itemCount} item{sale.itemCount !== 1 ? "s" : ""}:
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="text-lg font-semibold text-success">
+                        {dbUnitToDollars(sale.total)}
+                      </div>
+                      <div className="text-sm text-base-content/60">
+                        {sale.items.map((item, idx) => (
+                          <span key={idx}>
+                            {item.amountSold}x {item.label}
+                            {idx < sale.items.length - 1 ? ", " : ""}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className="text-sm text-base-content/60">
-                      {sale.items.map((item, idx) => (
-                        <span key={idx}>
-                          {item.amountSold}x {item.label}
-                          {idx < sale.items.length - 1 ? ", " : ""}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Total */}
-                  <div className="text-lg font-semibold text-success">
-                    Total: {dbUnitToDollars(sale.total)}
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="ml-4 flex flex-col gap-2">
-                  <button className="btn btn-ghost btn-sm gap-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="h-4 w-4"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                      />
-                    </svg>
-                    View Details
-                  </button>
+                {/* Void Button */}
+                <div className="ml-4">
                   <button
                     className="btn btn-error btn-sm gap-2"
                     onClick={() => handleVoidClick(sale.id)}
@@ -205,7 +178,7 @@ const RecentSales = () => {
                         d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
                       />
                     </svg>
-                    {isVoiding ? "Voiding..." : "Void Sale"}
+                    {isVoiding ? "Voiding..." : "Void"}
                   </button>
                 </div>
               </div>
