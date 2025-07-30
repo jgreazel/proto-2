@@ -819,85 +819,46 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="mb-6 border-b border-base-300">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setTabName("purchase")}
-                  className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium ${
-                    tabName === "purchase"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-base-content/70 hover:border-base-content/30 hover:text-base-content"
-                  }`}
+            {/* Report Type Selector */}
+            <div className="mb-6">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Report Type
+              </label>
+              <div className="relative">
+                <select
+                  value={tabName}
+                  onChange={(e) => setTabName(e.target.value as typeof tabName)}
+                  className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 pr-10 text-base shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20"
                 >
-                  <div className="flex items-center">
-                    <svg
-                      className="mr-2 h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                      />
-                    </svg>
-                    Concessions Report
-                  </div>
-                </button>
-                <button
-                  onClick={() => setTabName("admission")}
-                  className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium ${
-                    tabName === "admission"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-base-content/70 hover:border-base-content/30 hover:text-base-content"
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <svg
-                      className="mr-2 h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                    Admission Report
-                  </div>
-                </button>
-                <button
-                  onClick={() => setTabName("itemchangelog")}
-                  className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium ${
-                    tabName === "itemchangelog"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-base-content/70 hover:border-base-content/30 hover:text-base-content"
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <svg
-                      className="mr-2 h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Item Change Log
-                  </div>
-                </button>
-              </nav>
+                  <option value="purchase">
+                    🛒 Concessions Report - Track sales and inventory
+                  </option>
+                  <option value="admission">
+                    👥 Admission Report - Monitor entries and ticket sales
+                  </option>
+                  <option value="itemchangelog">
+                    📝 Item Change Log - Review inventory modifications
+                  </option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+                  <svg
+                    className="h-5 w-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                Choose the type of report you want to generate
+              </p>
             </div>
 
             {/* Report Form */}
