@@ -444,6 +444,86 @@ export const itemsRouter = createTRPCRouter({
       };
     }),
 
+  // Sales history and void management endpoints
+  getCompletedSales: privateProcedure
+    .input(
+      z
+        .object({
+          hoursBack: z.number().min(1).max(168).default(24), // 1 hour to 7 days, default 24 hours
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      // Calculate the cutoff time
+      const hoursBack = input?.hoursBack ?? 24;
+      const cutoffTime = new Date();
+      cutoffTime.setHours(cutoffTime.getHours() - hoursBack);
+
+      // Fetch transactions within the time window
+      const transactions = await ctx.db.transaction.findMany({
+        where: {
+          createdAt: {
+            gte: cutoffTime,
+          },
+        },
+        include: {
+          items: {
+            include: {
+              item: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Transform the data to include calculated totals and only concession items
+      const completedSales = transactions
+        .map((transaction) => {
+          // Filter only concession items from this transaction
+          const concessionItems = transaction.items.filter(
+            (transactionItem) => transactionItem.item.isConcessionItem,
+          );
+
+          // Skip transactions with no concession items
+          if (concessionItems.length === 0) {
+            return null;
+          }
+
+          // Calculate total for concession items only
+          const total = concessionItems.reduce(
+            (sum, transactionItem) =>
+              sum +
+              transactionItem.amountSold * transactionItem.item.sellingPrice,
+            0,
+          );
+
+          return {
+            id: transaction.id,
+            createdAt: transaction.createdAt,
+            createdBy: transaction.createdBy,
+            total,
+            itemCount: concessionItems.reduce(
+              (sum, transactionItem) => sum + transactionItem.amountSold,
+              0,
+            ),
+            items: concessionItems.map((transactionItem) => ({
+              id: transactionItem.item.id,
+              label: transactionItem.item.label,
+              amountSold: transactionItem.amountSold,
+              unitPrice: transactionItem.item.sellingPrice,
+              lineTotal:
+                transactionItem.amountSold * transactionItem.item.sellingPrice,
+              category: transactionItem.item.category,
+            })),
+          };
+        })
+        .filter((sale) => sale !== null);
+
+      return completedSales;
+    }),
+
   // Category management endpoints
   getCategories: privateProcedure.query(async ({ ctx }) => {
     // Get categories from both the dedicated Category table and existing items
