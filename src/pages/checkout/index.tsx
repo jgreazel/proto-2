@@ -18,35 +18,113 @@ const ItemFeed = (props: {
   category: "admission" | "concession";
   onClick: (data: Item) => void;
 }) => {
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const { data, isLoading } = api.items.getAll.useQuery({
     category: props.category,
   });
+
   if (isLoading)
     return (
       <div className="my-4 flex justify-center">
         <LoadingSpinner />
       </div>
     );
+
+  if (!data?.length) {
+    return (
+      <div className="p-12">
+        <NoData />
+        <div className="mt-8 text-center font-medium">No Items Yet</div>
+      </div>
+    );
+  }
+
+  // Group items by category
+  const itemsByCategory = data.reduce(
+    (acc, { item }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const rawCategory = item.category;
+      const category =
+        typeof rawCategory === "string" && rawCategory.trim()
+          ? rawCategory.trim()
+          : "Uncategorized";
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category]!.push(item);
+      return acc;
+    },
+    {} as Record<string, Item[]>,
+  );
+
+  // Get all available categories for filtering
+  const availableCategories = Object.keys(itemsByCategory).sort();
+
+  // Filter by selected category
+  const filteredCategories =
+    selectedCategory === "all"
+      ? availableCategories
+      : availableCategories.filter((cat) => cat === selectedCategory);
+
   return (
     <>
-      {!!data?.length ? (
-        <div className="grid grid-cols-3 gap-4 p-4">
-          {data?.map(({ item }) => (
+      {/* Category Filter */}
+      {availableCategories.length > 1 && (
+        <div className="space-y-3 p-4 pb-2">
+          {/* Quick filter buttons */}
+          <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => props.onClick(item)}
-              key={item.id}
-              className="btn capitalize"
+              className={`btn btn-xs ${
+                selectedCategory === "all" ? "btn-primary" : "btn-ghost"
+              }`}
+              onClick={() => setSelectedCategory("all")}
             >
-              {item.label}
+              All ({data.length})
             </button>
-          ))}
-        </div>
-      ) : (
-        <div className="p-12">
-          <NoData />
-          <div className="mt-8 text-center font-medium">No Items Yet</div>
+            {availableCategories.map((category) => (
+              <button
+                key={category}
+                className={`btn btn-xs ${
+                  selectedCategory === category ? "btn-primary" : "btn-ghost"
+                }`}
+                onClick={() => setSelectedCategory(category)}
+              >
+                {category} ({itemsByCategory[category]?.length})
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
+      {/* Items grouped by category */}
+      <div className="p-4 pt-2">
+        {filteredCategories.map((categoryName) => (
+          <div key={categoryName} className="mb-6">
+            <h3 className="mb-3 border-b border-base-300 pb-1 text-lg font-semibold text-base-content/80">
+              {categoryName}
+              <span className="ml-2 text-sm font-normal text-base-content/60">
+                ({itemsByCategory[categoryName]?.length} items)
+              </span>
+            </h3>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {itemsByCategory[categoryName]?.map((item) => (
+                <button
+                  onClick={() => props.onClick(item)}
+                  key={item.id}
+                  className="btn btn-outline h-auto min-h-[3rem] whitespace-normal text-left capitalize"
+                >
+                  <div className="flex w-full flex-col items-start">
+                    <span className="font-medium">{item.label}</span>
+                    <span className="text-xs opacity-70">
+                      {dbUnitToDollars(item.sellingPrice)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </>
   );
 };
