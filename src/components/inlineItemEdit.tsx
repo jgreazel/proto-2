@@ -155,7 +155,7 @@ const ConcessionItemEdit = ({
         />
       </td>
       <td>
-        <div className="badge badge-outline">Concession</div>
+        <div className="badge badge-primary badge-sm">Concession</div>
       </td>
       <td>
         <Controller
@@ -190,6 +190,9 @@ const ConcessionItemEdit = ({
         />
       </td>
       <td>
+        <span className="text-sm text-base-content/50">—</span>
+      </td>
+      <td>
         <Controller
           control={control}
           name="inStock"
@@ -209,8 +212,9 @@ const ConcessionItemEdit = ({
         <div className="flex gap-1">
           <button
             onClick={handleSubmit(handleSaveClick)}
-            className="btn btn-circle btn-ghost btn-sm"
+            className="btn btn-ghost btn-xs hover:btn-success"
             disabled={isLoading || !formState.isValid}
+            title="Save changes"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -229,8 +233,9 @@ const ConcessionItemEdit = ({
           </button>
           <button
             onClick={onCancel}
-            className="btn btn-circle btn-ghost btn-sm"
+            className="btn btn-ghost btn-xs hover:btn-error"
             disabled={isLoading}
+            title="Cancel editing"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -381,9 +386,11 @@ const AdmissionItemEdit = ({
         />
       </td>
       <td>
-        <div className="badge badge-outline">Admission</div>
+        <div className="badge badge-secondary badge-sm">Admission</div>
       </td>
-      <td>N/A</td>
+      <td>
+        <span className="text-sm text-base-content/50">—</span>
+      </td>
       <td>
         <Controller
           control={control}
@@ -401,18 +408,22 @@ const AdmissionItemEdit = ({
         />
       </td>
       <td>
+        <span className="text-sm text-base-content/50">—</span>
+      </td>
+      <td>
         {item.item.isDay ? (
-          <div className="badge badge-secondary badge-outline">Day</div>
+          <div className="badge badge-secondary badge-sm">Day Pass</div>
         ) : (
-          <div className="badge badge-accent badge-outline">Seasonal</div>
+          <div className="badge badge-accent badge-sm">Season Pass</div>
         )}
       </td>
       <td>
         <div className="flex gap-1">
           <button
             onClick={handleSubmit(handleSaveClick)}
-            className="btn btn-circle btn-ghost btn-sm"
+            className="btn btn-ghost btn-xs hover:btn-success"
             disabled={isLoading || !formState.isValid}
+            title="Save changes"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -431,8 +442,9 @@ const AdmissionItemEdit = ({
           </button>
           <button
             onClick={onCancel}
-            className="btn btn-circle btn-ghost btn-sm"
+            className="btn btn-ghost btn-xs hover:btn-error"
             disabled={isLoading}
+            title="Cancel editing"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
