@@ -14,6 +14,7 @@ import { PageLayout } from "~/components/layout";
 import isAuth from "~/components/isAuth";
 import { useRouter } from "next/router";
 import toast from "react-hot-toast";
+import { CategoryTypeahead } from "~/components/categoryTypeahead";
 
 type AdmissionFormData = {
   label: string;
@@ -186,6 +187,7 @@ type ConcessionFormData = {
   purchasePrice: number;
   sellingPrice: number;
   inStock: number;
+  category?: string;
   changeNote?: string;
 };
 
@@ -205,6 +207,7 @@ const ConcessionItemForm = (props: {
         purchasePrice: 0,
         sellingPrice: 0,
         inStock: 0,
+        category: "",
       },
     });
   const watchForm = watch();
@@ -267,6 +270,19 @@ const ConcessionItemForm = (props: {
           required: true,
           disabled: isSubmitting || isLoading,
         })}
+      />
+      <label className="text-xs font-medium">Category</label>
+      <Controller
+        control={control}
+        name="category"
+        render={({ field }) => (
+          <CategoryTypeahead
+            value={field.value || ""}
+            onChange={field.onChange}
+            placeholder="Select or create category..."
+            disabled={isSubmitting || isLoading}
+          />
+        )}
       />
       <label className="text-xs font-medium">Purchase Price</label>
       <Controller

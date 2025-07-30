@@ -6,6 +6,7 @@ import { api } from "~/utils/api";
 import handleApiError from "~/helpers/handleApiError";
 import toast from "react-hot-toast";
 import type { RouterOutputs } from "~/utils/api";
+import { CategoryTypeahead } from "./categoryTypeahead";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
@@ -14,6 +15,7 @@ type ConcessionFormData = {
   purchasePrice: number;
   sellingPrice: number;
   inStock: number;
+  category?: string;
   changeNote?: string;
 };
 
@@ -116,6 +118,8 @@ const ConcessionItemEdit = ({
     null,
   );
 
+  const { data: categories } = api.items.getCategories.useQuery();
+
   const { register, handleSubmit, control, formState, setValue } =
     useForm<ConcessionFormData>({
       defaultValues: {
@@ -123,6 +127,7 @@ const ConcessionItemEdit = ({
         purchasePrice: item.item.purchasePrice ?? 0,
         sellingPrice: item.item.sellingPrice,
         inStock: item.item.inStock ?? 0,
+        category: item.item.category ?? "",
         changeNote: "",
       },
     });
@@ -155,7 +160,22 @@ const ConcessionItemEdit = ({
         />
       </td>
       <td>
-        <div className="badge badge-primary badge-sm">Concession</div>
+        <div className="flex flex-col gap-1">
+          <div className="badge badge-primary badge-sm">Concession</div>
+          <Controller
+            control={control}
+            name="category"
+            render={({ field }) => (
+              <CategoryTypeahead
+                value={field.value || ""}
+                onChange={field.onChange}
+                placeholder="Category..."
+                disabled={isLoading}
+                className="input input-xs input-bordered w-full"
+              />
+            )}
+          />
+        </div>
       </td>
       <td>
         <Controller

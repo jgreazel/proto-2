@@ -8,6 +8,7 @@ import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
 import { InlineItemEdit } from "~/components/inlineItemEdit";
+import CategoryManager from "~/components/categoryManager";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
@@ -69,12 +70,24 @@ const ItemView = (props: {
     <tr className="transition-colors hover:bg-base-200/50">
       <td className="font-semibold text-base-content">{item.item.label}</td>
       <td>
-        <div
-          className={`badge ${
-            item.item.isConcessionItem ? "badge-primary" : "badge-secondary"
-          } badge-sm`}
-        >
-          {item.item.isConcessionItem ? "Concession" : "Admission"}
+        <div className="flex flex-col gap-1">
+          <div
+            className={`badge ${
+              item.item.isConcessionItem ? "badge-primary" : "badge-secondary"
+            } badge-sm`}
+          >
+            {item.item.isConcessionItem ? "Concession" : "Admission"}
+          </div>
+          {item.item.isConcessionItem && item.item.category && (
+            <div className="badge badge-outline badge-xs">
+              {item.item.category}
+            </div>
+          )}
+          {item.item.isConcessionItem && !item.item.category && (
+            <div className="badge badge-ghost badge-xs text-warning">
+              No category
+            </div>
+          )}
         </div>
       </td>
       <td className="font-mono text-sm">
@@ -403,6 +416,16 @@ function ItemsPage() {
             </div>
           </div>
         </div>
+
+        {/* Category Management Section - Only for Concession Items */}
+        {itemType === "concession" && (
+          <CategoryManager
+            onCategoryUpdate={() => {
+              // Refetch data when categories are updated
+              api.items.getAll.useQuery();
+            }}
+          />
+        )}
 
         <ItemList
           filter={filter}

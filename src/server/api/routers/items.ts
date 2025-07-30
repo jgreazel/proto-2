@@ -80,6 +80,11 @@ export const itemsRouter = createTRPCRouter({
         sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX),
         purchasePrice: z.number().min(SELL_MIN).max(SELL_MAX),
         inStock: z.number().min(0).max(10000),
+        category: z
+          .string()
+          .min(1)
+          .max(50, "Category name too long")
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -95,6 +100,7 @@ export const itemsRouter = createTRPCRouter({
           isConcessionItem: true,
           purchasePrice: input.purchasePrice,
           inStock: input.inStock,
+          category: input.category,
         },
       });
       return item;
@@ -136,6 +142,11 @@ export const itemsRouter = createTRPCRouter({
         sellingPrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         purchasePrice: z.number().min(SELL_MIN).max(SELL_MAX).optional(),
         inStock: z.number().min(0).max(1000).optional(),
+        category: z
+          .string()
+          .min(1)
+          .max(50, "Category name too long")
+          .optional(),
         changeNote: z.string().max(750, "Note too long").optional(),
       }),
     )
@@ -431,5 +442,124 @@ export const itemsRouter = createTRPCRouter({
           items: receiptItems,
         },
       };
+    }),
+
+  // Category management endpoints
+  getCategories: privateProcedure.query(async ({ ctx }) => {
+    // Get categories from both the dedicated Category table and existing items
+    const [dedicatedCategories, itemCategories] = await Promise.all([
+      ctx.db.category.findMany({
+        select: { name: true },
+        orderBy: { name: "asc" },
+      }),
+      ctx.db.inventoryItem.findMany({
+        where: {
+          isConcessionItem: true,
+          category: { not: null },
+        },
+        select: { category: true },
+        distinct: ["category"],
+      }),
+    ]);
+
+    // Combine both sources and remove duplicates
+    const allCategories = new Set([
+      ...dedicatedCategories.map((cat) => cat.name),
+      ...itemCategories
+        .map((item) => item.category)
+        .filter((category): category is string => category !== null),
+    ]);
+
+    return Array.from(allCategories).sort();
+  }),
+
+  createCategory: privateProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(50, "Category name too long"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if category already exists
+      const existingCategory = await ctx.db.category.findUnique({
+        where: { name: input.name },
+      });
+
+      if (existingCategory) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Category already exists",
+        });
+      }
+
+      // Create the new category
+      const category = await ctx.db.category.create({
+        data: {
+          name: input.name,
+          createdBy: ctx.userId,
+        },
+      });
+
+      return category;
+    }),
+
+  updateItemCategory: privateProcedure
+    .input(
+      z.object({
+        itemId: z.string(),
+        category: z
+          .string()
+          .min(1)
+          .max(50, "Category name too long")
+          .optional(),
+        changeNote: z.string().max(750, "Note too long").optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get the current item to store old values
+      const currentItem = await ctx.db.inventoryItem.findUnique({
+        where: { id: input.itemId },
+      });
+
+      if (!currentItem) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Item not found",
+        });
+      }
+
+      if (!currentItem.isConcessionItem) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only concession items can have categories",
+        });
+      }
+
+      // Update the item
+      const item = await ctx.db.inventoryItem.update({
+        where: { id: input.itemId },
+        data: { category: input.category },
+      });
+
+      // Create change log entry
+      try {
+        await ctx.db.itemChangeLog.create({
+          data: {
+            itemId: input.itemId,
+            userId: ctx.userId,
+            changeNote: input.changeNote ?? "Category updated",
+            oldValues: {
+              category: currentItem.category,
+            },
+            newValues: {
+              category: input.category,
+            },
+          },
+        });
+      } catch (error) {
+        console.warn("Change log creation failed:", error);
+      }
+
+      return item;
     }),
 });
