@@ -118,8 +118,6 @@ const ConcessionItemEdit = ({
     null,
   );
 
-  const { data: categories } = api.items.getCategories.useQuery();
-
   const { register, handleSubmit, control, formState } =
     useForm<ConcessionFormData>({
       defaultValues: {

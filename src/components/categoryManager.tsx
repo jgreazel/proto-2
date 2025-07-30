@@ -95,10 +95,10 @@ export default function CategoryManager({
           {/* Uncategorized Items Warning */}
           {getUncategorizedItems().length > 0 && (
             <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
-              <h4 className="mb-1 text-sm font-medium text-warning-content">
+              <h4 className="mb-1 text-sm font-medium text-base-content">
                 {getUncategorizedItems().length} Uncategorized Items
               </h4>
-              <p className="text-xs text-warning-content/80">
+              <p className="text-xs text-base-content/70">
                 Use the inline editing or item forms to assign categories to:{" "}
                 {getUncategorizedItems()
                   .slice(0, 3)

@@ -84,7 +84,7 @@ const ItemView = (props: {
             </div>
           )}
           {item.item.isConcessionItem && !item.item.category && (
-            <div className="badge badge-ghost badge-xs text-warning">
+            <div className="badge badge-ghost badge-xs text-base-content/60">
               No category
             </div>
           )}
