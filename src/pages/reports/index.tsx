@@ -482,18 +482,238 @@ export const AdmissionReportTable = forwardRef<
   );
 });
 
+type ItemChangeLogTableProps = {
+  data: RouterOutputs["reports"]["getNew"]["itemChangeLogReport"];
+  children?: ReactElement[] | ReactElement;
+};
+
+export const ItemChangeLogTable = forwardRef<
+  HTMLDivElement,
+  ItemChangeLogTableProps
+>(function ItemChangeLogTable(
+  props: ItemChangeLogTableProps,
+  ref: Ref<HTMLDivElement>,
+) {
+  const { data } = props;
+
+  return (
+    <div className="space-y-6" ref={ref}>
+      {/* Header Section */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Item Change Log Report
+            </h1>
+            <p className="mt-1 text-sm text-gray-600">
+              {dayjs(data?.startDate).format("MMMM DD, YYYY")} -{" "}
+              {dayjs(data?.endDate).format("MMMM DD, YYYY")}
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">{props.children}</div>
+        </div>
+      </div>
+
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 gap-6 print:grid-cols-4 print:gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center">
+            <div className="rounded-lg bg-blue-50 p-3">
+              <svg
+                className="h-6 w-6 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Changes</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {data?.changeLogs.length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center">
+            <div className="rounded-lg bg-green-50 p-3">
+              <svg
+                className="h-6 w-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">
+                Items Modified
+              </p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {new Set(data?.changeLogs.map((log) => log.itemId)).size}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center">
+            <div className="rounded-lg bg-purple-50 p-3">
+              <svg
+                className="h-6 w-6 text-purple-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Users Active</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {new Set(data?.changeLogs.map((log) => log.userId)).size}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center">
+            <div className="rounded-lg bg-orange-50 p-3">
+              <svg
+                className="h-6 w-6 text-orange-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">
+                Avg Changes/Day
+              </p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {data?.changeLogs.length && data?.startDate && data?.endDate
+                  ? Math.round(
+                      data.changeLogs.length /
+                        Math.max(
+                          1,
+                          dayjs(data.endDate).diff(
+                            dayjs(data.startDate),
+                            "day",
+                          ) + 1,
+                        ),
+                    )
+                  : 0}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Change Log Table */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h3 className="text-lg font-medium text-gray-900">
+            Change Log Details
+          </h3>
+          <p className="mt-1 text-sm text-gray-600">
+            Complete list of all item modifications
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Item
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Change Note
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Modified By
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Time
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {data?.changeLogs.map((log, index) => (
+                <tr
+                  key={log.id}
+                  className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                >
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                    {log.item.label}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    <div
+                      className="max-w-xs truncate"
+                      title={log.changeNote || "No note provided"}
+                    >
+                      {log.changeNote || "No note provided"}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                    {log.userId}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                    {dayjs(log.createdAt).format("MMM DD, YYYY")}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                    {dayjs(log.createdAt).format("h:mm A")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 type ReportData = {
   purchaseReportDateRange: RangeValueType<Dayjs>;
-
   admissionDataDateRange: RangeValueType<Dayjs>;
-
   timecardDateRange: RangeValueType<Dayjs>;
+  itemChangeLogDateRange: RangeValueType<Dayjs>;
 };
 
 export function ReportsPage() {
-  const [tabName, setTabName] = useState<"purchase" | "admission" | "timecard">(
-    "purchase",
-  );
+  const [tabName, setTabName] = useState<
+    "purchase" | "admission" | "timecard" | "itemchangelog"
+  >("purchase");
   const { handleSubmit, control, formState, watch } = useForm<ReportData>();
   const formVals = watch();
   const purchaseReport: RouterInputs["reports"]["getNew"]["purchaseReport"] = {
@@ -516,12 +736,21 @@ export function ReportsPage() {
     endDate:
       formVals.timecardDateRange?.[1]?.endOf("day").toDate() ?? new Date(),
   };
+  const itemChangeLogReport: RouterInputs["reports"]["getNew"]["itemChangeLogReport"] =
+    {
+      startDate: formVals.itemChangeLogDateRange?.[0]?.toDate() ?? new Date(),
+      endDate:
+        formVals.itemChangeLogDateRange?.[1]?.endOf("day").toDate() ??
+        new Date(),
+    };
 
   const { data, refetch } = api.reports.getNew.useQuery(
     {
       purchaseReport: tabName === "purchase" ? purchaseReport : null,
       admissionReport: tabName === "admission" ? admissionReport : null,
       timecardReport: tabName === "timecard" ? timecardReport : null,
+      itemChangeLogReport:
+        tabName === "itemchangelog" ? itemChangeLogReport : null,
     },
     {
       enabled: false,
@@ -643,6 +872,31 @@ export function ReportsPage() {
                     Admission Report
                   </div>
                 </button>
+                <button
+                  onClick={() => setTabName("itemchangelog")}
+                  className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium ${
+                    tabName === "itemchangelog"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-base-content/70 hover:border-base-content/30 hover:text-base-content"
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <svg
+                      className="mr-2 h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    Item Change Log
+                  </div>
+                </button>
               </nav>
             </div>
 
@@ -696,6 +950,34 @@ export function ReportsPage() {
                           />
                           <p className="text-xs text-gray-500">
                             Select the date range for admission and entry data
+                          </p>
+                        </div>
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {tabName === "itemchangelog" && (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <Controller
+                      control={control}
+                      name="itemChangeLogDateRange"
+                      render={({ field }) => (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Date Range
+                          </label>
+                          <RangePicker
+                            value={field.value}
+                            disabled={tabName !== "itemchangelog"}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                            onChange={(dates) => field.onChange(dates)}
+                            placeholder={["Start Date", "End Date"]}
+                          />
+                          <p className="text-xs text-gray-500">
+                            Select the date range for item change log data
                           </p>
                         </div>
                       )}
@@ -849,6 +1131,40 @@ export function ReportsPage() {
                 </Link>
               </button>
             </AdmissionReportTable>
+          )}
+
+          {showReport && data?.itemChangeLogReport && (
+            <ItemChangeLogTable data={data.itemChangeLogReport}>
+              <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <Link
+                  href={{
+                    pathname: "/reports/print/itemChangeLog",
+                    query: {
+                      start: formVals.itemChangeLogDateRange[0]?.toISOString(),
+                      end: formVals.itemChangeLogDateRange[1]
+                        ?.endOf("day")
+                        .toISOString(),
+                    },
+                  }}
+                  className="flex items-center"
+                >
+                  <svg
+                    className="mr-2 h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                    />
+                  </svg>
+                  Print Report
+                </Link>
+              </button>
+            </ItemChangeLogTable>
           )}
         </div>
       </div>

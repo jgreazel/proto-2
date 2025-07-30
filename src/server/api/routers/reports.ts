@@ -44,6 +44,13 @@ export const reportsRouter = createTRPCRouter({
           })
           .optional()
           .nullable(),
+        itemChangeLogReport: z
+          .object({
+            startDate: z.date(),
+            endDate: z.date(),
+          })
+          .optional()
+          .nullable(),
         timecardReport: z
           .object({
             startDate: z.date(),
@@ -154,6 +161,60 @@ export const reportsRouter = createTRPCRouter({
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       );
 
+      // ItemChangeLog Report
+      const itemChangeLogs = await ctx.db.itemChangeLog.findMany({
+        where: {
+          createdAt: {
+            gte: input.itemChangeLogReport?.startDate,
+            lte: input.itemChangeLogReport?.endDate,
+          },
+        },
+        include: {
+          item: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Enhance with user information
+      const changeLogUserIds = [
+        ...new Set(itemChangeLogs.map((log) => log.userId)),
+      ];
+      const changeLogUsers = await clerkClient.users
+        .getUserList({
+          userId: changeLogUserIds,
+          limit: 500,
+        })
+        .then((res) => res.filter(filterUserForClient));
+
+      itemChangeLogs.forEach((log) => {
+        // Warning: improper use of field for UI - following existing pattern
+        (log as any).userId =
+          changeLogUsers.find((u) => u.id === log.userId)?.username ??
+          log.userId;
+      });
+
+      // Calculate summary statistics
+      const totalChanges = itemChangeLogs.length;
+      const priceChanges = itemChangeLogs.filter(
+        (log) =>
+          log.changeNote?.toLowerCase().includes("price") ||
+          (log.oldValues &&
+            log.newValues &&
+            JSON.stringify(log.oldValues).includes("sellingPrice")) ||
+          JSON.stringify(log.newValues).includes("sellingPrice"),
+      ).length;
+      const stockChanges = itemChangeLogs.filter(
+        (log) =>
+          log.changeNote?.toLowerCase().includes("stock") ||
+          (log.oldValues &&
+            log.newValues &&
+            JSON.stringify(log.oldValues).includes("inStock")) ||
+          JSON.stringify(log.newValues).includes("inStock"),
+      ).length;
+      const otherChanges = totalChanges - priceChanges - stockChanges;
+
       return {
         purchaseReport: !!input.purchaseReport
           ? {
@@ -173,6 +234,19 @@ export const reportsRouter = createTRPCRouter({
               startDate: input.admissionReport?.startDate,
               endDate: input.admissionReport?.endDate,
               admissionEvents: combinedAdmissionEvents,
+            }
+          : null,
+        itemChangeLogReport: !!input.itemChangeLogReport
+          ? {
+              startDate: input.itemChangeLogReport?.startDate,
+              endDate: input.itemChangeLogReport?.endDate,
+              changeLogs: itemChangeLogs,
+              summary: {
+                totalChanges,
+                priceChanges,
+                stockChanges,
+                otherChanges,
+              },
             }
           : null,
       };
