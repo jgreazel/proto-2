@@ -11,7 +11,288 @@ import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
+import dayjs from "dayjs";
 type Item = RouterOutputs["items"]["getAll"][number]["item"];
+
+const RecentSales = () => {
+  const [hoursBack, setHoursBack] = useState(24);
+  const [voidingTransaction, setVoidingTransaction] = useState<string | null>(
+    null,
+  );
+  const [voidReason, setVoidReason] = useState("");
+
+  const {
+    data: completedSales,
+    isLoading,
+    refetch,
+  } = api.items.getCompletedSales.useQuery(
+    { hoursBack },
+    {
+      onError: handleApiError,
+    },
+  );
+
+  const { mutate: voidTransaction, isLoading: isVoiding } =
+    api.items.voidTransaction.useMutation({
+      onSuccess: (data) => {
+        toast.success(
+          `Transaction voided. Refund: ${dbUnitToDollars(data.refundAmount)}`,
+          {
+            duration: 5000,
+          },
+        );
+        setVoidingTransaction(null);
+        setVoidReason("");
+        void refetch();
+      },
+      onError: handleApiError,
+    });
+
+  const handleHoursBackChange = (hours: number) => {
+    setHoursBack(hours);
+    void refetch();
+  };
+
+  const handleVoidClick = (transactionId: string) => {
+    setVoidingTransaction(transactionId);
+    setVoidReason("");
+  };
+
+  const handleVoidConfirm = () => {
+    if (!voidingTransaction || !voidReason.trim()) return;
+
+    voidTransaction({
+      transactionId: voidingTransaction,
+      voidReason: voidReason.trim(),
+    });
+  };
+
+  const handleVoidCancel = () => {
+    setVoidingTransaction(null);
+    setVoidReason("");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      {/* Time Window Controls */}
+      <div className="mb-6 rounded-lg border border-base-300 bg-base-100 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="font-medium">Time Window: </span>
+            <div className="mt-2 flex gap-2">
+              {[1, 8, 24, 72, 168].map((hours) => (
+                <button
+                  key={hours}
+                  className={`btn btn-sm ${
+                    hoursBack === hours ? "btn-primary" : "btn-ghost"
+                  }`}
+                  onClick={() => handleHoursBackChange(hours)}
+                >
+                  {hours === 1
+                    ? "1 Hour"
+                    : hours === 8
+                    ? "8 Hours"
+                    : hours === 24
+                    ? "24 Hours"
+                    : hours === 72
+                    ? "3 Days"
+                    : "7 Days"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-base-content/60">
+              Showing sales from last {hoursBack} hour
+              {hoursBack !== 1 ? "s" : ""}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sales List */}
+      {completedSales && completedSales.length > 0 ? (
+        <div className="space-y-3">
+          {completedSales.map((sale) => (
+            <div
+              key={sale.id}
+              className="rounded-lg border border-base-300 bg-base-100 p-3 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="rounded bg-base-200 px-2 py-1 font-mono text-xs text-base-content/60">
+                      #{sale.id.slice(-8)}
+                    </div>
+                    <div className="text-sm text-base-content/70">
+                      {dayjs(sale.createdAt).format("MMM DD, h:mm A")}
+                    </div>
+                    <div className="badge badge-success badge-xs">
+                      Completed
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="text-lg font-semibold text-success">
+                        {dbUnitToDollars(sale.total)}
+                      </div>
+                      <div className="text-sm text-base-content/60">
+                        {sale.items.map((item, idx) => (
+                          <span key={idx}>
+                            {item.amountSold}x {item.label}
+                            {idx < sale.items.length - 1 ? ", " : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Void Button */}
+                <div className="ml-4">
+                  <button
+                    className="btn btn-error btn-sm gap-2"
+                    onClick={() => handleVoidClick(sale.id)}
+                    disabled={isVoiding}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-4 w-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                      />
+                    </svg>
+                    {isVoiding ? "Voiding..." : "Void"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-base-200">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-8 w-8 text-base-content/40"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h4.125M8.25 8.25V6.108"
+              />
+            </svg>
+          </div>
+          <h3 className="mb-2 text-lg font-medium text-base-content">
+            No recent sales found
+          </h3>
+          <p className="text-base-content/60">
+            Completed sales from the last {hoursBack} hour
+            {hoursBack !== 1 ? "s" : ""} will appear here
+          </p>
+        </div>
+      )}
+
+      {/* Void Transaction Modal */}
+      {voidingTransaction && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="mb-4 text-lg font-bold">Void Transaction</h3>
+            <div className="mb-4">
+              <p className="mb-2 text-sm text-base-content/70">
+                This will void the transaction and refund the customer.
+                Inventory will be restored.
+              </p>
+              <p className="text-sm font-medium text-warning">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="form-control mb-6">
+              <label className="label">
+                <span className="label-text font-medium">
+                  Reason for void *
+                </span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered h-24 resize-none"
+                placeholder="Enter reason for voiding this transaction..."
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                maxLength={500}
+              />
+              <label className="label">
+                <span className="label-text-alt text-base-content/60">
+                  {voidReason.length}/500 characters
+                </span>
+              </label>
+            </div>
+
+            <div className="modal-action">
+              <button
+                className="btn btn-ghost"
+                onClick={handleVoidCancel}
+                disabled={isVoiding}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-error gap-2"
+                onClick={handleVoidConfirm}
+                disabled={isVoiding || !voidReason.trim()}
+              >
+                {isVoiding ? (
+                  <>
+                    <LoadingSpinner />
+                    Voiding...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-4 w-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                      />
+                    </svg>
+                    Confirm Void
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ItemFeed = (props: {
   category: "admission" | "concession";
@@ -327,7 +608,7 @@ const AdmissionFeed = () => {
 };
 
 function CheckoutPage() {
-  const [mode, setMode] = useState<"sales" | "checkin">("sales");
+  const [mode, setMode] = useState<"sales" | "checkin" | "recent">("sales");
   const [feed, setFeed] = useState<"concession" | "admission">("concession");
   const [cart, setCart] = useState<Item[]>([]);
   const cartTotal = cart.reduce((acc, x) => (acc += x.sellingPrice), 0);
@@ -427,6 +708,13 @@ function CheckoutPage() {
               onClick={() => setMode("checkin")}
             >
               Guest Check-In
+            </a>
+            <a
+              role="tab"
+              className={`tab ${mode === "recent" && "tab-active"}`}
+              onClick={() => setMode("recent")}
+            >
+              Recent Sales
             </a>
           </div>
         </div>
@@ -677,6 +965,82 @@ function CheckoutPage() {
             {/* Check-in Interface */}
             <div className="rounded-lg border border-base-300 bg-base-100 shadow-lg">
               <AdmissionFeed />
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Recent Sales Mode */}
+      {mode === "recent" && (
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-6">
+            {/* Header Section */}
+            <div className="rounded-lg border border-base-300 bg-base-100 p-6 shadow-lg">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="rounded-lg bg-primary/10 p-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="h-6 w-6 text-primary"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h4.125M8.25 8.25V6.108"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-base-content">
+                    Recent Sales
+                  </h2>
+                  <p className="text-sm text-base-content/60">
+                    View and void recent concession sales
+                  </p>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="rounded-lg border border-warning/20 bg-warning/10 p-4">
+                <div className="flex items-start gap-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-warning">
+                      Voiding sales:
+                    </p>
+                    <ul className="mt-1 space-y-1 text-sm text-base-content/70">
+                      <li>
+                        • Voiding will refund the sale and restore inventory
+                      </li>
+                      <li>
+                        • Only concession items can be voided (admission passes
+                        cannot)
+                      </li>
+                      <li>• This action cannot be undone</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Sales Interface */}
+            <div className="rounded-lg border border-base-300 bg-base-100 shadow-lg">
+              <RecentSales />
             </div>
           </div>
         </div>

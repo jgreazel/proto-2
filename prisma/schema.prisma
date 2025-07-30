@@ -88,6 +88,12 @@ model Transaction {
     createdAt DateTime           @default(now())
     createdBy String
     items     TransactionItems[]
+
+    // Void tracking
+    isVoided   Boolean   @default(false)
+    voidedAt   DateTime?
+    voidedBy   String?
+    voidReason String?   @db.Text
 }
 
 model TransactionItems {
