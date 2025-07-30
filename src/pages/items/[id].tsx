@@ -142,10 +142,12 @@ const AdmissionItemForm = (props: {
           />
         </>
       )}
-      
+
       {data && (
         <>
-          <label className="text-xs font-medium">Change Note (required for edits)</label>
+          <label className="text-xs font-medium">
+            Change Note (required for edits)
+          </label>
           <textarea
             className="textarea textarea-bordered"
             placeholder="Describe what you're changing and why..."
@@ -160,7 +162,7 @@ const AdmissionItemForm = (props: {
           </div>
         </>
       )}
-      
+
       {!isSubmitting && (
         <Button
           primary
@@ -300,10 +302,12 @@ const ConcessionItemForm = (props: {
         {!data && "Initial "}Quantity in Stock
       </label>
       {quantityRow}
-      
+
       {data && (
         <>
-          <label className="text-xs font-medium">Change Note (required for edits)</label>
+          <label className="text-xs font-medium">
+            Change Note (required for edits)
+          </label>
           <textarea
             className="textarea textarea-bordered"
             placeholder="Describe what you're changing and why..."
@@ -318,7 +322,7 @@ const ConcessionItemForm = (props: {
           </div>
         </>
       )}
-      
+
       {!isSubmitting && (
         <div className="flex gap-1">
           <button
