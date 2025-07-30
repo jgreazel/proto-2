@@ -104,7 +104,7 @@ const AdmissionItemForm = (props: {
         />
         <label
           htmlFor="passTypeDayPassOption"
-          className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+          className="ms-2 text-sm font-medium text-base-content"
         >
           Day Pass
         </label>
@@ -119,7 +119,7 @@ const AdmissionItemForm = (props: {
         />
         <label
           htmlFor="passTypeSeasonalPassOption"
-          className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+          className="ms-2 text-sm font-medium text-base-content"
         >
           Seasonal Pass
         </label>
@@ -277,7 +277,7 @@ const ConcessionItemForm = (props: {
         name="category"
         render={({ field }) => (
           <CategoryTypeahead
-            value={field.value || ""}
+            value={field.value ?? ""}
             onChange={field.onChange}
             placeholder="Select or create category..."
             disabled={isSubmitting || isLoading}

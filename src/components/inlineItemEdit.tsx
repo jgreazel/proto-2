@@ -120,7 +120,7 @@ const ConcessionItemEdit = ({
 
   const { data: categories } = api.items.getCategories.useQuery();
 
-  const { register, handleSubmit, control, formState, setValue } =
+  const { register, handleSubmit, control, formState } =
     useForm<ConcessionFormData>({
       defaultValues: {
         label: item.item.label,
@@ -167,7 +167,7 @@ const ConcessionItemEdit = ({
             name="category"
             render={({ field }) => (
               <CategoryTypeahead
-                value={field.value || ""}
+                value={field.value ?? ""}
                 onChange={field.onChange}
                 placeholder="Category..."
                 disabled={isLoading}
@@ -321,7 +321,7 @@ const ConcessionItemEdit = ({
         <dialog className="modal modal-open">
           <div className="modal-box">
             <h3 className="text-lg font-bold">Add Change Note</h3>
-            <p className="py-2 text-sm text-gray-600">
+            <p className="py-2 text-sm text-base-content/70">
               Please provide a note describing this change for accountability:
             </p>
             <textarea
@@ -487,7 +487,7 @@ const AdmissionItemEdit = ({
         <dialog className="modal modal-open">
           <div className="modal-box">
             <h3 className="text-lg font-bold">Add Change Note</h3>
-            <p className="py-2 text-sm text-gray-600">
+            <p className="py-2 text-sm text-base-content/70">
               Please provide a note describing this change for accountability:
             </p>
             <textarea

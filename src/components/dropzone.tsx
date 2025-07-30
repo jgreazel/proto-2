@@ -78,7 +78,9 @@ export const Dropzone = () => {
       </div>
       <aside className="my-2 self-end ">
         {files && (
-          <h4 className="font-semibold text-zinc-400">Files pending upload</h4>
+          <h4 className="font-semibold text-base-content/60">
+            Files pending upload
+          </h4>
         )}
         <ul>{files}</ul>
       </aside>

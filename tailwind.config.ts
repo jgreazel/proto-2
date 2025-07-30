@@ -7,10 +7,10 @@ export default {
   // },
   plugins: [require("daisyui")],
   daisyui: {
-    // themes: ["emerald"],
+    themes: ["fantasy"],
     // themes: ["business"],
     // themes: ["corporate"],
-    themes: ["fantasy"],
+    // themes: ["emerald"],
     // darkTheme: "business",
     base: true, // applies background color and foreground color for root element by default
     styled: true, // include daisyUI colors and design decisions for all components

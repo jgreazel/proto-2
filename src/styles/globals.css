@@ -12,7 +12,7 @@ body {
 }
 
 .react-datepicker__header {
-  @apply !rounded-xl !bg-slate-50;
+  @apply !rounded-xl !bg-base-200;
 }
 
 .react-datepicker__day-name,

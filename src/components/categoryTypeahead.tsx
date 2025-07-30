@@ -39,7 +39,7 @@ export function CategoryTypeahead({
   // Combine existing categories with predefined ones, remove duplicates
   const allSuggestions = Array.from(
     new Set([...categories, ...predefinedCategories]),
-  ).sort() as string[];
+  ).sort();
 
   // Filter suggestions based on input
   const filteredSuggestions = allSuggestions.filter((cat: string) =>
