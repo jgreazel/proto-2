@@ -16,6 +16,10 @@ type Item = RouterOutputs["items"]["getAll"][number]["item"];
 
 const RecentSales = () => {
   const [hoursBack, setHoursBack] = useState(24);
+  const [voidingTransaction, setVoidingTransaction] = useState<string | null>(
+    null,
+  );
+  const [voidReason, setVoidReason] = useState("");
 
   const {
     data: completedSales,
@@ -28,9 +32,44 @@ const RecentSales = () => {
     },
   );
 
+  const { mutate: voidTransaction, isLoading: isVoiding } =
+    api.items.voidTransaction.useMutation({
+      onSuccess: (data) => {
+        toast.success(
+          `Transaction voided. Refund: ${dbUnitToDollars(data.refundAmount)}`,
+          {
+            duration: 5000,
+          },
+        );
+        setVoidingTransaction(null);
+        setVoidReason("");
+        void refetch();
+      },
+      onError: handleApiError,
+    });
+
   const handleHoursBackChange = (hours: number) => {
     setHoursBack(hours);
     void refetch();
+  };
+
+  const handleVoidClick = (transactionId: string) => {
+    setVoidingTransaction(transactionId);
+    setVoidReason("");
+  };
+
+  const handleVoidConfirm = () => {
+    if (!voidingTransaction || !voidReason.trim()) return;
+
+    voidTransaction({
+      transactionId: voidingTransaction,
+      voidReason: voidReason.trim(),
+    });
+  };
+
+  const handleVoidCancel = () => {
+    setVoidingTransaction(null);
+    setVoidReason("");
   };
 
   if (isLoading) {
@@ -147,7 +186,11 @@ const RecentSales = () => {
                     </svg>
                     View Details
                   </button>
-                  <button className="btn btn-error btn-sm gap-2">
+                  <button
+                    className="btn btn-error btn-sm gap-2"
+                    onClick={() => handleVoidClick(sale.id)}
+                    disabled={isVoiding}
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
@@ -162,7 +205,7 @@ const RecentSales = () => {
                         d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
                       />
                     </svg>
-                    Void Sale
+                    {isVoiding ? "Voiding..." : "Void Sale"}
                   </button>
                 </div>
               </div>
@@ -194,6 +237,84 @@ const RecentSales = () => {
             Completed sales from the last {hoursBack} hour
             {hoursBack !== 1 ? "s" : ""} will appear here
           </p>
+        </div>
+      )}
+
+      {/* Void Transaction Modal */}
+      {voidingTransaction && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="mb-4 text-lg font-bold">Void Transaction</h3>
+            <div className="mb-4">
+              <p className="mb-2 text-sm text-base-content/70">
+                This will void the transaction and refund the customer.
+                Inventory will be restored.
+              </p>
+              <p className="text-sm font-medium text-warning">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="form-control mb-6">
+              <label className="label">
+                <span className="label-text font-medium">
+                  Reason for void *
+                </span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered h-24 resize-none"
+                placeholder="Enter reason for voiding this transaction..."
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                maxLength={500}
+              />
+              <label className="label">
+                <span className="label-text-alt text-base-content/60">
+                  {voidReason.length}/500 characters
+                </span>
+              </label>
+            </div>
+
+            <div className="modal-action">
+              <button
+                className="btn btn-ghost"
+                onClick={handleVoidCancel}
+                disabled={isVoiding}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-error gap-2"
+                onClick={handleVoidConfirm}
+                disabled={isVoiding || !voidReason.trim()}
+              >
+                {isVoiding ? (
+                  <>
+                    <LoadingSpinner />
+                    Voiding...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-4 w-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                      />
+                    </svg>
+                    Confirm Void
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

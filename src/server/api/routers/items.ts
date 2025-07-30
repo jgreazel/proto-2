@@ -465,6 +465,7 @@ export const itemsRouter = createTRPCRouter({
           createdAt: {
             gte: cutoffTime,
           },
+          isVoided: false, // Only show non-voided transactions
         },
         include: {
           items: {
@@ -522,6 +523,128 @@ export const itemsRouter = createTRPCRouter({
         .filter((sale) => sale !== null);
 
       return completedSales;
+    }),
+
+  voidTransaction: privateProcedure
+    .input(
+      z.object({
+        transactionId: z.string(),
+        voidReason: z
+          .string()
+          .min(1, "Void reason is required")
+          .max(500, "Reason too long"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // await inRateWindow(ctx.userId);
+
+      // First, get the transaction with its items
+      const transaction = await ctx.db.transaction.findUnique({
+        where: { id: input.transactionId },
+        include: {
+          items: {
+            include: {
+              item: true,
+            },
+          },
+        },
+      });
+
+      if (!transaction) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Transaction not found",
+        });
+      }
+
+      if (transaction.isVoided) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Transaction is already voided",
+        });
+      }
+
+      // Only void transactions with concession items
+      const concessionItems = transaction.items.filter(
+        (transactionItem) => transactionItem.item.isConcessionItem,
+      );
+
+      if (concessionItems.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot void transactions without concession items",
+        });
+      }
+
+      // Use a transaction to ensure all operations succeed or fail together
+      const result = await ctx.db.$transaction(async (prisma) => {
+        // 1. Update the transaction to mark it as voided
+        const voidedTransaction = await prisma.transaction.update({
+          where: { id: input.transactionId },
+          data: {
+            isVoided: true,
+            voidedAt: new Date(),
+            voidedBy: ctx.userId,
+            voidReason: input.voidReason,
+          },
+        });
+
+        // 2. Reverse inventory changes for concession items
+        await Promise.all(
+          concessionItems.map(async (transactionItem) => {
+            const currentItem = await prisma.inventoryItem.findUnique({
+              where: { id: transactionItem.itemId },
+            });
+
+            if (!currentItem) return;
+
+            // Add back the sold quantity to inventory
+            await prisma.inventoryItem.update({
+              where: { id: transactionItem.itemId },
+              data: {
+                inStock:
+                  (currentItem.inStock ?? 0) + transactionItem.amountSold,
+              },
+            });
+
+            // Create a change log entry for the void
+            try {
+              await prisma.itemChangeLog.create({
+                data: {
+                  itemId: transactionItem.itemId,
+                  userId: ctx.userId,
+                  changeNote: `Voided transaction ${input.transactionId}: ${input.voidReason}`,
+                  oldValues: {
+                    inStock: currentItem.inStock,
+                  },
+                  newValues: {
+                    inStock:
+                      (currentItem.inStock ?? 0) + transactionItem.amountSold,
+                  },
+                },
+              });
+            } catch (error) {
+              console.warn("Change log creation failed:", error);
+            }
+          }),
+        );
+
+        return voidedTransaction;
+      });
+
+      // Calculate the refund amount (only concession items)
+      const refundAmount = concessionItems.reduce(
+        (sum, transactionItem) =>
+          sum + transactionItem.amountSold * transactionItem.item.sellingPrice,
+        0,
+      );
+
+      return {
+        success: true,
+        message: "Transaction voided successfully",
+        refundAmount,
+        voidedTransaction: result,
+      };
     }),
 
   // Category management endpoints
