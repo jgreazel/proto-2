@@ -9,7 +9,6 @@ import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import filterPasses from "~/helpers/filterPasses";
 import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
-import EmptyCart from "~/components/emptyCart";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
 type Item = RouterOutputs["items"]["getAll"][number]["item"];
@@ -18,35 +17,113 @@ const ItemFeed = (props: {
   category: "admission" | "concession";
   onClick: (data: Item) => void;
 }) => {
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const { data, isLoading } = api.items.getAll.useQuery({
     category: props.category,
   });
+
   if (isLoading)
     return (
       <div className="my-4 flex justify-center">
         <LoadingSpinner />
       </div>
     );
+
+  if (!data?.length) {
+    return (
+      <div className="p-12">
+        <NoData />
+        <div className="mt-8 text-center font-medium">No Items Yet</div>
+      </div>
+    );
+  }
+
+  // Group items by category
+  const itemsByCategory = data.reduce(
+    (acc, { item }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const rawCategory = item.category;
+      const category =
+        typeof rawCategory === "string" && rawCategory.trim()
+          ? rawCategory.trim()
+          : "Uncategorized";
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category]!.push(item);
+      return acc;
+    },
+    {} as Record<string, Item[]>,
+  );
+
+  // Get all available categories for filtering
+  const availableCategories = Object.keys(itemsByCategory).sort();
+
+  // Filter by selected category
+  const filteredCategories =
+    selectedCategory === "all"
+      ? availableCategories
+      : availableCategories.filter((cat) => cat === selectedCategory);
+
   return (
     <>
-      {!!data?.length ? (
-        <div className="grid grid-cols-3 gap-4 p-4">
-          {data?.map(({ item }) => (
+      {/* Category Filter */}
+      {availableCategories.length > 1 && (
+        <div className="space-y-3 p-4 pb-2">
+          {/* Quick filter buttons */}
+          <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => props.onClick(item)}
-              key={item.id}
-              className="btn capitalize"
+              className={`btn btn-xs ${
+                selectedCategory === "all" ? "btn-primary" : "btn-ghost"
+              }`}
+              onClick={() => setSelectedCategory("all")}
             >
-              {item.label}
+              All ({data.length})
             </button>
-          ))}
-        </div>
-      ) : (
-        <div className="p-12">
-          <NoData />
-          <div className="mt-8 text-center font-medium">No Items Yet</div>
+            {availableCategories.map((category) => (
+              <button
+                key={category}
+                className={`btn btn-xs ${
+                  selectedCategory === category ? "btn-primary" : "btn-ghost"
+                }`}
+                onClick={() => setSelectedCategory(category)}
+              >
+                {category} ({itemsByCategory[category]?.length})
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
+      {/* Items grouped by category */}
+      <div className="p-4 pt-2">
+        {filteredCategories.map((categoryName) => (
+          <div key={categoryName} className="mb-6">
+            <h3 className="mb-3 border-b border-base-300 pb-1 text-lg font-semibold text-base-content/80">
+              {categoryName}
+              <span className="ml-2 text-sm font-normal text-base-content/60">
+                ({itemsByCategory[categoryName]?.length} items)
+              </span>
+            </h3>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {itemsByCategory[categoryName]?.map((item) => (
+                <button
+                  onClick={() => props.onClick(item)}
+                  key={item.id}
+                  className="btn btn-outline h-auto min-h-[3rem] whitespace-normal text-left capitalize"
+                >
+                  <div className="flex w-full flex-col items-start">
+                    <span className="font-medium">{item.label}</span>
+                    <span className="text-xs opacity-70">
+                      {dbUnitToDollars(item.sellingPrice)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </>
   );
 };
@@ -88,81 +165,161 @@ const AdmissionFeed = () => {
   const filteredPasses = passesData?.filter((p) => filterPasses(p, filter));
 
   return (
-    <div className="p-2">
-      <label
-        htmlFor="pass-filter"
-        className="input input-bordered m-1 flex items-center gap-2"
-      >
-        <input
-          id="pass-filter"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          type="text"
-          className="grow"
-          placeholder="Search"
-        />
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 16 16"
-          fill="currentColor"
-          className="h-4 w-4 opacity-70"
+    <div className="p-6">
+      {/* Search Header */}
+      <div className="mb-6">
+        <label
+          htmlFor="pass-filter"
+          className="mb-2 block text-sm font-medium text-base-content"
         >
-          <path
-            fillRule="evenodd"
-            d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-            clipRule="evenodd"
+          Search Season Pass Holders
+        </label>
+        <div className="relative">
+          <input
+            id="pass-filter"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            type="text"
+            className="input input-bordered w-full pl-10"
+            placeholder="Search by name..."
           />
-        </svg>
-      </label>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-base-content/40"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+      </div>
 
+      {/* Pass Holders List */}
       {!!filteredPasses && filteredPasses.length > 0 ? (
-        filteredPasses.map(({ label, patrons, id }) => (
-          <div className="p-1" key={id}>
-            <div className="badge badge-outline"> {label}</div>
-
-            {patrons.map((p) => (
-              <div
-                className="flex-base my-1 flex items-center justify-between rounded-lg bg-base-100 p-2 shadow-lg"
-                key={p.id}
-              >
-                <div className="font-medium capitalize">{`${p.firstName} ${p.lastName}`}</div>
-                <div className="">
-                  {eventData?.find((e) => e.patronId === p.id) ? (
-                    <></>
-                  ) : (
-                    <div className="tooltip tooltip-left" data-tip="Admit">
-                      <button
-                        className="btn btn-circle btn-ghost btn-sm"
-                        onClick={() => onClick(p)}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="h-6 w-6 rotate-180"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
+        <div className="space-y-4">
+          {filteredPasses.map(({ label, patrons, id }) => (
+            <div
+              className="overflow-hidden rounded-lg border border-base-300"
+              key={id}
+            >
+              <div className="border-b border-base-300 bg-base-200 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="badge badge-primary badge-sm">{label}</div>
+                  <span className="text-sm text-base-content/60">
+                    {patrons.length}{" "}
+                    {patrons.length === 1 ? "member" : "members"}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
-        ))
+              <div className="divide-y divide-base-200">
+                {patrons.map((p) => {
+                  const isCheckedIn = eventData?.find(
+                    (e) => e.patronId === p.id,
+                  );
+                  return (
+                    <div
+                      className="hover:bg-base-50 flex items-center justify-between p-4 transition-colors"
+                      key={p.id}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`h-3 w-3 rounded-full ${
+                            isCheckedIn ? "bg-success" : "bg-base-300"
+                          }`}
+                        />
+                        <div>
+                          <div className="font-medium capitalize text-base-content">
+                            {`${p.firstName} ${p.lastName}`}
+                          </div>
+                          <div className="text-sm text-base-content/60">
+                            {isCheckedIn
+                              ? "Already checked in today"
+                              : "Ready to check in"}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        {isCheckedIn ? (
+                          <div className="flex items-center gap-2 text-success">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="h-4 w-4"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                              />
+                            </svg>
+                            <span className="text-sm font-medium">
+                              Checked In
+                            </span>
+                          </div>
+                        ) : (
+                          <button
+                            className="btn btn-primary btn-sm gap-2"
+                            onClick={() => onClick(p)}
+                            disabled={isCreating}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="h-4 w-4"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
+                              />
+                            </svg>
+                            Check In
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
-        <div className="p-12">
-          <NoData />
-          <div className="mt-8 text-center font-medium">
-            No Season Passes Yet
+        <div className="py-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-base-200 p-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-8 w-8 text-base-content/40"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+              />
+            </svg>
           </div>
+          <h3 className="mb-2 text-lg font-medium text-base-content">
+            {filter ? "No matching passes found" : "No season passes available"}
+          </h3>
+          <p className="text-base-content/60">
+            {filter
+              ? "Try adjusting your search terms"
+              : "Season passes will appear here when available"}
+          </p>
         </div>
       )}
     </div>
@@ -170,9 +327,8 @@ const AdmissionFeed = () => {
 };
 
 function CheckoutPage() {
-  const [feed, setFeed] = useState<"concession" | "admission" | "passes">(
-    "concession",
-  );
+  const [mode, setMode] = useState<"sales" | "checkin">("sales");
+  const [feed, setFeed] = useState<"concession" | "admission">("concession");
   const [cart, setCart] = useState<Item[]>([]);
   const cartTotal = cart.reduce((acc, x) => (acc += x.sellingPrice), 0);
   const { mutate, isLoading } = api.items.checkout.useMutation({
@@ -232,7 +388,7 @@ function CheckoutPage() {
           className={`tab ${feed === "concession" && "tab-active"}`}
           onClick={() => setFeed("concession")}
         >
-          Snacks
+          Concessions
         </a>
         <a
           role="tab"
@@ -241,139 +397,290 @@ function CheckoutPage() {
         >
           Passes
         </a>
-        <a
-          role="tab"
-          className={`tab ${feed === "passes" && "tab-active"}`}
-          onClick={() => setFeed("passes")}
-        >
-          Patrons
-        </a>
       </div>
-      {feed === "passes" ? (
-        <AdmissionFeed />
-      ) : (
-        <ItemFeed
-          onClick={(data) => {
-            setCart((prev) => [...prev, data]);
-          }}
-          category={feed}
-        />
-      )}
+      <ItemFeed
+        onClick={(data) => {
+          setCart((prev) => [...prev, data]);
+        }}
+        category={feed}
+      />
     </>
   );
 
   return (
     <PageLayout>
-      <div className="flex flex-col gap-2 md:flex-row">
-        <div className="hidden p-2 md:block md:w-2/3">{shoppingList}</div>
-        <div className="p-2 md:w-1/3">
-          <div className="rounded-lg bg-base-100 p-2 shadow-xl">
-            <div className="flex flex-row items-center gap-1 p-2 text-xl font-medium">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-                />
-              </svg>
-              Cart
-            </div>
-            {cart.length > 0 ? (
-              cart.map((i, idx) => (
-                <div
-                  className="my-1 flex flex-row items-center justify-between rounded-lg bg-base-100 p-2 shadow-xl"
-                  key={`${i.id}-${idx}`}
-                >
-                  <div className="flex flex-col">
-                    <div className="font-medium">{i.label}</div>
-                    <div className="text-sm">
-                      {dbUnitToDollars(i.sellingPrice)}
-                    </div>
-                  </div>
-                  <div className="tooltip tooltip-left" data-tip="Remove">
-                    <button
-                      className="btn btn-circle btn-ghost btn-sm"
-                      onClick={() => {
-                        const copy = [...cart];
-                        copy.splice(idx, 1);
-                        setCart(copy);
-                      }}
+      {/* Mode Selection Header */}
+      <div className="mb-6 border-b border-base-300 p-4">
+        <div className="flex flex-row items-center justify-between">
+          <h1 className="text-2xl font-bold">Point of Sale</h1>
+          <div role="tablist" className="tabs-boxed tabs">
+            <a
+              role="tab"
+              className={`tab ${mode === "sales" && "tab-active"}`}
+              onClick={() => setMode("sales")}
+            >
+              Sales & Checkout
+            </a>
+            <a
+              role="tab"
+              className={`tab ${mode === "checkin" && "tab-active"}`}
+              onClick={() => setMode("checkin")}
+            >
+              Guest Check-In
+            </a>
+          </div>
+        </div>
+      </div>
+      {/* Sales Mode */}
+      {mode === "sales" && (
+        <div className="flex flex-col gap-2 md:flex-row">
+          <div className="hidden p-2 md:block md:w-2/3">{shoppingList}</div>
+          <div className="p-2 md:w-1/3">
+            <div className="rounded-lg border border-base-300 bg-base-100 p-6 shadow-lg">
+              <div className="flex flex-row items-center gap-3 border-b border-base-300 pb-4">
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="h-5 w-5 text-primary"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-base-content">
+                    Shopping Cart
+                  </h3>
+                  <p className="text-sm text-base-content/60">
+                    {cart.length} {cart.length === 1 ? "item" : "items"}
+                  </p>
+                </div>
+              </div>
+              <div className="min-h-[200px] space-y-3 py-4">
+                {cart.length > 0 ? (
+                  cart.map((i, idx) => (
+                    <div
+                      className="bg-base-50 flex flex-row items-center justify-between rounded-lg border border-base-200 p-3 transition-colors hover:border-base-300"
+                      key={`${i.id}-${idx}`}
                     >
+                      <div className="flex flex-1 flex-col">
+                        <div className="font-medium text-base-content">
+                          {i.label}
+                        </div>
+                        <div className="text-sm font-semibold text-primary">
+                          {dbUnitToDollars(i.sellingPrice)}
+                        </div>
+                      </div>
+                      <div
+                        className="tooltip tooltip-left"
+                        data-tip="Remove item"
+                      >
+                        <button
+                          className="btn btn-circle btn-ghost btn-sm transition-colors hover:btn-error"
+                          onClick={() => {
+                            const copy = [...cart];
+                            copy.splice(idx, 1);
+                            setCart(copy);
+                          }}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="h-4 w-4"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="mb-3 rounded-lg bg-base-200 p-3">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
                         strokeWidth={1.5}
                         stroke="currentColor"
-                        className="h-6 w-6"
+                        className="h-8 w-8 text-base-content/40"
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                          d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
                         />
                       </svg>
-                    </button>
+                    </div>
+                    <p className="font-medium text-base-content/60">
+                      Your cart is empty
+                    </p>
+                    <p className="text-sm text-base-content/40">
+                      Add items to get started
+                    </p>
+                  </div>
+                )}
+              </div>
+              {cart.length > 0 && (
+                <div className="mb-4 border-t border-base-300 pt-4">
+                  <div className="flex items-center justify-between text-lg font-semibold">
+                    <span>Total:</span>
+                    <span className="text-primary">
+                      {dbUnitToDollars(cartTotal)}
+                    </span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="max-w-sm p-12">
-                <EmptyCart />
-              </div>
-            )}
-            <div
-              id="section-footer"
-              className="flex flex-row justify-end gap-2 p-2"
-            >
-              <button
-                className="btn btn-ghost"
-                disabled={!cart.length}
-                onClick={() => {
-                  setCart([]);
-                }}
-              >
-                Empty
-              </button>
-              {isLoading ? (
-                <LoadingSpinner />
-              ) : (
-                <Button
-                  primary
+              )}
+              <div className="flex flex-row justify-end gap-3">
+                <button
+                  className="btn btn-ghost btn-sm"
                   disabled={!cart.length}
                   onClick={() => {
-                    const uniq = new Set(cart.map((c) => c.id));
-                    let input: RouterInputs["items"]["checkout"];
-                    uniq.forEach((x) => {
-                      const toAdd = {
-                        id: x,
-                        amountSold: cart.filter((c) => c.id === x).length,
-                      };
-
-                      if (!input) {
-                        input = [toAdd];
-                      } else {
-                        input.push(toAdd);
-                      }
-                    });
-                    mutate(input!);
+                    setCart([]);
                   }}
                 >
-                  Checkout: {dbUnitToDollars(cartTotal)}
-                </Button>
-              )}
+                  Clear Cart
+                </button>
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <LoadingSpinner />
+                    <span className="text-sm">Processing...</span>
+                  </div>
+                ) : (
+                  <Button
+                    primary
+                    disabled={!cart.length}
+                    onClick={() => {
+                      const uniq = new Set(cart.map((c) => c.id));
+                      let input: RouterInputs["items"]["checkout"];
+                      uniq.forEach((x) => {
+                        const toAdd = {
+                          id: x,
+                          amountSold: cart.filter((c) => c.id === x).length,
+                        };
+
+                        if (!input) {
+                          input = [toAdd];
+                        } else {
+                          input.push(toAdd);
+                        }
+                      });
+                      mutate(input!);
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="mr-2 h-4 w-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H3.75M3.75 6v.75c0 .414.336.75.75.75h.75m0-1.5h.75v.75c0 .414.336.75.75.75H6v-.75c0-.414-.336-.75-.75-.75H4.5V6h-.75m0 0H3v-.375M21 18.75v.375c0 .621-.504 1.125-1.125 1.125H3.375c-.621 0-1.125-.504-1.125-1.125V6.75a1.125 1.125 0 0 1 1.125-1.125h17.25c.621 0 1.125.504 1.125 1.125v12Z"
+                      />
+                    </svg>
+                    Complete Purchase
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="block p-2 md:hidden">{shoppingList}</div>
+        </div>
+      )}{" "}
+      {/* Check-In Mode */}
+      {mode === "checkin" && (
+        <div className="mx-auto max-w-4xl">
+          <div className="grid gap-6">
+            {/* Header Section */}
+            <div className="rounded-lg border border-base-300 bg-base-100 p-6 shadow-lg">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="rounded-lg bg-primary/10 p-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="h-6 w-6 text-primary"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-base-content">
+                    Season Pass Check-In
+                  </h2>
+                  <p className="text-sm text-base-content/60">
+                    Admit guests with valid season passes
+                  </p>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="rounded-lg border border-info/20 bg-info/10 p-4">
+                <div className="flex items-start gap-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-info"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-info">
+                      How to check in guests:
+                    </p>
+                    <ul className="mt-1 space-y-1 text-sm text-base-content/70">
+                      <li>
+                        • Search for the guest&apos;s name using the search bar
+                        below
+                      </li>
+                      <li>• Click the check-in button next to their name</li>
+                      <li>
+                        • Already checked-in guests won&apos;t show a button
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Check-in Interface */}
+            <div className="rounded-lg border border-base-300 bg-base-100 shadow-lg">
+              <AdmissionFeed />
             </div>
           </div>
         </div>
-        <div className="block p-2 md:hidden">{shoppingList}</div>
-      </div>
+      )}
     </PageLayout>
   );
 }
