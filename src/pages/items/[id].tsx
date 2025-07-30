@@ -14,13 +14,13 @@ import { PageLayout } from "~/components/layout";
 import isAuth from "~/components/isAuth";
 import { useRouter } from "next/router";
 import toast from "react-hot-toast";
-import { router } from "@trpc/server";
 
 type AdmissionFormData = {
   label: string;
   sellingPrice: number;
   passType: "seasonal" | "day";
   patronLimit: number | null;
+  changeNote?: string;
 };
 
 const AdmissionItemForm = (props: {
@@ -142,6 +142,25 @@ const AdmissionItemForm = (props: {
           />
         </>
       )}
+      
+      {data && (
+        <>
+          <label className="text-xs font-medium">Change Note (required for edits)</label>
+          <textarea
+            className="textarea textarea-bordered"
+            placeholder="Describe what you're changing and why..."
+            rows={3}
+            {...register("changeNote", {
+              required: !!data,
+              disabled: isSubmitting || isLoading,
+            })}
+          />
+          <div className="text-xs text-base-content/70">
+            This note will be recorded for accountability purposes
+          </div>
+        </>
+      )}
+      
       {!isSubmitting && (
         <Button
           primary
@@ -165,6 +184,7 @@ type ConcessionFormData = {
   purchasePrice: number;
   sellingPrice: number;
   inStock: number;
+  changeNote?: string;
 };
 
 const ConcessionItemForm = (props: {
@@ -280,6 +300,25 @@ const ConcessionItemForm = (props: {
         {!data && "Initial "}Quantity in Stock
       </label>
       {quantityRow}
+      
+      {data && (
+        <>
+          <label className="text-xs font-medium">Change Note (required for edits)</label>
+          <textarea
+            className="textarea textarea-bordered"
+            placeholder="Describe what you're changing and why..."
+            rows={3}
+            {...register("changeNote", {
+              required: !!data,
+              disabled: isSubmitting || isLoading,
+            })}
+          />
+          <div className="text-xs text-base-content/70">
+            This note will be recorded for accountability purposes
+          </div>
+        </>
+      )}
+      
       {!isSubmitting && (
         <div className="flex gap-1">
           <button
@@ -486,44 +525,41 @@ function SingleItemPage() {
   return (
     <>
       <Head>
-        <title>Guard Shack - Item</title>
+        <title>Guard Shack - {id === "0" ? "New Item" : "Edit Item"}</title>
       </Head>
       <PageLayout>
-        <dialog id="single-item-modal" className="modal modal-open">
-          <form method="dialog" className="modal-backdrop">
-            <Link href="/items">close</Link>
-          </form>
-          <div className="modal-box">
-            <form method="dialog">
-              <Link
-                href="/items"
-                className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+        <div className="flex h-full w-full flex-col gap-4 p-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">
+              {id === "0" ? "Create New Item" : "Edit Item"}
+            </h1>
+            <Link href="/items" className="btn btn-outline">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-4 w-4"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-6 w-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18 18 6M6 6l12 12"
-                  />
-                </svg>
-              </Link>
-            </form>
-            <div className="mt-4">
-              {id === "0" ? (
-                <CreateItemWizard />
-              ) : (
-                <EditItemWizard id={id as string} />
-              )}
-            </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+                />
+              </svg>
+              Back to Items
+            </Link>
           </div>
-        </dialog>
+
+          <div className="rounded-lg bg-base-100 p-6 shadow-lg">
+            {id === "0" ? (
+              <CreateItemWizard />
+            ) : (
+              <EditItemWizard id={id as string} />
+            )}
+          </div>
+        </div>
       </PageLayout>
     </>
   );

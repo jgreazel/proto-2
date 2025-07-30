@@ -281,31 +281,65 @@ export const itemsRouter = createTRPCRouter({
 
   restockItems: privateProcedure
     .input(
-      z.array(
-        z.object({
-          id: z.string(),
-          restockAmount: z.number().min(-10000).max(10000),
-        }),
-      ),
+      z.object({
+        items: z.array(
+          z.object({
+            id: z.string(),
+            restockAmount: z.number().min(-10000).max(10000),
+          }),
+        ),
+        changeNote: z.string().max(500, "Note too long").optional(),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
 
       const items = await ctx.db.inventoryItem.findMany({
-        where: { id: { in: input.map((i) => i.id) } },
+        where: { id: { in: input.items.map((i) => i.id) } },
       });
 
+      // Update items and create change logs
       await Promise.all(
-        items.map(
-          async (i, idx) =>
-            await ctx.db.inventoryItem.update({
-              where: { id: i.id },
-              data: { ...i, inStock: i.inStock! + input[idx]!.restockAmount },
-            }),
-        ),
+        items.map(async (item) => {
+          const inputItem = input.items.find((i) => i.id === item.id);
+          if (!inputItem) return;
+
+          const oldStock = item.inStock!;
+          const newStock = oldStock + inputItem.restockAmount;
+
+          // Update the item
+          await ctx.db.inventoryItem.update({
+            where: { id: item.id },
+            data: { inStock: newStock },
+          });
+
+          // Create change log entry
+          try {
+            await (ctx.db as any).itemChangeLog.create({
+              data: {
+                itemId: item.id,
+                userId: ctx.userId,
+                changeNote:
+                  input.changeNote ??
+                  `Restocked: ${inputItem.restockAmount > 0 ? "+" : ""}${
+                    inputItem.restockAmount
+                  }`,
+                oldValues: {
+                  inStock: oldStock,
+                },
+                newValues: {
+                  inStock: newStock,
+                },
+              },
+            });
+          } catch (error) {
+            console.warn("Change log creation failed:", error);
+          }
+        }),
       ).catch((e: { message: string }) => {
         throw new TRPCError({ message: e.message, code: "BAD_REQUEST" });
       });
+
       return { message: "Inventory successfully updated!", success: true };
     }),
 
