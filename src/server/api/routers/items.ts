@@ -326,7 +326,7 @@ export const itemsRouter = createTRPCRouter({
 
           // Create change log entry
           try {
-            await (ctx.db as any).itemChangeLog.create({
+            await ctx.db.itemChangeLog.create({
               data: {
                 itemId: item.id,
                 userId: ctx.userId,
