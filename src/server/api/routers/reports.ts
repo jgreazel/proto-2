@@ -64,50 +64,132 @@ export const reportsRouter = createTRPCRouter({
       // await inRateWindow(ctx.userId);
 
       // Purchase Report
-      const tranItemLinks = await ctx.db.transactionItems
-        .findMany({
-          where: {
-            createdAt: {
-              gte: input.purchaseReport?.startDate,
-              lte: input.purchaseReport?.endDate,
+      const transactions = await ctx.db.transaction.findMany({
+        where: {
+          createdAt: {
+            gte: input.purchaseReport?.startDate,
+            lte: input.purchaseReport?.endDate,
+          },
+        },
+        include: {
+          items: {
+            include: {
+              item: true,
             },
           },
-          include: {
-            item: true,
-          },
-        })
-        .then((dbLinks) =>
-          dbLinks.filter((l) => {
-            if (l.item.isAdmissionItem) {
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Filter and process transactions to include void information
+      const processedTransactions = transactions
+        .map((transaction) => {
+          // Filter items based on report criteria
+          const filteredItems = transaction.items.filter((transactionItem) => {
+            if (transactionItem.item.isAdmissionItem) {
               return input.purchaseReport?.includeAdmissions;
-            } else if (l.item.isConcessionItem) {
+            } else if (transactionItem.item.isConcessionItem) {
               return input.purchaseReport?.includeConcessions;
             }
-          }),
-        );
+            return false;
+          });
+
+          // Skip transactions with no matching items
+          if (filteredItems.length === 0) {
+            return null;
+          }
+
+          // Calculate transaction total for filtered items
+          const transactionTotal = filteredItems.reduce(
+            (sum, transactionItem) =>
+              sum +
+              transactionItem.amountSold * transactionItem.item.sellingPrice,
+            0,
+          );
+
+          return {
+            id: transaction.id,
+            createdAt: transaction.createdAt,
+            createdBy: transaction.createdBy,
+            isVoided: transaction.isVoided,
+            voidedAt: transaction.voidedAt,
+            voidedBy: transaction.voidedBy,
+            voidReason: transaction.voidReason,
+            total: transactionTotal,
+            items: filteredItems.map((transactionItem) => ({
+              id: transactionItem.item.id,
+              label: transactionItem.item.label,
+              amountSold: transactionItem.amountSold,
+              unitPrice: transactionItem.item.sellingPrice,
+              lineTotal:
+                transactionItem.amountSold * transactionItem.item.sellingPrice,
+              isAdmissionItem: transactionItem.item.isAdmissionItem,
+              isConcessionItem: transactionItem.item.isConcessionItem,
+              category: transactionItem.item.category,
+            })),
+          };
+        })
+        .filter((transaction) => transaction !== null);
+
+      // Get all unique user IDs for username lookup
+      const allUserIds = [
+        ...new Set([
+          ...processedTransactions.map((t) => t.createdBy),
+          ...processedTransactions
+            .filter((t) => t.voidedBy)
+            .map((t) => t.voidedBy!),
+        ]),
+      ];
 
       const users = await clerkClient.users
         .getUserList({
-          userId: tranItemLinks.map((l) => l.createdBy),
+          userId: allUserIds,
           limit: 500,
         })
         .then((res) => res.filter(filterUserForClient));
 
+      // Calculate totals (excluding voided transactions for active totals)
       let admissionTotal = 0;
       let concessionTotal = 0;
       let admissionCount = 0;
       let concessionCount = 0;
-      tranItemLinks.forEach((l) => {
-        if (l.item.isAdmissionItem) {
-          admissionTotal += l.amountSold * l.item.sellingPrice;
-          admissionCount += l.amountSold;
-        } else if (l.item.isConcessionItem) {
-          concessionTotal += l.amountSold * l.item.sellingPrice;
-          concessionCount += l.amountSold;
+      let voidedAdmissionTotal = 0;
+      let voidedConcessionTotal = 0;
+      let voidedAdmissionCount = 0;
+      let voidedConcessionCount = 0;
+
+      processedTransactions.forEach((transaction) => {
+        transaction.items.forEach((item) => {
+          if (item.isAdmissionItem) {
+            if (transaction.isVoided) {
+              voidedAdmissionTotal += item.lineTotal;
+              voidedAdmissionCount += item.amountSold;
+            } else {
+              admissionTotal += item.lineTotal;
+              admissionCount += item.amountSold;
+            }
+          } else if (item.isConcessionItem) {
+            if (transaction.isVoided) {
+              voidedConcessionTotal += item.lineTotal;
+              voidedConcessionCount += item.amountSold;
+            } else {
+              concessionTotal += item.lineTotal;
+              concessionCount += item.amountSold;
+            }
+          }
+        });
+
+        // Update usernames
+        transaction.createdBy =
+          users.find((u) => u.id === transaction.createdBy)?.username ??
+          transaction.createdBy;
+        if (transaction.voidedBy) {
+          transaction.voidedBy =
+            users.find((u) => u.id === transaction.voidedBy)?.username ??
+            transaction.voidedBy;
         }
-        // Warning: improper use of field for UI
-        l.createdBy =
-          users.find((u) => u.id === l.createdBy)?.username ?? l.createdBy;
       });
 
       // Admission Report
@@ -220,12 +302,20 @@ export const reportsRouter = createTRPCRouter({
           ? {
               startDate: input.purchaseReport?.startDate,
               endDate: input.purchaseReport?.endDate,
-              transactions: tranItemLinks,
+              transactions: processedTransactions,
               summary: {
                 admissionTotal,
                 admissionCount,
                 concessionTotal,
                 concessionCount,
+                voidedAdmissionTotal,
+                voidedConcessionTotal,
+                voidedAdmissionCount,
+                voidedConcessionCount,
+                totalTransactions: processedTransactions.length,
+                voidedTransactions: processedTransactions.filter(
+                  (t) => t.isVoided,
+                ).length,
               },
             }
           : null,

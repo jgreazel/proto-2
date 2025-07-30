@@ -52,7 +52,7 @@ export const PurchaseReportTable = forwardRef<
       </div>
 
       {/* Summary Metrics */}
-      <div className="grid grid-cols-1 gap-6 print:grid-cols-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 print:grid-cols-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center">
             <div className="rounded-lg bg-blue-50 p-3">
@@ -72,10 +72,42 @@ export const PurchaseReportTable = forwardRef<
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">
-                Total Concessions
+                Active Revenue
               </p>
               <p className="text-2xl font-semibold text-gray-900">
-                {data?.summary.concessionCount}
+                {dbUnitToDollars(data?.summary.concessionTotal ?? 0)}
+              </p>
+              <p className="text-xs text-gray-500">
+                {data?.summary.concessionCount} items
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center">
+            <div className="rounded-lg bg-red-50 p-3">
+              <svg
+                className="h-6 w-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+                />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Voided Sales</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {dbUnitToDollars(data?.summary.voidedConcessionTotal ?? 0)}
+              </p>
+              <p className="text-xs text-gray-500">
+                {data?.summary.voidedConcessionCount} items voided
               </p>
             </div>
           </div>
@@ -94,14 +126,19 @@ export const PurchaseReportTable = forwardRef<
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Transactions
+              </p>
               <p className="text-2xl font-semibold text-gray-900">
-                {dbUnitToDollars(data?.summary.concessionTotal ?? 0)}
+                {data?.summary.totalTransactions ?? 0}
+              </p>
+              <p className="text-xs text-gray-500">
+                {data?.summary.voidedTransactions ?? 0} voided
               </p>
             </div>
           </div>
@@ -120,15 +157,19 @@ export const PurchaseReportTable = forwardRef<
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
                 />
               </svg>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Transactions</p>
+              <p className="text-sm font-medium text-gray-600">Net Revenue</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {data?.transactions.length}
+                {dbUnitToDollars(
+                  (data?.summary.concessionTotal ?? 0) -
+                    (data?.summary.voidedConcessionTotal ?? 0),
+                )}
               </p>
+              <p className="text-xs text-gray-500">After voids</p>
             </div>
           </div>
         </div>
@@ -149,56 +190,100 @@ export const PurchaseReportTable = forwardRef<
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Product
+                  Transaction ID
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Quantity
+                  Items
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Amount
+                  Total
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Time
+                  Date & Time
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Cashier
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Type
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Void Info
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {data?.transactions.map((t, index) => (
+              {data?.transactions.map((transaction, index) => (
                 <tr
-                  key={t.transactionId}
-                  className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                  key={transaction.id}
+                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
+                    transaction.isVoided ? "opacity-75" : ""
+                  }`}
                 >
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                    {t.item.label}
+                  <td className="whitespace-nowrap px-6 py-4 font-mono text-sm text-gray-900">
+                    #{transaction.id.slice(-8)}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                    {t.amountSold}
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <div className="space-y-1">
+                      {transaction.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span>
+                            {item.amountSold}x {item.label}
+                          </span>
+                          <span className="font-medium">
+                            {dbUnitToDollars(item.lineTotal)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                    {dbUnitToDollars(t.amountSold * t.item.sellingPrice)}
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-gray-900">
+                    {dbUnitToDollars(transaction.total)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {dayjs(t.createdAt).format("MMM DD, YYYY")}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {dayjs(t.createdAt).format("h:mm A")}
+                    <div>
+                      <div>
+                        {dayjs(transaction.createdAt).format("MMM DD, YYYY")}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {dayjs(transaction.createdAt).format("h:mm A")}
+                      </div>
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm capitalize text-gray-600">
-                    {t.createdBy}
+                    {transaction.createdBy}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
-                    <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                      Concession
-                    </span>
+                    {transaction.isVoided ? (
+                      <span className="inline-flex rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                        VOIDED
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                        Completed
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {transaction.isVoided ? (
+                      <div className="space-y-1">
+                        <div className="text-xs">
+                          <strong>Voided by:</strong> {transaction.voidedBy}
+                        </div>
+                        <div className="text-xs">
+                          <strong>Date:</strong>{" "}
+                          {dayjs(transaction.voidedAt).format("MMM DD, h:mm A")}
+                        </div>
+                        <div className="text-xs">
+                          <strong>Reason:</strong>{" "}
+                          <span className="italic">
+                            {transaction.voidReason}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))}
