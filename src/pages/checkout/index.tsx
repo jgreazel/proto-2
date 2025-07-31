@@ -123,17 +123,17 @@ const RecentSales = () => {
         <div className="space-y-3">
           {completedSales.map((sale) => (
             <div
-              key={sale.id}
+              key={sale!.id}
               className="rounded-lg border border-base-300 bg-base-100 p-3 shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="mb-2 flex items-center gap-3">
                     <div className="rounded bg-base-200 px-2 py-1 font-mono text-xs text-base-content/60">
-                      #{sale.id.slice(-8)}
+                      #{sale!.id.slice(-8)}
                     </div>
                     <div className="text-sm text-base-content/70">
-                      {dayjs(sale.createdAt).format("MMM DD, h:mm A")}
+                      {dayjs(sale!.createdAt).format("MMM DD, h:mm A")}
                     </div>
                     <div className="badge badge-success badge-xs">
                       Completed
@@ -143,13 +143,13 @@ const RecentSales = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="text-lg font-semibold text-success">
-                        {dbUnitToDollars(sale.total)}
+                        {dbUnitToDollars(sale!.total)}
                       </div>
                       <div className="text-sm text-base-content/60">
-                        {sale.items.map((item, idx) => (
+                        {sale!.items.map((item, idx) => (
                           <span key={idx}>
                             {item.amountSold}x {item.label}
-                            {idx < sale.items.length - 1 ? ", " : ""}
+                            {idx < sale!.items.length - 1 ? ", " : ""}
                           </span>
                         ))}
                       </div>
@@ -161,7 +161,7 @@ const RecentSales = () => {
                 <div className="ml-4">
                   <button
                     className="btn btn-error btn-sm gap-2"
-                    onClick={() => handleVoidClick(sale.id)}
+                    onClick={() => handleVoidClick(sale!.id)}
                     disabled={isVoiding}
                   >
                     <svg

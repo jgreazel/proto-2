@@ -215,17 +215,17 @@ export const PurchaseReportTable = forwardRef<
             <tbody className="divide-y divide-gray-200 bg-white">
               {data?.transactions.map((transaction, index) => (
                 <tr
-                  key={transaction.id}
+                  key={transaction!.id}
                   className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
-                    transaction.isVoided ? "opacity-75" : ""
+                    transaction!.isVoided ? "opacity-75" : ""
                   }`}
                 >
                   <td className="whitespace-nowrap px-6 py-4 font-mono text-sm text-gray-900">
-                    #{transaction.id.slice(-8)}
+                    #{transaction!.id.slice(-8)}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="space-y-1">
-                      {transaction.items.map((item, idx) => (
+                      {transaction!.items.map((item, idx) => (
                         <div key={idx} className="flex justify-between">
                           <span>
                             {item.amountSold}x {item.label}
@@ -238,23 +238,23 @@ export const PurchaseReportTable = forwardRef<
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-gray-900">
-                    {dbUnitToDollars(transaction.total)}
+                    {dbUnitToDollars(transaction!.total)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
                     <div>
                       <div>
-                        {dayjs(transaction.createdAt).format("MMM DD, YYYY")}
+                        {dayjs(transaction!.createdAt).format("MMM DD, YYYY")}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {dayjs(transaction.createdAt).format("h:mm A")}
+                        {dayjs(transaction!.createdAt).format("h:mm A")}
                       </div>
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm capitalize text-gray-600">
-                    {transaction.createdBy}
+                    {transaction!.createdBy}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
-                    {transaction.isVoided ? (
+                    {transaction!.isVoided ? (
                       <span className="inline-flex rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
                         VOIDED
                       </span>
@@ -265,19 +265,21 @@ export const PurchaseReportTable = forwardRef<
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {transaction.isVoided ? (
+                    {transaction!.isVoided ? (
                       <div className="space-y-1">
                         <div className="text-xs">
-                          <strong>Voided by:</strong> {transaction.voidedBy}
+                          <strong>Voided by:</strong> {transaction!.voidedBy}
                         </div>
                         <div className="text-xs">
                           <strong>Date:</strong>{" "}
-                          {dayjs(transaction.voidedAt).format("MMM DD, h:mm A")}
+                          {dayjs(transaction!.voidedAt).format(
+                            "MMM DD, h:mm A",
+                          )}
                         </div>
                         <div className="text-xs">
                           <strong>Reason:</strong>{" "}
                           <span className="italic">
-                            {transaction.voidReason}
+                            {transaction!.voidReason}
                           </span>
                         </div>
                       </div>
@@ -764,9 +766,9 @@ export const ItemChangeLogTable = forwardRef<
                   <td className="px-6 py-4 text-sm text-gray-600">
                     <div
                       className="max-w-xs truncate"
-                      title={log.changeNote || "No note provided"}
+                      title={log.changeNote ?? "No note provided"}
                     >
-                      {log.changeNote || "No note provided"}
+                      {log.changeNote ?? "No note provided"}
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">

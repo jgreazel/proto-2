@@ -1,27 +1,10 @@
 import { clerkClient } from "@clerk/nextjs";
 import { z } from "zod";
-import dayjs from "dayjs";
 
 import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
 // import inRateWindow from "../helpers/inRateWindow";
-
-const MS_IN_HOUR = 1000 * 60 * 60;
-
-type Shift = {
-  userId: string;
-  clockIn: Date;
-  clockOut?: Date;
-  rate: number;
-};
-type Timecard = {
-  user: { id: string; username: string };
-  period: [start: Date, end: Date];
-  totalWorkedMs: number;
-  totalEarned: number;
-  shifts: Shift[];
-}[];
 
 export const reportsRouter = createTRPCRouter({
   // todo: only query db if input params dictate so
@@ -136,10 +119,10 @@ export const reportsRouter = createTRPCRouter({
       // Get all unique user IDs for username lookup
       const allUserIds = [
         ...new Set([
-          ...processedTransactions.map((t) => t.createdBy),
+          ...processedTransactions.map((t) => t!.createdBy),
           ...processedTransactions
-            .filter((t) => t.voidedBy)
-            .map((t) => t.voidedBy!),
+            .filter((t) => t!.voidedBy)
+            .map((t) => t!.voidedBy!),
         ]),
       ];
 
@@ -161,9 +144,9 @@ export const reportsRouter = createTRPCRouter({
       let voidedConcessionCount = 0;
 
       processedTransactions.forEach((transaction) => {
-        transaction.items.forEach((item) => {
+        transaction!.items.forEach((item) => {
           if (item.isAdmissionItem) {
-            if (transaction.isVoided) {
+            if (transaction!.isVoided) {
               voidedAdmissionTotal += item.lineTotal;
               voidedAdmissionCount += item.amountSold;
             } else {
@@ -171,7 +154,7 @@ export const reportsRouter = createTRPCRouter({
               admissionCount += item.amountSold;
             }
           } else if (item.isConcessionItem) {
-            if (transaction.isVoided) {
+            if (transaction!.isVoided) {
               voidedConcessionTotal += item.lineTotal;
               voidedConcessionCount += item.amountSold;
             } else {
@@ -182,13 +165,13 @@ export const reportsRouter = createTRPCRouter({
         });
 
         // Update usernames
-        transaction.createdBy =
-          users.find((u) => u.id === transaction.createdBy)?.username ??
-          transaction.createdBy;
-        if (transaction.voidedBy) {
-          transaction.voidedBy =
-            users.find((u) => u.id === transaction.voidedBy)?.username ??
-            transaction.voidedBy;
+        transaction!.createdBy =
+          users.find((u) => u.id === transaction!.createdBy)?.username ??
+          transaction!.createdBy;
+        if (transaction!.voidedBy) {
+          transaction!.voidedBy =
+            users.find((u) => u.id === transaction!.voidedBy)?.username ??
+            transaction!.voidedBy;
         }
       });
 
@@ -272,13 +255,14 @@ export const reportsRouter = createTRPCRouter({
 
       itemChangeLogs.forEach((log) => {
         // Warning: improper use of field for UI - following existing pattern
-        (log as any).userId =
+        (log as typeof log & { userId: string }).userId =
           changeLogUsers.find((u) => u.id === log.userId)?.username ??
           log.userId;
       });
 
       // Calculate summary statistics
       const totalChanges = itemChangeLogs.length;
+      /* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
       const priceChanges = itemChangeLogs.filter(
         (log) =>
           log.changeNote?.toLowerCase().includes("price") ||
@@ -295,6 +279,7 @@ export const reportsRouter = createTRPCRouter({
             JSON.stringify(log.oldValues).includes("inStock")) ||
           JSON.stringify(log.newValues).includes("inStock"),
       ).length;
+      /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
       const otherChanges = totalChanges - priceChanges - stockChanges;
 
       return {
@@ -314,7 +299,7 @@ export const reportsRouter = createTRPCRouter({
                 voidedConcessionCount,
                 totalTransactions: processedTransactions.length,
                 voidedTransactions: processedTransactions.filter(
-                  (t) => t.isVoided,
+                  (t) => t!.isVoided,
                 ).length,
               },
             }
