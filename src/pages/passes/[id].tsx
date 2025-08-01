@@ -22,14 +22,14 @@ const PatronsList = (props: {
 }) => {
   if (!props.patrons.length) {
     return (
-      <div className="text-center py-8 text-base-content/60">
+      <div className="py-8 text-center text-base-content/60">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="h-12 w-12 mx-auto mb-2 opacity-50"
+          className="mx-auto mb-2 h-12 w-12 opacity-50"
         >
           <path
             strokeLinecap="round"
@@ -48,13 +48,14 @@ const PatronsList = (props: {
       {props.patrons.map((patron) => (
         <div
           key={patron.id}
-          className="flex items-center justify-between bg-base-200/50 rounded-lg p-4"
+          className="flex items-center justify-between rounded-lg bg-base-200/50 p-4"
         >
           <div className="flex items-center gap-3">
             <div className="avatar placeholder">
-              <div className="bg-neutral text-neutral-content rounded-full w-10">
+              <div className="w-10 rounded-full bg-neutral text-neutral-content">
                 <span className="text-sm">
-                  {patron.firstName.charAt(0)}{patron.lastName.charAt(0)}
+                  {patron.firstName.charAt(0)}
+                  {patron.lastName.charAt(0)}
                 </span>
               </div>
             </div>
@@ -65,8 +66,7 @@ const PatronsList = (props: {
               <div className="text-sm text-base-content/70">
                 {patron.birthDate
                   ? `${
-                      new Date().getFullYear() -
-                      patron.birthDate.getFullYear()
+                      new Date().getFullYear() - patron.birthDate.getFullYear()
                     } years old`
                   : "Age not specified"}
               </div>
@@ -105,14 +105,15 @@ const AddPatronForm = (props: {
 }) => {
   const [showForm, setShowForm] = useState(false);
 
-  const { mutate: createPatron, isLoading } = api.passes.createPatron.useMutation({
-    onSuccess: () => {
-      toast.success("Patron added successfully!");
-      setShowForm(false);
-      props.onPatronAdded();
-    },
-    onError: handleApiError,
-  });
+  const { mutate: createPatron, isLoading } =
+    api.passes.createPatron.useMutation({
+      onSuccess: () => {
+        toast.success("Patron added successfully!");
+        setShowForm(false);
+        props.onPatronAdded();
+      },
+      onError: handleApiError,
+    });
 
   const onSubmit = (data: PatronFormData) => {
     createPatron({
@@ -148,8 +149,8 @@ const AddPatronForm = (props: {
   }
 
   return (
-    <div className="border border-primary/20 rounded-lg p-4 bg-base-100">
-      <div className="flex items-center justify-between mb-4">
+    <div className="rounded-lg border border-primary/20 bg-base-100 p-4">
+      <div className="mb-4 flex items-center justify-between">
         <h4 className="font-semibold">Add New Family Member</h4>
         <button
           onClick={() => setShowForm(false)}
@@ -195,16 +196,12 @@ function SinglePassPage() {
 
   const router = useRouter();
 
-  const {
-    register,
-    handleSubmit,
-    formState,
-    reset,
-  } = useForm<SeasonPassFormData>({
-    defaultValues: {
-      label: data?.label,
-    },
-  });
+  const { register, handleSubmit, formState, reset } =
+    useForm<SeasonPassFormData>({
+      defaultValues: {
+        label: data?.label,
+      },
+    });
 
   useEffect(() => {
     if (data) {
@@ -257,18 +254,14 @@ function SinglePassPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="mx-auto max-w-4xl p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <div className="breadcrumbs text-sm">
-              <ul>
-                <li><Link href="/passes">Season Passes</Link></li>
-                <li>{isEditing ? data?.label ?? 'Loading...' : 'New Pass'}</li>
-              </ul>
-            </div>
             <h1 className="text-3xl font-bold text-base-content">
-              {isEditing ? `Manage ${data?.label ?? 'Pass'}` : 'Create New Season Pass'}
+              {isEditing
+                ? `Manage ${data?.label ?? "Pass"}`
+                : "Create New Season Pass"}
             </h1>
           </div>
           <Link href="/passes" className="btn btn-ghost">
@@ -293,13 +286,13 @@ function SinglePassPage() {
         {isReallyLoading ? (
           <LoadingPage />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6 lg:col-span-2">
               {/* Pass Details Card */}
               <div className="card bg-base-100 shadow-lg">
                 <div className="card-body">
-                  <h2 className="card-title text-xl mb-4">
+                  <h2 className="card-title mb-4 text-xl">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
@@ -319,7 +312,9 @@ function SinglePassPage() {
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text font-medium">Family Name / Pass Label</span>
+                        <span className="label-text font-medium">
+                          Family Name / Pass Label
+                        </span>
                       </label>
                       <input
                         {...register("label", { required: true })}
@@ -328,7 +323,9 @@ function SinglePassPage() {
                         disabled={isMutating}
                       />
                       <label className="label">
-                        <span className="label-text-alt">This will be the display name for the pass</span>
+                        <span className="label-text-alt">
+                          This will be the display name for the pass
+                        </span>
                       </label>
                     </div>
                     <div className="flex justify-end gap-2">
@@ -357,7 +354,7 @@ function SinglePassPage() {
               {isEditing && (
                 <div className="card bg-base-100 shadow-lg">
                   <div className="card-body">
-                    <h2 className="card-title text-xl mb-4">
+                    <h2 className="card-title mb-4 text-xl">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
@@ -374,10 +371,16 @@ function SinglePassPage() {
                       </svg>
                       Family Members ({data?.patrons.length ?? 0})
                     </h2>
-                    
+
                     <div className="space-y-4">
-                      <PatronsList patrons={data?.patrons ?? []} isEditing={isEditing} />
-                      <AddPatronForm passId={id()} onPatronAdded={handlePatronAdded} />
+                      <PatronsList
+                        patrons={data?.patrons ?? []}
+                        isEditing={isEditing}
+                      />
+                      <AddPatronForm
+                        passId={id()}
+                        onPatronAdded={handlePatronAdded}
+                      />
                     </div>
                   </div>
                 </div>
@@ -394,26 +397,36 @@ function SinglePassPage() {
                     <div className="stats stats-vertical">
                       <div className="stat">
                         <div className="stat-title">Total Members</div>
-                        <div className="stat-value text-2xl">{data.patrons.length}</div>
+                        <div className="stat-value text-2xl">
+                          {data.patrons.length}
+                        </div>
                       </div>
                       <div className="stat">
                         <div className="stat-title">Adults</div>
                         <div className="stat-value text-2xl">
-                          {data.patrons.filter(p => {
-                            if (!p.birthDate) return true;
-                            const age = new Date().getFullYear() - p.birthDate.getFullYear();
-                            return age >= 18;
-                          }).length}
+                          {
+                            data.patrons.filter((p) => {
+                              if (!p.birthDate) return true;
+                              const age =
+                                new Date().getFullYear() -
+                                p.birthDate.getFullYear();
+                              return age >= 18;
+                            }).length
+                          }
                         </div>
                       </div>
                       <div className="stat">
                         <div className="stat-title">Children</div>
                         <div className="stat-value text-2xl">
-                          {data.patrons.filter(p => {
-                            if (!p.birthDate) return false;
-                            const age = new Date().getFullYear() - p.birthDate.getFullYear();
-                            return age < 18;
-                          }).length}
+                          {
+                            data.patrons.filter((p) => {
+                              if (!p.birthDate) return false;
+                              const age =
+                                new Date().getFullYear() -
+                                p.birthDate.getFullYear();
+                              return age < 18;
+                            }).length
+                          }
                         </div>
                       </div>
                     </div>
@@ -422,7 +435,7 @@ function SinglePassPage() {
               )}
 
               {/* Help Card */}
-              <div className="card bg-info/10 border border-info/20">
+              <div className="card border border-info/20 bg-info/10">
                 <div className="card-body">
                   <h3 className="card-title text-info">
                     <svg
@@ -441,9 +454,11 @@ function SinglePassPage() {
                     </svg>
                     Tips
                   </h3>
-                  <ul className="text-sm space-y-2">
+                  <ul className="space-y-2 text-sm">
                     <li>• Add all family members who will use this pass</li>
-                    <li>• Include birth dates for accurate age-based pricing</li>
+                    <li>
+                      • Include birth dates for accurate age-based pricing
+                    </li>
                     <li>• Each family member can be edited individually</li>
                     <li>• Season passes are valid for one full year</li>
                   </ul>

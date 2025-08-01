@@ -18,7 +18,7 @@ function PassesPage() {
   const { data, isLoading } = api.passes.getAll.useQuery();
   const [filter, setFilter] = useState("");
   const [showNewPassForm, setShowNewPassForm] = useState(false);
-  const [expandedPass, setExpandedPass] = useState<string | null>(null);
+  const [expandedPasses, setExpandedPasses] = useState<Set<string>>(new Set());
 
   const filteredPasses = data?.filter((d) => filterPasses(d, filter));
 
@@ -49,7 +49,15 @@ function PassesPage() {
   };
 
   const togglePassExpansion = (passId: string) => {
-    setExpandedPass(expandedPass === passId ? null : passId);
+    setExpandedPasses((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(passId)) {
+        newSet.delete(passId);
+      } else {
+        newSet.add(passId);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -219,7 +227,7 @@ function PassesPage() {
                             strokeWidth={1.5}
                             stroke="currentColor"
                             className={`h-5 w-5 transition-transform ${
-                              expandedPass === pass.id ? "rotate-180" : ""
+                              expandedPasses.has(pass.id) ? "rotate-180" : ""
                             }`}
                           >
                             <path
@@ -228,7 +236,7 @@ function PassesPage() {
                               d="m19.5 8.25-7.5 7.5-7.5-7.5"
                             />
                           </svg>
-                          {expandedPass === pass.id ? "Collapse" : "Expand"}
+                          {expandedPasses.has(pass.id) ? "Collapse" : "Expand"}
                         </button>
                         <Link
                           href={`passes/${pass.id}`}
@@ -258,7 +266,10 @@ function PassesPage() {
                       <div className="mt-4">
                         <div className="mb-3 flex flex-wrap gap-2">
                           {pass.patrons
-                            .slice(0, expandedPass === pass.id ? undefined : 3)
+                            .slice(
+                              0,
+                              expandedPasses.has(pass.id) ? undefined : 3,
+                            )
                             .map((patron) => (
                               <div
                                 key={patron.id}
@@ -306,14 +317,15 @@ function PassesPage() {
                                 </Link>
                               </div>
                             ))}
-                          {!expandedPass && pass.patrons.length > 3 && (
-                            <button
-                              onClick={() => togglePassExpansion(pass.id)}
-                              className="flex items-center gap-1 rounded-lg bg-base-300 px-3 py-2 text-sm transition-colors hover:bg-base-200"
-                            >
-                              +{pass.patrons.length - 3} more
-                            </button>
-                          )}
+                          {!expandedPasses.has(pass.id) &&
+                            pass.patrons.length > 3 && (
+                              <button
+                                onClick={() => togglePassExpansion(pass.id)}
+                                className="flex items-center gap-1 rounded-lg bg-base-300 px-3 py-2 text-sm transition-colors hover:bg-base-200"
+                              >
+                                +{pass.patrons.length - 3} more
+                              </button>
+                            )}
                         </div>
                       </div>
                     )}

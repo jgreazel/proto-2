@@ -34,14 +34,6 @@ function SinglePatronPage() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <div className="breadcrumbs text-sm">
-              <ul>
-                <li>
-                  <Link href="/passes">Season Passes</Link>
-                </li>
-                <li>Edit Patron</li>
-              </ul>
-            </div>
             <h1 className="text-3xl font-bold text-base-content">
               Edit Patron Information
             </h1>
