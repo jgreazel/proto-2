@@ -117,6 +117,12 @@ model AdmissionEvent {
     createdAt DateTime @default(now())
     createdBy String
 
+    // Void tracking
+    isVoided   Boolean   @default(false)
+    voidedAt   DateTime?
+    voidedBy   String?
+    voidReason String?   @db.Text
+
     @@index([patronId])
 }
 

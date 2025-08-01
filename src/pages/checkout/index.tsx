@@ -16,45 +16,56 @@ type Item = RouterOutputs["items"]["getAll"][number]["item"];
 
 const TransactionHistory = () => {
   const [hoursBack, setHoursBack] = useState(24);
-  const [voidingTransaction, setVoidingTransaction] = useState<string | null>(
-    null,
-  );
+  const [voidingTransaction, setVoidingTransaction] = useState<{
+    id: string;
+    type: "purchase" | "admission";
+  } | null>(null);
   const [voidReason, setVoidReason] = useState("");
+  const [showVoided, setShowVoided] = useState(false);
 
   const {
     data: transactions,
     isLoading,
     refetch,
-  } = api.items.getCompletedSales.useQuery(
-    { hoursBack },
+  } = api.history.getAll.useQuery(
+    {
+      hoursBack,
+      includeVoided: showVoided,
+      type: "all",
+    },
     {
       onError: handleApiError,
     },
   );
 
   const { mutate: voidTransaction, isLoading: isVoiding } =
-    api.items.voidTransaction.useMutation({
+    api.history.voidTransaction.useMutation({
       onSuccess: (data) => {
-        toast.success(
-          `Transaction voided. Refund: ${dbUnitToDollars(data.refundAmount)}`,
-          {
-            duration: 5000,
-          },
-        );
+        if (data.refundAmount > 0) {
+          toast.success(
+            `Transaction voided. Refund: ${dbUnitToDollars(data.refundAmount)}`,
+            {
+              duration: 5000,
+            },
+          );
+        } else {
+          toast.success("Admission voided successfully", {
+            duration: 3000,
+          });
+        }
         setVoidingTransaction(null);
         setVoidReason("");
         void refetch();
       },
       onError: handleApiError,
     });
-
   const handleHoursBackChange = (hours: number) => {
     setHoursBack(hours);
     void refetch();
   };
 
-  const handleVoidClick = (transactionId: string) => {
-    setVoidingTransaction(transactionId);
+  const handleVoidClick = (id: string, type: "purchase" | "admission") => {
+    setVoidingTransaction({ id, type });
     setVoidReason("");
   };
 
@@ -62,7 +73,8 @@ const TransactionHistory = () => {
     if (!voidingTransaction || !voidReason.trim()) return;
 
     voidTransaction({
-      transactionId: voidingTransaction,
+      id: voidingTransaction.id,
+      type: voidingTransaction.type,
       voidReason: voidReason.trim(),
     });
   };
@@ -109,78 +121,117 @@ const TransactionHistory = () => {
               ))}
             </div>
           </div>
-          <div>
+          <div className="flex flex-col items-end gap-2">
             <div className="text-sm text-base-content/60">
               Showing transactions from last {hoursBack} hour
               {hoursBack !== 1 ? "s" : ""}
+            </div>
+            <div className="form-control">
+              <label className="label cursor-pointer">
+                <span className="label-text mr-2 text-sm">Show voided</span>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-sm"
+                  checked={showVoided}
+                  onChange={(e) => setShowVoided(e.target.checked)}
+                />
+              </label>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Sales List */}
+      {/* Transaction List */}
       {transactions && transactions.length > 0 ? (
         <div className="space-y-3">
           {transactions.map((transaction) => (
             <div
-              key={transaction!.id}
+              key={transaction.id}
               className="rounded-lg border border-base-300 bg-base-100 p-3 shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="mb-2 flex items-center gap-3">
                     <div className="rounded bg-base-200 px-2 py-1 font-mono text-xs text-base-content/60">
-                      #{transaction!.id.slice(-8)}
+                      #{transaction.id.slice(-8)}
                     </div>
                     <div className="text-sm text-base-content/70">
-                      {dayjs(transaction!.createdAt).format("MMM DD, h:mm A")}
+                      {dayjs(transaction.createdAt).format("MMM DD, h:mm A")}
                     </div>
-                    <div className="badge badge-success badge-xs">
-                      Completed
+                    <div
+                      className={`badge badge-xs ${
+                        transaction.type === "purchase"
+                          ? "badge-success"
+                          : "badge-info"
+                      }`}
+                    >
+                      {transaction.type === "purchase"
+                        ? "Purchase"
+                        : "Admission"}
                     </div>
+                    {transaction.isVoided && (
+                      <div className="badge badge-error badge-xs">Voided</div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="text-lg font-semibold text-success">
-                        {dbUnitToDollars(transaction!.total)}
-                      </div>
-                      <div className="text-sm text-base-content/60">
-                        {transaction!.items.map((item, idx) => (
-                          <span key={idx}>
-                            {item.amountSold}x {item.label}
-                            {idx < transaction!.items.length - 1 ? ", " : ""}
-                          </span>
-                        ))}
-                      </div>
+                      {transaction.type === "purchase" ? (
+                        <>
+                          <div className="text-lg font-semibold text-success">
+                            {dbUnitToDollars(transaction.total)}
+                          </div>
+                          <div className="text-sm text-base-content/60">
+                            {transaction.items.map((item, idx) => (
+                              <span key={idx}>
+                                {item.amountSold}x {item.label}
+                                {idx < transaction.items.length - 1 ? ", " : ""}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-lg font-semibold text-info">
+                            Check-in
+                          </div>
+                          <div className="text-sm text-base-content/60">
+                            {transaction.patronName} ({transaction.passLabel})
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Void Button */}
-                <div className="ml-4">
-                  <button
-                    className="btn btn-error btn-sm gap-2"
-                    onClick={() => handleVoidClick(transaction!.id)}
-                    disabled={isVoiding}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="h-4 w-4"
+                {!transaction.isVoided && (
+                  <div className="ml-4">
+                    <button
+                      className="btn btn-error btn-sm gap-2"
+                      onClick={() =>
+                        handleVoidClick(transaction.id, transaction.type)
+                      }
+                      disabled={isVoiding}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
-                      />
-                    </svg>
-                    {isVoiding ? "Voiding..." : "Void"}
-                  </button>
-                </div>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="h-4 w-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                        />
+                      </svg>
+                      {isVoiding ? "Voiding..." : "Void"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
