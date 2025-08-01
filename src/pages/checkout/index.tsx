@@ -473,6 +473,13 @@ const AdmissionFeed = () => {
     refetch,
   } = api.passes.getAdmissions.useQuery({
     range: [getStartOfDay(today), getEndOfDay(today)],
+    includeVoided: false, // Exclude voided admissions so people can check in again
+  });
+
+  // Also fetch voided admissions to show context
+  const { data: voidedEventData } = api.passes.getAdmissions.useQuery({
+    range: [getStartOfDay(today), getEndOfDay(today)],
+    includeVoided: true,
   });
   const { mutate, isLoading: isCreating } = api.passes.admitPatron.useMutation({
     onSuccess: async (data) => {
@@ -553,6 +560,9 @@ const AdmissionFeed = () => {
                   const isCheckedIn = eventData?.find(
                     (e) => e.patronId === p.id,
                   );
+                  const hasVoidedAdmission = voidedEventData?.find(
+                    (e) => e.patronId === p.id && e.isVoided,
+                  );
                   return (
                     <div
                       className="hover:bg-base-50 flex items-center justify-between p-4 transition-colors"
@@ -561,7 +571,11 @@ const AdmissionFeed = () => {
                       <div className="flex items-center gap-3">
                         <div
                           className={`h-3 w-3 rounded-full ${
-                            isCheckedIn ? "bg-success" : "bg-base-300"
+                            isCheckedIn
+                              ? "bg-success"
+                              : hasVoidedAdmission
+                              ? "bg-warning"
+                              : "bg-base-300"
                           }`}
                         />
                         <div>
@@ -569,9 +583,15 @@ const AdmissionFeed = () => {
                             {`${p.firstName} ${p.lastName}`}
                           </div>
                           <div className="text-sm text-base-content/60">
-                            {isCheckedIn
-                              ? "Already checked in today"
-                              : "Ready to check in"}
+                            {isCheckedIn ? (
+                              "Already checked in today"
+                            ) : hasVoidedAdmission ? (
+                              <span className="text-warning">
+                                Previous check-in was voided
+                              </span>
+                            ) : (
+                              "Ready to check in"
+                            )}
                           </div>
                         </div>
                       </div>

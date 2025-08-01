@@ -204,6 +204,7 @@ export const passesRouter = createTRPCRouter({
     .input(
       z.object({
         range: z.array(z.date()).refine((data) => data.length === 2),
+        includeVoided: z.boolean().default(false),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -215,6 +216,7 @@ export const passesRouter = createTRPCRouter({
             lte: input.range[1],
             gte: input.range[0],
           },
+          ...(input.includeVoided ? {} : { isVoided: { not: true } }),
         },
       });
     }),

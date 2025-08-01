@@ -497,6 +497,9 @@ export const AdmissionReportTable = forwardRef<
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Type
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
@@ -529,6 +532,11 @@ export const AdmissionReportTable = forwardRef<
                         {e.item.label}
                       </span>
                     </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                        Active
+                      </span>
+                    </td>
                   </tr>
                 ) : (
                   <tr
@@ -557,6 +565,17 @@ export const AdmissionReportTable = forwardRef<
                       <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
                         Member
                       </span>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      {e.isVoided ? (
+                        <span className="inline-flex rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                          Voided
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                          Active
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ),

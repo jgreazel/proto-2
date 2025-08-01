@@ -68,18 +68,20 @@ async function getPurchaseHistory(
 
   return transactions
     .map((transaction) => {
-      // Filter only concession items from this transaction
-      const concessionItems = transaction.items.filter(
-        (transactionItem) => transactionItem.item.isConcessionItem,
+      // Filter concession items and admission items from this transaction
+      const saleItems = transaction.items.filter(
+        (transactionItem) =>
+          transactionItem.item.isConcessionItem ||
+          transactionItem.item.isAdmissionItem,
       );
 
-      // Skip transactions with no concession items
-      if (concessionItems.length === 0) {
+      // Skip transactions with no sale items
+      if (saleItems.length === 0) {
         return null;
       }
 
-      // Calculate total for concession items only
-      const total = concessionItems.reduce(
+      // Calculate total for all sale items
+      const total = saleItems.reduce(
         (sum, transactionItem) =>
           sum + transactionItem.amountSold * transactionItem.item.sellingPrice,
         0,
@@ -95,11 +97,11 @@ async function getPurchaseHistory(
         voidedBy: transaction.voidedBy,
         voidReason: transaction.voidReason,
         total,
-        itemCount: concessionItems.reduce(
+        itemCount: saleItems.reduce(
           (sum, transactionItem) => sum + transactionItem.amountSold,
           0,
         ),
-        items: concessionItems.map((transactionItem) => ({
+        items: saleItems.map((transactionItem) => ({
           id: transactionItem.item.id,
           label: transactionItem.item.label,
           amountSold: transactionItem.amountSold,
@@ -187,21 +189,25 @@ async function voidPurchaseTransaction(
     });
   }
 
-  // Only void transactions with concession items
+  // Handle both concession items and admission items
   const concessionItems = transaction.items.filter(
     (transactionItem) => transactionItem.item.isConcessionItem,
   );
 
-  if (concessionItems.length === 0) {
+  const admissionItems = transaction.items.filter(
+    (transactionItem) => transactionItem.item.isAdmissionItem,
+  );
+
+  if (concessionItems.length === 0 && admissionItems.length === 0) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "Cannot void transactions without concession items",
+      message: "Cannot void transactions without concession or admission items",
     });
   }
 
   // Use a transaction to ensure all operations succeed or fail together
   const result = await db.$transaction(async (prisma) => {
-    // Restore inventory for concession items
+    // Restore inventory for concession items only (passes don't have inventory)
     for (const transactionItem of concessionItems) {
       await prisma.inventoryItem.update({
         where: { id: transactionItem.itemId },
@@ -224,8 +230,8 @@ async function voidPurchaseTransaction(
       },
     });
 
-    // Calculate refund amount
-    const refundAmount = concessionItems.reduce(
+    // Calculate refund amount for both item types
+    const refundAmount = [...concessionItems, ...admissionItems].reduce(
       (sum, transactionItem) =>
         sum + transactionItem.amountSold * transactionItem.item.sellingPrice,
       0,
