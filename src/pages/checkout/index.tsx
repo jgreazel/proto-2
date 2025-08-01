@@ -14,7 +14,7 @@ import isAuth from "~/components/isAuth";
 import dayjs from "dayjs";
 type Item = RouterOutputs["items"]["getAll"][number]["item"];
 
-const RecentSales = () => {
+const TransactionHistory = () => {
   const [hoursBack, setHoursBack] = useState(24);
   const [voidingTransaction, setVoidingTransaction] = useState<string | null>(
     null,
@@ -22,7 +22,7 @@ const RecentSales = () => {
   const [voidReason, setVoidReason] = useState("");
 
   const {
-    data: completedSales,
+    data: transactions,
     isLoading,
     refetch,
   } = api.items.getCompletedSales.useQuery(
@@ -111,7 +111,7 @@ const RecentSales = () => {
           </div>
           <div>
             <div className="text-sm text-base-content/60">
-              Showing sales from last {hoursBack} hour
+              Showing transactions from last {hoursBack} hour
               {hoursBack !== 1 ? "s" : ""}
             </div>
           </div>
@@ -119,21 +119,21 @@ const RecentSales = () => {
       </div>
 
       {/* Sales List */}
-      {completedSales && completedSales.length > 0 ? (
+      {transactions && transactions.length > 0 ? (
         <div className="space-y-3">
-          {completedSales.map((sale) => (
+          {transactions.map((transaction) => (
             <div
-              key={sale!.id}
+              key={transaction!.id}
               className="rounded-lg border border-base-300 bg-base-100 p-3 shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="mb-2 flex items-center gap-3">
                     <div className="rounded bg-base-200 px-2 py-1 font-mono text-xs text-base-content/60">
-                      #{sale!.id.slice(-8)}
+                      #{transaction!.id.slice(-8)}
                     </div>
                     <div className="text-sm text-base-content/70">
-                      {dayjs(sale!.createdAt).format("MMM DD, h:mm A")}
+                      {dayjs(transaction!.createdAt).format("MMM DD, h:mm A")}
                     </div>
                     <div className="badge badge-success badge-xs">
                       Completed
@@ -143,13 +143,13 @@ const RecentSales = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="text-lg font-semibold text-success">
-                        {dbUnitToDollars(sale!.total)}
+                        {dbUnitToDollars(transaction!.total)}
                       </div>
                       <div className="text-sm text-base-content/60">
-                        {sale!.items.map((item, idx) => (
+                        {transaction!.items.map((item, idx) => (
                           <span key={idx}>
                             {item.amountSold}x {item.label}
-                            {idx < sale!.items.length - 1 ? ", " : ""}
+                            {idx < transaction!.items.length - 1 ? ", " : ""}
                           </span>
                         ))}
                       </div>
@@ -161,7 +161,7 @@ const RecentSales = () => {
                 <div className="ml-4">
                   <button
                     className="btn btn-error btn-sm gap-2"
-                    onClick={() => handleVoidClick(sale!.id)}
+                    onClick={() => handleVoidClick(transaction!.id)}
                     disabled={isVoiding}
                   >
                     <svg
@@ -204,10 +204,10 @@ const RecentSales = () => {
             </svg>
           </div>
           <h3 className="mb-2 text-lg font-medium text-base-content">
-            No recent sales found
+            No recent transactions found
           </h3>
           <p className="text-base-content/60">
-            Completed sales from the last {hoursBack} hour
+            Transactions from the last {hoursBack} hour
             {hoursBack !== 1 ? "s" : ""} will appear here
           </p>
         </div>
@@ -221,7 +221,8 @@ const RecentSales = () => {
             <div className="mb-4">
               <p className="mb-2 text-sm text-base-content/70">
                 This will void the transaction and refund the customer.
-                Inventory will be restored.
+                Inventory will be restored for purchases, and admission events
+                will be reversed.
               </p>
               <p className="text-sm font-medium text-warning">
                 This action cannot be undone.
@@ -714,7 +715,7 @@ function CheckoutPage() {
               className={`tab ${mode === "recent" && "tab-active"}`}
               onClick={() => setMode("recent")}
             >
-              Recent Sales
+              History
             </a>
           </div>
         </div>
@@ -988,16 +989,16 @@ function CheckoutPage() {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h4.125M8.25 8.25V6.108"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
                     />
                   </svg>
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-base-content">
-                    Recent Sales
+                    Transaction History
                   </h2>
                   <p className="text-sm text-base-content/60">
-                    View and void recent concession sales
+                    View and revert recent purchases and admission events
                   </p>
                 </div>
               </div>
@@ -1021,15 +1022,15 @@ function CheckoutPage() {
                   </svg>
                   <div>
                     <p className="text-sm font-medium text-warning">
-                      Voiding sales:
+                      Voiding transactions:
                     </p>
                     <ul className="mt-1 space-y-1 text-sm text-base-content/70">
                       <li>
-                        • Voiding will refund the sale and restore inventory
+                        • Voiding purchases will refund the sale and restore
+                        inventory
                       </li>
                       <li>
-                        • Only concession items can be voided (admission passes
-                        cannot)
+                        • Voiding admissions will remove the check-in record
                       </li>
                       <li>• This action cannot be undone</li>
                     </ul>
@@ -1040,7 +1041,7 @@ function CheckoutPage() {
 
             {/* Recent Sales Interface */}
             <div className="rounded-lg border border-base-300 bg-base-100 shadow-lg">
-              <RecentSales />
+              <TransactionHistory />
             </div>
           </div>
         </div>
