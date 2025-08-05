@@ -75,8 +75,40 @@ function HomePage() {
                       <div className="stat-value text-primary">
                         $
                         {(
+                          ((todayStats?.purchaseReport?.summary
+                            .concessionTotal ?? 0) +
+                            (todayStats?.admissionReport?.admissionEvents
+                              .filter((x) => x.type === "transaction")
+                              .reduce(
+                                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                                // @ts-ignore
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+                                (sum, x) =>
+                                  sum + x.amountSold * x.item.sellingPrice,
+                                0,
+                              ) ?? 0)) /
+                          100
+                        ).toFixed(2)}
+                      </div>
+                      <div className="stat-desc">
+                        Concessions: $
+                        {(
                           (todayStats?.purchaseReport?.summary
                             .concessionTotal ?? 0) / 100
+                        ).toFixed(2)}
+                        <br />
+                        Admissions: $
+                        {(
+                          (todayStats?.admissionReport?.admissionEvents
+                            .filter((x) => x.type === "transaction")
+                            .reduce(
+                              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                              // @ts-ignore
+                              // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+                              (sum, x) =>
+                                sum + x.amountSold * x.item.sellingPrice,
+                              0,
+                            ) ?? 0) / 100
                         ).toFixed(2)}
                       </div>
                     </div>
