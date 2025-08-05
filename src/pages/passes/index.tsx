@@ -6,9 +6,10 @@ import { useState } from "react";
 import filterPasses from "~/helpers/filterPasses";
 import PeopleGrid from "~/components/peopleGrid";
 import isAuth from "~/components/isAuth";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 import handleApiError from "~/helpers/handleApiError";
+import { SeasonTypeahead } from "~/components/seasonTypeahead";
 
 type PassFormData = {
   label: string;
@@ -16,6 +17,8 @@ type PassFormData = {
 };
 
 function PassesPage() {
+  const currentYear = new Date().getFullYear().toString();
+
   const [filter, setFilter] = useState("");
   const [showNewPassForm, setShowNewPassForm] = useState(false);
   const [expandedPasses, setExpandedPasses] = useState<Set<string>>(new Set());
@@ -56,10 +59,11 @@ function PassesPage() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { isValid, isDirty },
   } = useForm<PassFormData>({
     defaultValues: {
-      season: new Date().getFullYear().toString(),
+      season: currentYear,
     },
   });
 
@@ -230,12 +234,21 @@ function PassesPage() {
                         className="input input-bordered flex-1"
                         disabled={isCreating}
                       />
-                      <input
-                        {...register("season", { required: true })}
-                        placeholder="Season (e.g., 2025)"
-                        className="input input-bordered w-32"
-                        disabled={isCreating}
-                      />
+                      <div className="w-32">
+                        <Controller
+                          name="season"
+                          control={control}
+                          rules={{ required: true }}
+                          render={({ field }) => (
+                            <SeasonTypeahead
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Season"
+                              disabled={isCreating}
+                            />
+                          )}
+                        />
+                      </div>
                       <button
                         type="submit"
                         disabled={!isValid || !isDirty || isCreating}

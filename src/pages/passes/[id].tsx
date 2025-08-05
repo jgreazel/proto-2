@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 
 import { type RouterOutputs, api } from "~/utils/api";
@@ -10,9 +10,11 @@ import handleApiError from "~/helpers/handleApiError";
 import PatronForm, { type PatronFormData } from "~/components/patronForm";
 import { PageLayout } from "~/components/layout";
 import isAuth from "~/components/isAuth";
+import { SeasonTypeahead } from "~/components/seasonTypeahead";
 
 type SeasonPassFormData = {
   label: string;
+  season: string;
 };
 
 // Simple patron management component
@@ -194,20 +196,36 @@ function SinglePassPage() {
   );
   const isReallyLoading = isLoading && isEditing;
 
+  // Get user settings to check if admin
+  const { data: userSettings } = api.profile.getSettingsByUser.useQuery();
+  const isAdmin = userSettings?.isAdmin ?? false;
+
   const router = useRouter();
 
-  const { register, handleSubmit, formState, reset } =
+  const currentYear = new Date().getFullYear().toString();
+
+  const { register, handleSubmit, formState, reset, control } =
     useForm<SeasonPassFormData>({
       defaultValues: {
-        label: data?.label,
+        label: "",
+        season: currentYear,
       },
     });
 
   useEffect(() => {
     if (data) {
-      reset({ label: data.label });
+      reset({
+        label: data.label,
+        season: data.season,
+      });
+    } else if (!isEditing) {
+      // For new passes, ensure we always start with current year
+      reset({
+        label: "",
+        season: currentYear,
+      });
     }
-  }, [data, reset]);
+  }, [data, reset, isEditing, currentYear]);
 
   const ctx = api.useUtils();
 
@@ -328,6 +346,51 @@ function SinglePassPage() {
                         </span>
                       </label>
                     </div>
+
+                    {/* Season Field - Admin Only */}
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">
+                          Season Year
+                          {!isAdmin && (
+                            <span className="badge badge-secondary badge-sm ml-2">
+                              Admin Only
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                      {isAdmin ? (
+                        <Controller
+                          control={control}
+                          name="season"
+                          rules={{ required: true }}
+                          render={({ field }) => (
+                            <SeasonTypeahead
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Ex: 2025, 2026..."
+                              disabled={isMutating}
+                              className="input input-bordered"
+                            />
+                          )}
+                        />
+                      ) : (
+                        <input
+                          {...register("season")}
+                          className="input input-bordered"
+                          disabled={true}
+                          placeholder="Contact admin to change season"
+                        />
+                      )}
+                      <label className="label">
+                        <span className="label-text-alt">
+                          {isAdmin
+                            ? "Type to see suggestions or enter a custom year"
+                            : "Only admins can modify the season year"}
+                        </span>
+                      </label>
+                    </div>
+
                     <div className="flex justify-end gap-2">
                       <Link href="/passes" className="btn btn-ghost">
                         Cancel
@@ -461,6 +524,12 @@ function SinglePassPage() {
                     </li>
                     <li>• Each family member can be edited individually</li>
                     <li>• Season passes are valid for one full year</li>
+                    {isAdmin && (
+                      <li>
+                        • As an admin, you can modify the season year with
+                        typeahead suggestions
+                      </li>
+                    )}
                   </ul>
                 </div>
               </div>
