@@ -61,6 +61,7 @@ model SeasonPass {
     // invItemId String
 
     label              String    @default("Unlabeled Season Pass") @db.VarChar(255)
+    season             String    @default("2025") @db.VarChar(10)
     effectiveStartDate DateTime  @default(now())
     effectiveEndDate   DateTime?
 

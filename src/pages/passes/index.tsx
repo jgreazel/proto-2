@@ -12,13 +12,31 @@ import handleApiError from "~/helpers/handleApiError";
 
 type PassFormData = {
   label: string;
+  season: string;
 };
 
 function PassesPage() {
-  const { data, isLoading } = api.passes.getAll.useQuery();
   const [filter, setFilter] = useState("");
   const [showNewPassForm, setShowNewPassForm] = useState(false);
   const [expandedPasses, setExpandedPasses] = useState<Set<string>>(new Set());
+  const [selectedSeason, setSelectedSeason] = useState<string>("");
+
+  // Get user settings to check if admin
+  const { data: userSettings } = api.profile.getSettingsByUser.useQuery();
+  const isAdmin = userSettings?.isAdmin ?? false;
+
+  // Get available seasons for admin filtering
+  const { data: availableSeasons } = api.passes.getAllSeasons.useQuery(
+    undefined,
+    {
+      enabled: isAdmin,
+    },
+  );
+
+  // Get passes data with season filtering
+  const { data, isLoading } = api.passes.getAll.useQuery(
+    selectedSeason ? { season: selectedSeason } : undefined,
+  );
 
   const filteredPasses = data?.filter((d) => filterPasses(d, filter));
 
@@ -39,7 +57,11 @@ function PassesPage() {
     handleSubmit,
     reset,
     formState: { isValid, isDirty },
-  } = useForm<PassFormData>();
+  } = useForm<PassFormData>({
+    defaultValues: {
+      season: new Date().getFullYear().toString(),
+    },
+  });
 
   const onSubmit = (data: PassFormData) => {
     createPass({
@@ -124,6 +146,32 @@ function PassesPage() {
                   </svg>
                 </div>
               </div>
+
+              {/* Admin Season Filter */}
+              {isAdmin && availableSeasons && availableSeasons.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="season-filter"
+                    className="text-sm font-medium text-base-content/70"
+                  >
+                    Season:
+                  </label>
+                  <select
+                    id="season-filter"
+                    value={selectedSeason}
+                    onChange={(e) => setSelectedSeason(e.target.value)}
+                    className="select select-bordered select-sm"
+                  >
+                    <option value="">All Seasons</option>
+                    {availableSeasons.map((season) => (
+                      <option key={season} value={season}>
+                        {season}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <button
                 onClick={() => setShowNewPassForm(!showNewPassForm)}
                 className="btn btn-primary"
@@ -174,23 +222,28 @@ function PassesPage() {
                       </svg>
                     </button>
                   </div>
-                  <form
-                    onSubmit={handleSubmit(onSubmit)}
-                    className="flex gap-3"
-                  >
-                    <input
-                      {...register("label", { required: true })}
-                      placeholder="Family name (e.g., Johnson, Anderson)"
-                      className="input input-bordered flex-1"
-                      disabled={isCreating}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!isValid || !isDirty || isCreating}
-                      className="btn btn-primary"
-                    >
-                      {isCreating ? <LoadingSpinner /> : "Create Pass"}
-                    </button>
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="flex gap-3">
+                      <input
+                        {...register("label", { required: true })}
+                        placeholder="Family name (e.g., Johnson, Anderson)"
+                        className="input input-bordered flex-1"
+                        disabled={isCreating}
+                      />
+                      <input
+                        {...register("season", { required: true })}
+                        placeholder="Season (e.g., 2025)"
+                        className="input input-bordered w-32"
+                        disabled={isCreating}
+                      />
+                      <button
+                        type="submit"
+                        disabled={!isValid || !isDirty || isCreating}
+                        className="btn btn-primary"
+                      >
+                        {isCreating ? <LoadingSpinner /> : "Create Pass"}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </div>
@@ -209,7 +262,12 @@ function PassesPage() {
                     {/* Pass Header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <h2 className="card-title text-xl">{pass.label}</h2>
+                        <div>
+                          <h2 className="card-title text-xl">{pass.label}</h2>
+                          <div className="text-sm text-base-content/70">
+                            Season {pass.season}
+                          </div>
+                        </div>
                         <div className="badge badge-outline">
                           {pass.patrons.length}{" "}
                           {pass.patrons.length === 1 ? "patron" : "patrons"}
