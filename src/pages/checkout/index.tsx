@@ -464,8 +464,9 @@ const ItemFeed = (props: {
 type Patron = RouterOutputs["passes"]["getAll"][number]["patrons"][number];
 
 const AdmissionFeed = () => {
+  const currentYear = new Date().getFullYear().toString();
   const { data: passesData, isLoading: isFetchingPasses } =
-    api.passes.getAll.useQuery();
+    api.passes.getAll.useQuery({ season: currentYear });
   const today = new Date();
   const {
     data: eventData,

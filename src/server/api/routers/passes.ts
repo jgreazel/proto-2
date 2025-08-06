@@ -219,6 +219,71 @@ export const passesRouter = createTRPCRouter({
       return admission;
     }),
 
+  copySeasonPassToCurrentYear: privateProcedure
+    .input(
+      z.object({
+        passId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const createdById = ctx.userId;
+      const currentYear = new Date().getFullYear().toString();
+
+      // await inRateWindow(createdById);
+
+      // Get the original pass with patrons
+      const originalPass = await ctx.db.seasonPass.findUnique({
+        where: { id: input.passId },
+        include: { patrons: true },
+      });
+
+      if (!originalPass) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Season pass not found",
+        });
+      }
+
+      // Check if a pass with the same label already exists for current year
+      const existingPass = await ctx.db.seasonPass.findFirst({
+        where: {
+          label: originalPass.label,
+          season: currentYear,
+        },
+      });
+
+      if (existingPass) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `A pass with the name "${originalPass.label}" already exists for ${currentYear}`,
+        });
+      }
+
+      // Create new pass for current year
+      const newPass = await ctx.db.seasonPass.create({
+        data: {
+          label: originalPass.label,
+          season: currentYear,
+          createdBy: createdById,
+          effectiveStartDate: new Date(),
+          effectiveEndDate: addOneYear(new Date()),
+          patrons: {
+            createMany: {
+              data: originalPass.patrons.map((patron) => ({
+                firstName: patron.firstName,
+                lastName: patron.lastName,
+                birthDate: patron.birthDate,
+                createdBy: createdById,
+              })),
+            },
+          },
+        },
+        include: { patrons: true },
+      });
+
+      return newPass;
+    }),
+
   getAdmissions: privateProcedure
     .input(
       z.object({
