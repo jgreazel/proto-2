@@ -18,23 +18,28 @@ const PurchaseReportPrintPage = () => {
   console.log(query);
 
   const [start, end, includeAdmissions, includeConcessions] = [
-    new Date(query.start as string),
-    new Date(query.end as string),
+    query.start ? new Date(query.start as string) : new Date(),
+    query.end ? new Date(query.end as string) : new Date(),
     query.includeAdmissions === "true",
     query.includeConcessions === "true",
   ];
-  const { data, isLoading } = api.reports.getNew.useQuery({
-    purchaseReport: {
-      startDate: start,
-      endDate: end,
-      includeAdmissions: includeAdmissions,
-      includeConcessions: includeConcessions,
+  const { data, isLoading } = api.reports.getNew.useQuery(
+    {
+      purchaseReport: {
+        startDate: start,
+        endDate: end,
+        includeAdmissions: includeAdmissions,
+        includeConcessions: includeConcessions,
+      },
     },
-  });
+    {
+      enabled: !!query.start && !!query.end, // Only run query when we have the required params
+    },
+  );
 
   const reactToPrintContent = useCallback(() => {
     return ref.current;
-  }, [ref.current]);
+  }, []);
 
   const handlePrint = useReactToPrint({
     content: reactToPrintContent,

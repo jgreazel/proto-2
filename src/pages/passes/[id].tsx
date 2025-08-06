@@ -1,10 +1,8 @@
-import { type Dispatch, type SetStateAction, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
-import dayjs from "dayjs";
+import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
-import { Select } from "antd";
 
 import { type RouterOutputs, api } from "~/utils/api";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
@@ -12,273 +10,178 @@ import handleApiError from "~/helpers/handleApiError";
 import PatronForm, { type PatronFormData } from "~/components/patronForm";
 import { PageLayout } from "~/components/layout";
 import isAuth from "~/components/isAuth";
-
-const ReassignNode = (props: { patronId: string; onSubmit: () => void }) => {
-  const [showRemove, setShowRemove] = useState(true);
-  const [select, setSelect] = useState<{ label: string; value: string }>();
-  const { data, isLoading: isFetching } = api.passes.getAll.useQuery();
-  const { mutate, isLoading: isUpdating } = api.passes.updatePatron.useMutation(
-    {
-      onError: handleApiError,
-      onSuccess: () => {
-        setShowRemove(true);
-        toast.success("Patron Moved!");
-        props.onSubmit();
-      },
-    },
-  );
-
-  const options =
-    data
-      ?.filter((pass) => !pass.patrons.some((p) => p.id === props.patronId))
-      .map((o) => ({ label: o.label, value: o.id })) ?? [];
-
-  return (
-    <div>
-      {showRemove ? (
-        <div className="tooltip tooltip-left" data-tip="Remove from pass">
-          <button
-            className="btn btn-circle btn-ghost btn-sm"
-            onClick={() => {
-              setShowRemove(false);
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
-              />
-            </svg>
-          </button>
-        </div>
-      ) : (
-        <div className="flex flex-row items-center gap-2">
-          <button
-            onClick={() => {
-              setShowRemove(true);
-            }}
-            className="btn btn-circle btn-ghost btn-sm"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-          <button
-            disabled={isUpdating || !select}
-            onClick={() => {
-              mutate({
-                id: props.patronId,
-                // idk why its a string when everywhere thinks its a obj
-                passId: select as unknown as string,
-              });
-            }}
-            className="btn btn-circle btn-ghost btn-sm"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m4.5 12.75 6 6 9-13.5"
-              />
-            </svg>
-          </button>
-          <Select
-            value={select}
-            onChange={(newValue) => {
-              setSelect(newValue);
-            }}
-            placeholder="Move to what pass?"
-            options={options}
-            disabled={isFetching}
-            showSearch
-            filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-            }
-          />
-        </div>
-      )}
-    </div>
-  );
-};
-
-const PatronFormSection = (props: {
-  isLoading?: boolean;
-  value: RouterOutputs["passes"]["createPatron"][];
-  onChange: Dispatch<SetStateAction<RouterOutputs["passes"]["createPatron"][]>>;
-  isEditing?: boolean;
-  passId?: string;
-}) => {
-  const [showForm, setShowForm] = useState(false);
-
-  function onAdd<
-    T extends PatronFormData | RouterOutputs["passes"]["createPatron"],
-  >(data: T) {
-    props.onChange([
-      ...props.value,
-      {
-        ...data,
-        birthDate: dayjs(data.birthDate).toDate(),
-        id: data.id ?? "",
-        createdAt: "createdAt" in data ? data.createdAt : new Date(),
-        createdBy: "createdBy" in data ? data.createdBy : "",
-        passId: "passId" in data ? data.passId : "",
-        banReEntryDate: "banReEntryDate" in data ? data.banReEntryDate : null,
-      },
-    ]);
-    setShowForm(false);
-  }
-
-  const { mutate, isLoading: isCreating } = api.passes.createPatron.useMutation(
-    {
-      onSuccess: onAdd,
-      onError: handleApiError,
-    },
-  );
-
-  const onSubmit = (data: PatronFormData) => {
-    if (props.isEditing) {
-      mutate({
-        ...data,
-        passId: props.passId!,
-        birthDate: data.birthDate?.toDate(),
-      });
-      toast.success(`Success!`);
-    } else {
-      onAdd(data);
-    }
-  };
-
-  const isGray = props.isLoading ?? isCreating;
-
-  const removeFromState = (id: number) => {
-    const copy = [...props.value];
-    copy.splice(id, 1);
-    props.onChange(copy);
-  };
-
-  return (
-    <div className="flex flex-col gap-3">
-      <>
-        {!!props.value.length ? (
-          props.value.map((p, idx) => (
-            <div
-              className="flex flex-row items-center justify-between rounded-lg bg-base-100 p-4 shadow-lg"
-              key={p.firstName + p.lastName}
-            >
-              <div className="font-medium">{p.firstName}</div>
-              {props.isEditing ? (
-                <ReassignNode
-                  patronId={p.id}
-                  onSubmit={() => removeFromState(idx)}
-                />
-              ) : (
-                <button
-                  onClick={() => removeFromState(idx)}
-                  className="btn btn-circle btn-ghost btn-sm"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="h-6 w-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
-          ))
-        ) : (
-          <div role="alert" className="alert">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              className="h-6 w-6 shrink-0 stroke-info"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
-            <span>You haven&apos;t added any swimmers to your pass yet!</span>
-          </div>
-        )}
-      </>
-      {showForm ? (
-        <PatronForm
-          onCancel={() => {
-            setShowForm(false);
-          }}
-          disabled={isGray}
-          onSubmit={onSubmit}
-          submitText="Add"
-        />
-      ) : (
-        <div className="flex justify-end">
-          <button
-            className="btn btn-ghost"
-            onClick={() => setShowForm((prev) => !prev)}
-            disabled={isGray}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-            Add Patron
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
+import { SeasonTypeahead } from "~/components/seasonTypeahead";
 
 type SeasonPassFormData = {
   label: string;
+  season: string;
+};
+
+// Simple patron management component
+const PatronsList = (props: {
+  patrons: RouterOutputs["passes"]["getById"]["patrons"];
+  isEditing: boolean;
+}) => {
+  if (!props.patrons.length) {
+    return (
+      <div className="py-8 text-center text-base-content/60">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="mx-auto mb-2 h-12 w-12 opacity-50"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
+          />
+        </svg>
+        <p className="font-medium">No patrons added yet</p>
+        <p className="text-sm">Add family members to this pass</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {props.patrons.map((patron) => (
+        <div
+          key={patron.id}
+          className="flex items-center justify-between rounded-lg bg-base-200/50 p-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="avatar placeholder">
+              <div className="w-10 rounded-full bg-neutral text-neutral-content">
+                <span className="text-sm">
+                  {patron.firstName.charAt(0)}
+                  {patron.lastName.charAt(0)}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold capitalize">
+                {patron.firstName} {patron.lastName}
+              </div>
+              <div className="text-sm text-base-content/70">
+                {patron.birthDate
+                  ? `${
+                      new Date().getFullYear() - patron.birthDate.getFullYear()
+                    } years old`
+                  : "Age not specified"}
+              </div>
+            </div>
+          </div>
+          <Link
+            href={`/passes/patrons/${patron.id}`}
+            className="btn btn-ghost btn-sm"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-4 w-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+              />
+            </svg>
+            Edit
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Add patron form component
+const AddPatronForm = (props: {
+  passId: string;
+  onPatronAdded: () => void;
+}) => {
+  const [showForm, setShowForm] = useState(false);
+
+  const { mutate: createPatron, isLoading } =
+    api.passes.createPatron.useMutation({
+      onSuccess: () => {
+        toast.success("Patron added successfully!");
+        setShowForm(false);
+        props.onPatronAdded();
+      },
+      onError: handleApiError,
+    });
+
+  const onSubmit = (data: PatronFormData) => {
+    createPatron({
+      ...data,
+      passId: props.passId,
+      birthDate: data.birthDate?.toDate(),
+    });
+  };
+
+  if (!showForm) {
+    return (
+      <button
+        onClick={() => setShowForm(true)}
+        className="btn btn-outline btn-primary w-full"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-5 w-5"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 4.5v15m7.5-7.5h-15"
+          />
+        </svg>
+        Add Family Member
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-primary/20 bg-base-100 p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <h4 className="font-semibold">Add New Family Member</h4>
+        <button
+          onClick={() => setShowForm(false)}
+          className="btn btn-circle btn-ghost btn-sm"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="h-4 w-4"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18 18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+      <PatronForm
+        disabled={isLoading}
+        onCancel={() => setShowForm(false)}
+        onSubmit={onSubmit}
+        submitText="Add Member"
+      />
+    </div>
+  );
 };
 
 function SinglePassPage() {
@@ -287,142 +190,353 @@ function SinglePassPage() {
     id?.toString() ?? "0";
   const isEditing = id() !== "0";
 
-  const { data, isLoading } = api.passes.getById.useQuery(
+  const { data, isLoading, refetch } = api.passes.getById.useQuery(
     { id: id() },
     { enabled: isEditing },
   );
   const isReallyLoading = isLoading && isEditing;
 
-  const [patrons, setPatrons] = useState<
-    RouterOutputs["passes"]["createPatron"][]
-  >([]);
+  // Get user settings to check if admin
+  const { data: userSettings } = api.profile.getSettingsByUser.useQuery();
+  const isAdmin = userSettings?.isAdmin ?? false;
 
   const router = useRouter();
 
-  const { register, handleSubmit, reset, formState } =
-    useForm<SeasonPassFormData>();
+  const currentYear = new Date().getFullYear().toString();
+
+  const { register, handleSubmit, formState, reset, control } =
+    useForm<SeasonPassFormData>({
+      defaultValues: {
+        label: "",
+        season: currentYear,
+      },
+    });
+
   useEffect(() => {
-    if (data && !isReallyLoading) {
-      reset({ label: data.label });
-      setPatrons(data.patrons);
+    if (data) {
+      reset({
+        label: data.label,
+        season: data.season,
+      });
+    } else if (!isEditing) {
+      // For new passes, ensure we always start with current year
+      reset({
+        label: "",
+        season: currentYear,
+      });
     }
-  }, [isReallyLoading, data, reset]);
+  }, [data, reset, isEditing, currentYear]);
 
   const ctx = api.useUtils();
-  const { mutate: editMutate, isLoading: isUpdating } =
-    api.passes.updateSeasonPass.useMutation({
-      onSuccess: (data) => {
-        void ctx.passes.getById.invalidate({
-          id: data.id,
-        });
-        router.push("/passes");
-        toast.success("Pass Updated!");
-      },
-      onError: handleApiError,
-    });
+
   const { mutate: createMutate, isLoading: isCreating } =
     api.passes.createSeasonPass.useMutation({
-      onSuccess: () => {
-        reset();
-        setPatrons([]);
-        void ctx.passes.getAll.invalidate();
-        router.push("/passes");
-        toast.success("Pass Created!");
+      onSuccess: async () => {
+        await ctx.passes.getAll.invalidate();
+        toast.success("Season pass created!");
+        void router.push("/passes");
       },
       onError: handleApiError,
     });
+
+  const { mutate: updateMutate, isLoading: isUpdating } =
+    api.passes.updateSeasonPass.useMutation({
+      onSuccess: async () => {
+        await ctx.passes.getAll.invalidate();
+        toast.success("Season pass updated!");
+        void router.push("/passes");
+      },
+      onError: handleApiError,
+    });
+
+  const isMutating = isCreating || isUpdating;
 
   const onSubmit = (data: SeasonPassFormData) => {
     if (isEditing) {
-      editMutate({
+      updateMutate({
         id: id(),
-        label: data.label,
+        ...data,
       });
     } else {
       createMutate({
         seasonPass: data,
-        patrons,
+        patrons: [],
       });
     }
   };
 
-  const isMutating = isCreating || isUpdating;
+  const handlePatronAdded = () => {
+    void refetch();
+    void ctx.passes.getAll.invalidate();
+  };
 
   return (
     <PageLayout>
-      <dialog id="single-item-modal" className="modal modal-open">
-        <form method="dialog" className="modal-backdrop">
-          <Link href="/passes">close</Link>
-        </form>
-        <div className="modal-box">
-          <form method="dialog">
-            <Link
-              href="/passes"
-              className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+      <div className="mx-auto max-w-4xl p-6">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-base-content">
+              {isEditing
+                ? `Manage ${data?.label ?? "Pass"}`
+                : "Create New Season Pass"}
+            </h1>
+          </div>
+          <Link href="/passes" className="btn btn-ghost">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-5 w-5"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18 18 6M6 6l12 12"
-                />
-              </svg>
-            </Link>
-          </form>
-          <h2 className="font-semibold underline">Patron Details</h2>
-          {isReallyLoading ? (
-            <LoadingPage />
-          ) : (
-            <>
-              <PatronFormSection
-                value={patrons}
-                onChange={setPatrons}
-                isLoading={isMutating}
-                isEditing={isEditing}
-                passId={id()}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18 18 6M6 6l12 12"
               />
-              <h2 className="font-semibold underline">Pass Details</h2>
-              <form
-                onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col gap-3"
-              >
-                <label className="text-xs font-medium">
-                  Label / Family Name
-                </label>
-                <input
-                  id="label"
-                  placeholder="Ex: Johnson, Anderson, etc..."
-                  className="input input-bordered grow"
-                  {...register("label", {
-                    required: true,
-                    disabled: isMutating,
-                  })}
-                />
-                {isMutating ? (
-                  <div className="flex justify-center">
-                    <LoadingSpinner />
-                  </div>
-                ) : (
-                  <button
-                    className="btn btn-primary"
-                    disabled={!formState.isValid || !formState.isDirty}
-                    type="submit"
-                  >
-                    {isEditing ? "Update" : "Create"}
-                  </button>
-                )}
-              </form>
-            </>
-          )}
+            </svg>
+            Close
+          </Link>
         </div>
-      </dialog>
+
+        {isReallyLoading ? (
+          <LoadingPage />
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Main Content */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Pass Details Card */}
+              <div className="card bg-base-100 shadow-lg">
+                <div className="card-body">
+                  <h2 className="card-title mb-4 text-xl">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-6 w-6"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Z"
+                      />
+                    </svg>
+                    Pass Details
+                  </h2>
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">
+                          Family Name / Pass Label
+                        </span>
+                      </label>
+                      <input
+                        {...register("label", { required: true })}
+                        placeholder="Ex: Johnson, Anderson, Smith..."
+                        className="input input-bordered"
+                        disabled={isMutating}
+                      />
+                      <label className="label">
+                        <span className="label-text-alt">
+                          This will be the display name for the pass
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Season Field - Admin Only */}
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text font-medium">
+                          Season Year
+                          {!isAdmin && (
+                            <span className="badge badge-secondary badge-sm ml-2">
+                              Admin Only
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                      {isAdmin ? (
+                        <Controller
+                          control={control}
+                          name="season"
+                          rules={{ required: true }}
+                          render={({ field }) => (
+                            <SeasonTypeahead
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Ex: 2025, 2026..."
+                              disabled={isMutating}
+                              className="input input-bordered"
+                            />
+                          )}
+                        />
+                      ) : (
+                        <input
+                          {...register("season")}
+                          className="input input-bordered"
+                          disabled={true}
+                          placeholder="Contact admin to change season"
+                        />
+                      )}
+                      <label className="label">
+                        <span className="label-text-alt">
+                          {isAdmin
+                            ? "Type to see suggestions or enter a custom year"
+                            : "Only admins can modify the season year"}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Link href="/passes" className="btn btn-ghost">
+                        Cancel
+                      </Link>
+                      <button
+                        type="submit"
+                        disabled={!formState.isValid || isMutating}
+                        className="btn btn-primary"
+                      >
+                        {isMutating ? (
+                          <LoadingSpinner />
+                        ) : isEditing ? (
+                          "Update Pass"
+                        ) : (
+                          "Create Pass"
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              {/* Family Members Section */}
+              {isEditing && (
+                <div className="card bg-base-100 shadow-lg">
+                  <div className="card-body">
+                    <h2 className="card-title mb-4 text-xl">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="h-6 w-6"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+                        />
+                      </svg>
+                      Family Members ({data?.patrons.length ?? 0})
+                    </h2>
+
+                    <div className="space-y-4">
+                      <PatronsList
+                        patrons={data?.patrons ?? []}
+                        isEditing={isEditing}
+                      />
+                      <AddPatronForm
+                        passId={id()}
+                        onPatronAdded={handlePatronAdded}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Quick Stats */}
+              {isEditing && data && (
+                <div className="card bg-base-100 shadow-lg">
+                  <div className="card-body">
+                    <h3 className="card-title text-lg">Quick Stats</h3>
+                    <div className="stats stats-vertical">
+                      <div className="stat">
+                        <div className="stat-title">Total Members</div>
+                        <div className="stat-value text-2xl">
+                          {data.patrons.length}
+                        </div>
+                      </div>
+                      <div className="stat">
+                        <div className="stat-title">Adults</div>
+                        <div className="stat-value text-2xl">
+                          {
+                            data.patrons.filter((p) => {
+                              if (!p.birthDate) return true;
+                              const age =
+                                new Date().getFullYear() -
+                                p.birthDate.getFullYear();
+                              return age >= 18;
+                            }).length
+                          }
+                        </div>
+                      </div>
+                      <div className="stat">
+                        <div className="stat-title">Children</div>
+                        <div className="stat-value text-2xl">
+                          {
+                            data.patrons.filter((p) => {
+                              if (!p.birthDate) return false;
+                              const age =
+                                new Date().getFullYear() -
+                                p.birthDate.getFullYear();
+                              return age < 18;
+                            }).length
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Help Card */}
+              <div className="card border border-info/20 bg-info/10">
+                <div className="card-body">
+                  <h3 className="card-title text-info">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-5 w-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+                      />
+                    </svg>
+                    Tips
+                  </h3>
+                  <ul className="space-y-2 text-sm">
+                    <li>• Add all family members who will use this pass</li>
+                    <li>
+                      • Include birth dates for accurate age-based pricing
+                    </li>
+                    <li>• Each family member can be edited individually</li>
+                    <li>• Season passes are valid for one full year</li>
+                    {isAdmin && (
+                      <li>
+                        • As an admin, you can modify the season year with
+                        typeahead suggestions
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </PageLayout>
   );
 }

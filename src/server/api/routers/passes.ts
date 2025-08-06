@@ -10,15 +10,32 @@ const addOneYear = (date: Date) => {
   return dateCopy;
 };
 
-// todo add effective dates
-// should account for effective dates
 export const passesRouter = createTRPCRouter({
-  getAll: privateProcedure.query(async ({ ctx }) => {
+  getAll: privateProcedure
+    .input(
+      z
+        .object({
+          season: z.string().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      // await inRateWindow(ctx.userId);
+      return await ctx.db.seasonPass.findMany({
+        where: input?.season ? { season: input.season } : undefined,
+        orderBy: [{ label: "asc" }],
+        include: { patrons: true },
+      });
+    }),
+
+  getAllSeasons: privateProcedure.query(async ({ ctx }) => {
     // await inRateWindow(ctx.userId);
-    return await ctx.db.seasonPass.findMany({
-      orderBy: [{ label: "asc" }],
-      include: { patrons: true },
+    const seasons = await ctx.db.seasonPass.findMany({
+      select: { season: true },
+      distinct: ["season"],
+      orderBy: { season: "desc" },
     });
+    return seasons.map((s) => s.season);
   }),
 
   getById: privateProcedure
@@ -49,6 +66,7 @@ export const passesRouter = createTRPCRouter({
       z.object({
         seasonPass: z.object({
           label: z.string().min(1).max(30, "Too many characters"),
+          season: z.string().min(1).max(10, "Season too long"),
           effectiveStartDate: z.date().optional(),
         }),
         patrons: z
@@ -104,6 +122,7 @@ export const passesRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         label: z.string().min(1).max(30, "Too many characters").optional(),
+        season: z.string().min(1).max(10, "Season too long").optional(),
         effectiveStartDate: z.date().optional(),
         effectiveEndDate: z.date().optional(),
       }),
@@ -204,6 +223,7 @@ export const passesRouter = createTRPCRouter({
     .input(
       z.object({
         range: z.array(z.date()).refine((data) => data.length === 2),
+        includeVoided: z.boolean().default(false),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -215,6 +235,7 @@ export const passesRouter = createTRPCRouter({
             lte: input.range[1],
             gte: input.range[0],
           },
+          ...(input.includeVoided ? {} : { isVoided: { not: true } }),
         },
       });
     }),

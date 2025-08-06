@@ -61,6 +61,7 @@ model SeasonPass {
     // invItemId String
 
     label              String    @default("Unlabeled Season Pass") @db.VarChar(255)
+    season             String    @default("2025") @db.VarChar(10)
     effectiveStartDate DateTime  @default(now())
     effectiveEndDate   DateTime?
 
@@ -116,6 +117,12 @@ model AdmissionEvent {
     patron    Patron   @relation(fields: [patronId], references: [id])
     createdAt DateTime @default(now())
     createdBy String
+
+    // Void tracking
+    isVoided   Boolean   @default(false)
+    voidedAt   DateTime?
+    voidedBy   String?
+    voidReason String?   @db.Text
 
     @@index([patronId])
 }
