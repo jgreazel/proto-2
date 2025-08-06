@@ -79,14 +79,19 @@ function HomePage() {
                             .concessionTotal ?? 0) +
                             (todayStats?.admissionReport?.admissionEvents
                               .filter((x) => x.type === "transaction")
-                              .reduce(
-                                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                                // @ts-ignore
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-                                (sum, x) =>
-                                  sum + x.amountSold * x.item.sellingPrice,
-                                0,
-                              ) ?? 0)) /
+                              .reduce((sum, x) => {
+                                // Type guard to ensure x is a transaction with amountSold and item
+                                if (
+                                  x.type === "transaction" &&
+                                  "amountSold" in x &&
+                                  "item" in x
+                                ) {
+                                  return (
+                                    sum + x.amountSold * x.item.sellingPrice
+                                  );
+                                }
+                                return sum;
+                              }, 0) ?? 0)) /
                           100
                         ).toFixed(2)}
                       </div>
@@ -101,14 +106,17 @@ function HomePage() {
                         {(
                           (todayStats?.admissionReport?.admissionEvents
                             .filter((x) => x.type === "transaction")
-                            .reduce(
-                              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                              // @ts-ignore
-                              // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-                              (sum, x) =>
-                                sum + x.amountSold * x.item.sellingPrice,
-                              0,
-                            ) ?? 0) / 100
+                            .reduce((sum, x) => {
+                              // Type guard to ensure x is a transaction with amountSold and item
+                              if (
+                                x.type === "transaction" &&
+                                "amountSold" in x &&
+                                "item" in x
+                              ) {
+                                return sum + x.amountSold * x.item.sellingPrice;
+                              }
+                              return sum;
+                            }, 0) ?? 0) / 100
                         ).toFixed(2)}
                       </div>
                     </div>

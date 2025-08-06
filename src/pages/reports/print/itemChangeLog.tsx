@@ -17,20 +17,25 @@ const ItemChangeLogReportPrintPage = () => {
   console.log(query);
 
   const [start, end] = [
-    new Date(query.start as string),
-    new Date(query.end as string),
+    query.start ? new Date(query.start as string) : new Date(),
+    query.end ? new Date(query.end as string) : new Date(),
   ];
 
-  const { data, isLoading } = api.reports.getNew.useQuery({
-    itemChangeLogReport: {
-      startDate: start,
-      endDate: end,
+  const { data, isLoading } = api.reports.getNew.useQuery(
+    {
+      itemChangeLogReport: {
+        startDate: start,
+        endDate: end,
+      },
     },
-  });
+    {
+      enabled: !!query.start && !!query.end, // Only run query when we have the required params
+    },
+  );
 
   const reactToPrintContent = useCallback(() => {
     return ref.current;
-  }, [ref.current]);
+  }, []);
 
   const handlePrint = useReactToPrint({
     content: reactToPrintContent,
