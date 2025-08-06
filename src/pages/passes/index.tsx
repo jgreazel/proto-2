@@ -55,6 +55,17 @@ function PassesPage() {
       onError: handleApiError,
     });
 
+  const { mutate: copyPassToCurrentYear, isLoading: isCopying } =
+    api.passes.copySeasonPassToCurrentYear.useMutation({
+      onSuccess: (newPass) => {
+        toast.success(
+          `Pass "${newPass.label}" copied to ${currentYear} successfully!`,
+        );
+        void ctx.passes.getAll.invalidate();
+      },
+      onError: handleApiError,
+    });
+
   const {
     register,
     handleSubmit,
@@ -72,6 +83,16 @@ function PassesPage() {
       seasonPass: data,
       patrons: [],
     });
+  };
+
+  const handleCopyToCurrentYear = (passId: string, passLabel: string) => {
+    if (
+      confirm(
+        `Copy "${passLabel}" and all its patrons to ${currentYear}? This will create a new season pass for the current year.`,
+      )
+    ) {
+      copyPassToCurrentYear({ passId });
+    }
   };
 
   const togglePassExpansion = (passId: string) => {
@@ -309,6 +330,42 @@ function PassesPage() {
                           </svg>
                           {expandedPasses.has(pass.id) ? "Collapse" : "Expand"}
                         </button>
+                        {/* Copy to Current Year button - only show if not current year */}
+                        {pass.season !== currentYear && (
+                          <button
+                            onClick={() =>
+                              handleCopyToCurrentYear(pass.id, pass.label)
+                            }
+                            disabled={isCopying}
+                            className="btn btn-outline btn-sm gap-1"
+                            title={`Copy "${pass.label}" to ${currentYear}`}
+                          >
+                            {isCopying ? (
+                              <LoadingSpinner />
+                            ) : (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="h-4 w-4"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 2.25.654 9.06 9.06 0 0 1 2.25-.654H12a1.125 1.125 0 0 1 1.125 1.125v3.375c0 .621.504 1.125 1.125 1.125h3.375c.621 0 1.125-.504 1.125-1.125V8.625c0-.621-.504-1.125-1.125-1.125H15.75Z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                                />
+                              </svg>
+                            )}
+                            Copy to {currentYear}
+                          </button>
+                        )}
                         <Link
                           href={`passes/${pass.id}`}
                           className="btn btn-primary btn-sm"
