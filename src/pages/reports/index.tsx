@@ -1,5 +1,5 @@
 import { type ReactElement, type Ref, forwardRef, useState } from "react";
-import { DatePicker, Drawer } from "antd";
+import { DatePicker } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { useForm, Controller } from "react-hook-form";
@@ -9,12 +9,9 @@ import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import type { RangeValueType } from "../_app";
 import { PageLayout } from "~/components/layout";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
-import NoData from "~/components/noData";
 import handleApiError from "~/helpers/handleApiError";
 import isAuth from "~/components/isAuth";
 import Link from "next/link";
-import { AdminTimeClock } from "../timeclock/admin";
-import toast from "react-hot-toast";
 
 const { RangePicker } = DatePicker;
 dayjs.extend(duration);
@@ -810,53 +807,42 @@ export const ItemChangeLogTable = forwardRef<
 });
 
 type ReportData = {
-  purchaseReportDateRange: RangeValueType<Dayjs>;
-  admissionDataDateRange: RangeValueType<Dayjs>;
-  timecardDateRange: RangeValueType<Dayjs>;
-  itemChangeLogDateRange: RangeValueType<Dayjs>;
+  dateRange: RangeValueType<Dayjs>;
 };
 
 export function ReportsPage() {
-  const [tabName, setTabName] = useState<
-    "purchase" | "admission" | "timecard" | "itemchangelog"
+  const [activeTab, setActiveTab] = useState<
+    "purchase" | "admission" | "itemchangelog"
   >("purchase");
-  const { handleSubmit, control, formState, watch } = useForm<ReportData>();
+  const { handleSubmit, control, watch } = useForm<ReportData>();
   const formVals = watch();
+
+  const startDate = formVals.dateRange?.[0]?.toDate() ?? new Date();
+  const endDate = formVals.dateRange?.[1]?.endOf("day").toDate() ?? new Date();
+
   const purchaseReport: RouterInputs["reports"]["getNew"]["purchaseReport"] = {
-    startDate: formVals.purchaseReportDateRange?.[0]?.toDate() ?? new Date(),
-    endDate:
-      formVals.purchaseReportDateRange?.[1]?.endOf("day").toDate() ??
-      new Date(),
+    startDate,
+    endDate,
     includeAdmissions: false,
     includeConcessions: true,
   };
   const admissionReport: RouterInputs["reports"]["getNew"]["admissionReport"] =
     {
-      startDate: formVals.admissionDataDateRange?.[0]?.toDate() ?? new Date(),
-      endDate:
-        formVals.admissionDataDateRange?.[1]?.endOf("day").toDate() ??
-        new Date(),
+      startDate,
+      endDate,
     };
-  const timecardReport: RouterInputs["reports"]["getNew"]["timecardReport"] = {
-    startDate: formVals.timecardDateRange?.[0]?.toDate() ?? new Date(),
-    endDate:
-      formVals.timecardDateRange?.[1]?.endOf("day").toDate() ?? new Date(),
-  };
   const itemChangeLogReport: RouterInputs["reports"]["getNew"]["itemChangeLogReport"] =
     {
-      startDate: formVals.itemChangeLogDateRange?.[0]?.toDate() ?? new Date(),
-      endDate:
-        formVals.itemChangeLogDateRange?.[1]?.endOf("day").toDate() ??
-        new Date(),
+      startDate,
+      endDate,
     };
 
   const { data, refetch } = api.reports.getNew.useQuery(
     {
-      purchaseReport: tabName === "purchase" ? purchaseReport : null,
-      admissionReport: tabName === "admission" ? admissionReport : null,
-      timecardReport: tabName === "timecard" ? timecardReport : null,
-      itemChangeLogReport:
-        tabName === "itemchangelog" ? itemChangeLogReport : null,
+      purchaseReport,
+      admissionReport,
+      timecardReport: null,
+      itemChangeLogReport,
     },
     {
       enabled: false,
@@ -912,174 +898,82 @@ export function ReportsPage() {
         </div>
 
         <div className="mx-auto max-w-7xl px-6 py-8">
-          {/* Report Type Navigation */}
-          <div className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-medium text-gray-900">
-                  Report Configuration
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Select report type and date range
-                </p>
-              </div>
-            </div>
-
-            {/* Report Type Selector */}
-            <div className="mb-6">
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Report Type
-              </label>
-              <div className="relative">
-                <select
-                  value={tabName}
-                  onChange={(e) => setTabName(e.target.value as typeof tabName)}
-                  className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-3 pr-10 text-base shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20"
-                >
-                  <option value="purchase">
-                    🛒 Concessions Report - Track sales and inventory
-                  </option>
-                  <option value="admission">
-                    👥 Admission Report - Monitor entries and ticket sales
-                  </option>
-                  <option value="itemchangelog">
-                    📝 Item Change Log - Review inventory modifications
-                  </option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
-                  <svg
-                    className="h-5 w-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-gray-500">
-                Choose the type of report you want to generate
+          {/* Date Selection - Primary Control */}
+          <div className="mb-8 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-4">
+              <h2 className="text-lg font-medium text-gray-900">
+                Select Date Range
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Choose the date range for all reports
               </p>
             </div>
 
-            {/* Report Form */}
-            <form onSubmit={handleSubmit(submit)} className="space-y-6">
-              {tabName === "purchase" && (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div>
-                    <Controller
-                      control={control}
-                      name="purchaseReportDateRange"
-                      render={({ field }) => (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Date Range
-                          </label>
-                          <RangePicker
-                            value={field.value}
-                            disabled={tabName !== "purchase"}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                            onChange={(dates) => field.onChange(dates)}
-                            placeholder={["Start Date", "End Date"]}
-                          />
-                          <p className="text-xs text-gray-500">
-                            Select the date range for concession sales data
-                          </p>
-                        </div>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {tabName === "admission" && (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div>
-                    <Controller
-                      control={control}
-                      name="admissionDataDateRange"
-                      render={({ field }) => (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Date Range
-                          </label>
-                          <RangePicker
-                            value={field.value}
-                            disabled={tabName !== "admission"}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                            onChange={(dates) => field.onChange(dates)}
-                            placeholder={["Start Date", "End Date"]}
-                          />
-                          <p className="text-xs text-gray-500">
-                            Select the date range for admission and entry data
-                          </p>
-                        </div>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {tabName === "itemchangelog" && (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div>
-                    <Controller
-                      control={control}
-                      name="itemChangeLogDateRange"
-                      render={({ field }) => (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Date Range
-                          </label>
-                          <RangePicker
-                            value={field.value}
-                            disabled={tabName !== "itemchangelog"}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                            onChange={(dates) => field.onChange(dates)}
-                            placeholder={["Start Date", "End Date"]}
-                          />
-                          <p className="text-xs text-gray-500">
-                            Select the date range for item change log data
-                          </p>
-                        </div>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`btn btn-primary ${loading ? "loading" : ""}`}
-                >
-                  {loading ? (
-                    "Generating..."
-                  ) : (
-                    <>
-                      <svg
-                        className="mr-2 h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            {/* Date Range Form */}
+            <form onSubmit={handleSubmit(submit)} className="space-y-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="flex-1">
+                  <Controller
+                    control={control}
+                    name="dateRange"
+                    render={({ field }) => (
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Report Date Range
+                        </label>
+                        <RangePicker
+                          value={field.value}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                          onChange={(dates) => field.onChange(dates)}
+                          placeholder={["Start Date", "End Date"]}
                         />
-                      </svg>
-                      Generate Report
-                    </>
-                  )}
-                </button>
+                      </div>
+                    )}
+                  />
+                </div>
+                <div className="flex-shrink-0">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`btn btn-primary ${loading ? "loading" : ""}`}
+                  >
+                    {loading ? (
+                      <>
+                        <svg
+                          className="mr-2 h-4 w-4 animate-spin"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="mr-2 h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                          />
+                        </svg>
+                        Generate Reports
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -1130,17 +1024,111 @@ export function ReportsPage() {
             </div>
           )}
 
-          {showReport && data?.purchaseReport && (
+          {showReport && data && (
+            <>
+              {/* Report Tabs */}
+              <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div className="border-b border-gray-200 px-6 py-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Report Results
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Switch between different report views
+                  </p>
+                </div>
+                <div className="p-6">
+                  <nav className="flex space-x-8" aria-label="Report tabs">
+                    <button
+                      onClick={() => setActiveTab("purchase")}
+                      className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
+                        activeTab === "purchase"
+                          ? "border-primary text-primary"
+                          : "border-transparent text-base-content/60 hover:border-base-content/30 hover:text-base-content"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                          />
+                        </svg>
+                        <span>Concessions Report</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("admission")}
+                      className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
+                        activeTab === "admission"
+                          ? "border-primary text-primary"
+                          : "border-transparent text-base-content/60 hover:border-base-content/30 hover:text-base-content"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
+                        </svg>
+                        <span>Admission Report</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("itemchangelog")}
+                      className={`whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
+                        activeTab === "itemchangelog"
+                          ? "border-primary text-primary"
+                          : "border-transparent text-base-content/60 hover:border-base-content/30 hover:text-base-content"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <span>Item Change Log</span>
+                      </div>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Individual Report Views */}
+          {showReport && data?.purchaseReport && activeTab === "purchase" && (
             <PurchaseReportTable data={data.purchaseReport}>
               <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                 <Link
                   href={{
                     pathname: "/reports/print/purchase",
                     query: {
-                      start: formVals.purchaseReportDateRange[0]?.toISOString(),
-                      end: formVals.purchaseReportDateRange[1]
-                        ?.endOf("day")
-                        .toISOString(),
+                      start: formVals.dateRange?.[0]?.toISOString(),
+                      end: formVals.dateRange?.[1]?.endOf("day").toISOString(),
                       includeAdmissions: false,
                       includeConcessions: true,
                     },
@@ -1166,17 +1154,15 @@ export function ReportsPage() {
             </PurchaseReportTable>
           )}
 
-          {showReport && data?.admissionReport && (
+          {showReport && data?.admissionReport && activeTab === "admission" && (
             <AdmissionReportTable data={data.admissionReport}>
               <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                 <Link
                   href={{
                     pathname: "/reports/print/admission",
                     query: {
-                      start: formVals.admissionDataDateRange[0]?.toISOString(),
-                      end: formVals.admissionDataDateRange[1]
-                        ?.endOf("day")
-                        .toISOString(),
+                      start: formVals.dateRange?.[0]?.toISOString(),
+                      end: formVals.dateRange?.[1]?.endOf("day").toISOString(),
                     },
                   }}
                   className="flex items-center"
@@ -1200,39 +1186,41 @@ export function ReportsPage() {
             </AdmissionReportTable>
           )}
 
-          {showReport && data?.itemChangeLogReport && (
-            <ItemChangeLogTable data={data.itemChangeLogReport}>
-              <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                <Link
-                  href={{
-                    pathname: "/reports/print/itemChangeLog",
-                    query: {
-                      start: formVals.itemChangeLogDateRange[0]?.toISOString(),
-                      end: formVals.itemChangeLogDateRange[1]
-                        ?.endOf("day")
-                        .toISOString(),
-                    },
-                  }}
-                  className="flex items-center"
-                >
-                  <svg
-                    className="mr-2 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+          {showReport &&
+            data?.itemChangeLogReport &&
+            activeTab === "itemchangelog" && (
+              <ItemChangeLogTable data={data.itemChangeLogReport}>
+                <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                  <Link
+                    href={{
+                      pathname: "/reports/print/itemChangeLog",
+                      query: {
+                        start: formVals.dateRange?.[0]?.toISOString(),
+                        end: formVals.dateRange?.[1]
+                          ?.endOf("day")
+                          .toISOString(),
+                      },
+                    }}
+                    className="flex items-center"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                    />
-                  </svg>
-                  Print Report
-                </Link>
-              </button>
-            </ItemChangeLogTable>
-          )}
+                    <svg
+                      className="mr-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                      />
+                    </svg>
+                    Print Report
+                  </Link>
+                </button>
+              </ItemChangeLogTable>
+            )}
         </div>
       </div>
     </PageLayout>
