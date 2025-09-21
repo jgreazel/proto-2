@@ -1,12 +1,17 @@
-import { PageLayout } from "~/components/layout";
+import LandingPage from "./landing";
+
 import { useUser } from "@clerk/nextjs";
-import isAuth from "~/components/isAuth";
+import { PageLayout } from "~/components/layout";
 import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/loading";
 import dayjs from "dayjs";
 
 function HomePage() {
-  const { user } = useUser();
+  const { isSignedIn, user } = useUser();
+
+  if (!isSignedIn) {
+    return <LandingPage />;
+  }
 
   // Get today's basic stats for admins
   const { data: todayStats, isLoading } = api.reports.getNew.useQuery(
@@ -174,4 +179,4 @@ function HomePage() {
   );
 }
 
-export default isAuth(HomePage, "employee");
+export default HomePage;
