@@ -20,6 +20,8 @@ generator client {
     provider = "prisma-client-js"
 }
 
+// ? how will this schema change affect existing data?
+// todo all the apis will need adjusted
 model InventoryItem {
     id           String             @id @default(cuid())
     createdAt    DateTime           @default(now())
@@ -29,19 +31,42 @@ model InventoryItem {
     transactions TransactionItems[]
     changeLogs   ItemChangeLog[]
 
-    // concession items
-    isConcessionItem Boolean @default(false)
-    purchasePrice    Int?
-    inStock          Int?    @default(0)
-    category         String? @db.VarChar(100) // New field for concession categories
+    // New unified approach - itemType determines which detail table to look in
+    itemType String  @db.VarChar(50) // 'concession', 'admission', 'swimming_lesson'
+    typeId   String? // References the ID in the appropriate detail table
+}
 
-    // admisison items
-    isAdmissionItem Boolean  @default(false)
-    isSeasonal      Boolean?
-    isDay           Boolean?
-    patronLimit     Int?
-    // todo uncomment if need to connect
-    // seasonPasses    SeasonPass[]
+// Separate detail models for each item type
+model ConcessionItem {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    createdBy String
+
+    purchasePrice Int
+    inStock       Int     @default(0)
+    category      String? @db.VarChar(100)
+}
+
+model AdmissionItem {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    createdBy String
+
+    isSeasonal  Boolean @default(false)
+    isDay       Boolean @default(false)
+    patronLimit Int?
+}
+
+model SwimmingLesson {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    createdBy String
+
+    lessonType         String  @db.VarChar(100) // type of lesson
+    duration           Int? // duration in minutes
+    capacity           Int? // max participants
+    ageGroup           String? @db.VarChar(50) // age range
+    requiresSeasonPass Boolean @default(false)
 }
 
 model Category {
