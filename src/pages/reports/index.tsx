@@ -1079,11 +1079,11 @@ export function ReportsPage() {
           },
         };
 
-  const tabs: { key: TabKey; label: string; emoji: string }[] = [
-    { key: "overview", label: "Overview", emoji: "📊" },
-    { key: "purchase", label: "Sales", emoji: "💰" },
-    { key: "admission", label: "Admissions", emoji: "🎟️" },
-    { key: "itemchangelog", label: "Changes", emoji: "📋" },
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "purchase", label: "Sales" },
+    { key: "admission", label: "Admissions" },
+    { key: "itemchangelog", label: "Changes" },
   ];
 
   // Summary helpers
@@ -1229,40 +1229,42 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {/* Report tabs + compare toggle + date label */}
+            {/* Report tabs + date label + compare */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="join">
-                  {tabs.map((t) => (
-                    <button
-                      key={t.key}
-                      className={`btn join-item btn-xs sm:btn-sm gap-1 ${
-                        activeTab === t.key ? "btn-primary" : ""
-                      }`}
-                      onClick={() => setActiveTab(t.key)}
-                    >
-                      <span>{t.emoji}</span>
-                      <span className="hidden sm:inline">{t.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {dateRange && (
-                  <label className="flex cursor-pointer items-center gap-1.5">
-                    <input
-                      type="checkbox"
-                      className="toggle toggle-primary toggle-xs"
-                      checked={comparing}
-                      onChange={(e) => setComparing(e.target.checked)}
-                    />
-                    <span className="text-xs text-base-content/60">Compare</span>
-                  </label>
-                )}
+              <div className="join">
+                {tabs.map((t) => (
+                  <button
+                    key={t.key}
+                    className={`btn join-item btn-xs sm:btn-sm ${
+                      activeTab === t.key ? "btn-primary" : ""
+                    }`}
+                    onClick={() => setActiveTab(t.key)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
               {dateRange && (
-                <span className="text-xs text-base-content/50">
-                  {dateRange[0].format("MMM D")} — {dateRange[1].format("MMM D, YYYY")}
-                  {isFetching && <span className="loading loading-dots loading-xs ml-2" />}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className={`btn btn-xs gap-1 ${comparing ? "btn-secondary" : "btn-ghost"}`}
+                    onClick={() => setComparing((v) => !v)}
+                    title={comparing
+                      ? `Comparing to ${dayjs(prevStart).format("MMM D")} – ${dayjs(prevEnd).format("MMM D")}`
+                      : "Compare to previous period"}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-3.5 w-3.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                    {comparing
+                      ? `vs ${dayjs(prevStart).format("MMM D")} – ${dayjs(prevEnd).format("MMM D")}`
+                      : "Compare"}
+                  </button>
+                  <span className="text-xs text-base-content/50">
+                    {dateRange[0].format("MMM D")} — {dateRange[1].format("MMM D, YYYY")}
+                    {isFetching && <span className="loading loading-dots loading-xs ml-2" />}
+                  </span>
+                </div>
               )}
             </div>
           </div>
