@@ -309,7 +309,7 @@ export const ConcessionItemForm = (props: {
                 onChange={field.onChange}
                 placeholder="Select or create category..."
                 disabled={isSubmitting || isLoading}
-                className="input-sm"
+                className="input input-bordered input-sm w-full"
               />
             )}
           />
