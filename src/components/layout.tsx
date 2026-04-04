@@ -237,54 +237,76 @@ const EndMenu = ({
   username: string;
   isAdmin: boolean;
 }) => {
+  const initial = username.charAt(0).toUpperCase();
+
   return (
     <>
       <div className="dropdown dropdown-end z-50">
-        <div tabIndex={0} role="button" className="btn btn-ghost capitalize">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="h-6 w-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-            />
+        <div
+          tabIndex={0}
+          role="button"
+          className="btn btn-ghost gap-2 px-2 capitalize"
+        >
+          {/* Avatar circle with initial */}
+          <div className="relative">
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-sm ${isAdmin ? "bg-primary text-primary-content" : "bg-base-300 text-base-content"}`}>
+              {initial}
+            </div>
+            {isAdmin && (
+              <div className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-warning text-warning-content ring-2 ring-primary/10">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-2 w-2">
+                  <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1.5V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+          </div>
+          {/* Name + role on desktop */}
+          <div className="hidden flex-col items-start sm:flex">
+            <span className="text-sm font-semibold leading-tight">{username}</span>
+            <span className={`text-[10px] leading-tight ${isAdmin ? "font-medium text-primary" : "text-base-content/50"}`}>
+              {isAdmin ? "Admin" : "Staff"}
+            </span>
+          </div>
+          {/* Chevron */}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3 text-base-content/40">
+            <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </div>
         <ul
           tabIndex={0}
-          className="menu dropdown-content menu-md rounded-box bg-base-100 p-2 shadow-xl"
+          className="menu dropdown-content menu-md mt-2 w-60 rounded-xl bg-base-100 p-2 shadow-xl ring-1 ring-base-content/5"
         >
-          <div className="p-1 font-medium capitalize">Hi, {username}</div>
+          {/* Profile header */}
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold ${isAdmin ? "bg-primary text-primary-content" : "bg-base-300 text-base-content"}`}>
+              {initial}
+            </div>
+            <div>
+              <div className="font-semibold capitalize">{username}</div>
+              <div className={`text-xs ${isAdmin ? "font-medium text-primary" : "text-base-content/50"}`}>
+                {isAdmin ? "Administrator" : "Staff Member"}
+              </div>
+            </div>
+          </div>
           <div className="divider m-0"></div>
-          <li className="w-max">
-            <Link href={"/users/profile"}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-                />
+          <li>
+            <Link href="/users/profile">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
               </svg>
-              Profile
+              My Profile
             </Link>
           </li>
           {isAdmin && (
             <>
-              <div className="divider mb-1 mt-1 text-xs uppercase">
-                Admin Tools
+              <div className="divider mb-1 mt-1"></div>
+              <div className="flex items-center gap-1.5 px-3 py-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3 text-primary">
+                  <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1.5V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clipRule="evenodd" />
+                </svg>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                  Admin Tools
+                </span>
               </div>
               <li>
                 <Link href="/items">
@@ -292,6 +314,7 @@ const EndMenu = ({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                   </svg>
                   Items
+                  <kbd className="kbd kbd-xs ml-auto opacity-30">G I</kbd>
                 </Link>
               </li>
               <li>
@@ -300,6 +323,7 @@ const EndMenu = ({
                     <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
                   </svg>
                   Files
+                  <kbd className="kbd kbd-xs ml-auto opacity-30">G F</kbd>
                 </Link>
               </li>
               <li>
@@ -308,6 +332,7 @@ const EndMenu = ({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
                   </svg>
                   Reports
+                  <kbd className="kbd kbd-xs ml-auto opacity-30">G E</kbd>
                 </Link>
               </li>
               <li>
@@ -316,12 +341,13 @@ const EndMenu = ({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                   </svg>
                   Manage Users
+                  <kbd className="kbd kbd-xs ml-auto opacity-30">G U</kbd>
                 </Link>
               </li>
             </>
           )}
           <div className="divider m-0"></div>
-          <li className="w-max self-end text-accent">
+          <li className="text-error/70">
             <SignOutButton />
           </li>
         </ul>
@@ -346,7 +372,7 @@ const DesktopNavLink = ({
   return (
     <Link
       href={href}
-      className={`btn btn-ghost btn-sm ${isActive ? "bg-base-200 font-semibold" : ""}`}
+      className={`btn btn-ghost btn-sm ${isActive ? "bg-primary/15 font-semibold text-primary" : "text-base-content hover:bg-primary/10"}`}
     >
       {label}
       {shortcutKey && (
@@ -466,18 +492,18 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
   const home = (
     <Link href="/" className="flex h-full items-center gap-2 px-2">
       <img src="/LOGO.png" alt="Guard Shack" className="h-full max-h-12 w-auto object-contain py-1" />
-      <span className="hidden text-xl font-bold sm:inline">Guard Shack</span>
+      <span className="hidden text-xl font-bold text-base-content sm:inline">Guard Shack</span>
     </Link>
   );
 
   return (
     <>
-      <div className="navbar bg-base-100 shadow-md">
+      <div className="navbar bg-primary/10 shadow-sm">
         <div className="navbar-start">
           {/* Mobile hamburger — hidden on md+ */}
           {!disabled && (
             <div className="dropdown z-50 md:hidden">
-              <div tabIndex={0} role="button" className="btn btn-ghost">
+              <div tabIndex={0} role="button" className="btn btn-ghost text-base-content">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5"
