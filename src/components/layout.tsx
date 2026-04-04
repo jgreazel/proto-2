@@ -464,9 +464,9 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
   if (!userLoaded) return <div></div>;
 
   const home = (
-    <Link href="/" className="btn btn-ghost text-xl">
-      <img src="/LOGO.png" alt="Guard Shack" className="h-7 w-7 object-contain" />
-      <span className="hidden sm:inline">Guard Shack</span>
+    <Link href="/" className="flex h-full items-center gap-2 px-2">
+      <img src="/LOGO.png" alt="Guard Shack" className="h-full max-h-12 w-auto object-contain py-1" />
+      <span className="hidden text-xl font-bold sm:inline">Guard Shack</span>
     </Link>
   );
 
