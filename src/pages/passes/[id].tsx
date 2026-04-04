@@ -1,3 +1,7 @@
+/**
+ * @deprecated This page is superseded by the single-screen passes management
+ * at /passes. Kept for backwards compatibility with direct URLs.
+ */
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";

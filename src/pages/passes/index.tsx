@@ -1,20 +1,430 @@
 import { PageLayout } from "~/components/layout";
-import { api } from "~/utils/api";
+import { type RouterOutputs, api } from "~/utils/api";
 import { LoadingPage, LoadingSpinner } from "~/components/loading";
-import Link from "next/link";
 import { useState } from "react";
 import filterPasses from "~/helpers/filterPasses";
 import PeopleGrid from "~/components/peopleGrid";
 import isAuth from "~/components/isAuth";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import toast from "react-hot-toast";
 import handleApiError from "~/helpers/handleApiError";
 import { SeasonTypeahead } from "~/components/seasonTypeahead";
+import { DatePicker } from "antd";
+import dayjs from "dayjs";
 
-type PassFormData = {
+// ── Types ──────────────────────────────────────────────────────────────
+
+type NewPassFormData = {
   label: string;
   season: string;
+  members: { firstName: string; lastName: string; birthDate?: string }[];
 };
+
+type Patron = RouterOutputs["passes"]["getAll"][number]["patrons"][number];
+
+// ── Inline patron editor (replaces the patron chip when editing) ──────
+
+const InlinePatronEditor = ({
+  patron,
+  onSave,
+  onCancel,
+  isSaving,
+}: {
+  patron: Patron;
+  onSave: (data: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    birthDate?: Date | null;
+  }) => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) => {
+  const [firstName, setFirstName] = useState(patron.firstName);
+  const [lastName, setLastName] = useState(patron.lastName);
+  const [birthDate, setBirthDate] = useState(
+    patron.birthDate ? dayjs(patron.birthDate) : null,
+  );
+
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded-lg border border-primary/30 bg-base-100 p-3">
+      <div className="form-control min-w-[120px] flex-1">
+        <label className="label py-0">
+          <span className="label-text text-xs">First Name</span>
+        </label>
+        <input
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          className="input input-bordered input-sm"
+          disabled={isSaving}
+        />
+      </div>
+      <div className="form-control min-w-[120px] flex-1">
+        <label className="label py-0">
+          <span className="label-text text-xs">Last Name</span>
+        </label>
+        <input
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          className="input input-bordered input-sm"
+          disabled={isSaving}
+        />
+      </div>
+      <div className="form-control min-w-[140px]">
+        <label className="label py-0">
+          <span className="label-text text-xs">Birthday</span>
+        </label>
+        <DatePicker
+          value={birthDate}
+          format="MM/DD/YYYY"
+          className="input input-bordered input-sm w-full"
+          onChange={(d) => setBirthDate(d)}
+          disabled={isSaving}
+        />
+      </div>
+      <div className="flex gap-1">
+        <button
+          onClick={() =>
+            onSave({
+              id: patron.id,
+              firstName,
+              lastName,
+              birthDate: birthDate?.toDate() ?? null,
+            })
+          }
+          disabled={!firstName.trim() || !lastName.trim() || isSaving}
+          className="btn btn-primary btn-sm"
+        >
+          {isSaving ? <LoadingSpinner /> : "Save"}
+        </button>
+        <button
+          onClick={onCancel}
+          disabled={isSaving}
+          className="btn btn-ghost btn-sm"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── Inline add-member form (appears at bottom of expanded card) ───────
+
+const InlineAddMember = ({
+  passId,
+  onAdded,
+}: {
+  passId: string;
+  onAdded: () => void;
+}) => {
+  const [show, setShow] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [birthDate, setBirthDate] = useState<dayjs.Dayjs | null>(null);
+
+  const { mutate, isLoading } = api.passes.createPatron.useMutation({
+    onSuccess: () => {
+      toast.success("Member added!");
+      setFirstName("");
+      setLastName("");
+      setBirthDate(null);
+      setShow(false);
+      onAdded();
+    },
+    onError: handleApiError,
+  });
+
+  if (!show) {
+    return (
+      <button
+        onClick={() => setShow(true)}
+        className="btn btn-outline btn-primary btn-sm w-full"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-4 w-4"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 4.5v15m7.5-7.5h-15"
+          />
+        </svg>
+        Add Member
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3">
+      <div className="form-control min-w-[120px] flex-1">
+        <label className="label py-0">
+          <span className="label-text text-xs">First Name</span>
+        </label>
+        <input
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          placeholder="John"
+          className="input input-bordered input-sm"
+          disabled={isLoading}
+        />
+      </div>
+      <div className="form-control min-w-[120px] flex-1">
+        <label className="label py-0">
+          <span className="label-text text-xs">Last Name</span>
+        </label>
+        <input
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Doe"
+          className="input input-bordered input-sm"
+          disabled={isLoading}
+        />
+      </div>
+      <div className="form-control min-w-[140px]">
+        <label className="label py-0">
+          <span className="label-text text-xs">Birthday (opt.)</span>
+        </label>
+        <DatePicker
+          value={birthDate}
+          format="MM/DD/YYYY"
+          className="input input-bordered input-sm w-full"
+          onChange={(d) => setBirthDate(d)}
+          disabled={isLoading}
+        />
+      </div>
+      <div className="flex gap-1">
+        <button
+          onClick={() =>
+            mutate({
+              passId,
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              birthDate: birthDate?.toDate() ?? null,
+            })
+          }
+          disabled={!firstName.trim() || !lastName.trim() || isLoading}
+          className="btn btn-primary btn-sm"
+        >
+          {isLoading ? <LoadingSpinner /> : "Add"}
+        </button>
+        <button
+          onClick={() => setShow(false)}
+          disabled={isLoading}
+          className="btn btn-ghost btn-sm"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── Expanded pass management panel ────────────────────────────────────
+
+const PassManagementPanel = ({
+  pass,
+  isAdmin,
+}: {
+  pass: RouterOutputs["passes"]["getAll"][number];
+  isAdmin: boolean;
+}) => {
+  const [editingPatronId, setEditingPatronId] = useState<string | null>(null);
+  const [editingPass, setEditingPass] = useState(false);
+  const [passLabel, setPassLabel] = useState(pass.label);
+  const [passSeason, setPassSeason] = useState(pass.season);
+
+  const ctx = api.useUtils();
+  const invalidateAll = () => void ctx.passes.getAll.invalidate();
+
+  const { mutate: updatePass, isLoading: isUpdatingPass } =
+    api.passes.updateSeasonPass.useMutation({
+      onSuccess: () => {
+        toast.success("Pass updated!");
+        setEditingPass(false);
+        invalidateAll();
+      },
+      onError: handleApiError,
+    });
+
+  const { mutate: updatePatron, isLoading: isUpdatingPatron } =
+    api.passes.updatePatron.useMutation({
+      onSuccess: () => {
+        toast.success("Member updated!");
+        setEditingPatronId(null);
+        invalidateAll();
+      },
+      onError: handleApiError,
+    });
+
+  return (
+    <div className="mt-4 space-y-4 border-t border-base-200 pt-4">
+      {/* Pass details quick-edit */}
+      <div className="flex items-center gap-2">
+        {editingPass ? (
+          <div className="flex flex-1 flex-wrap items-end gap-2">
+            <div className="form-control flex-1">
+              <label className="label py-0">
+                <span className="label-text text-xs font-medium">
+                  Pass Label
+                </span>
+              </label>
+              <input
+                value={passLabel}
+                onChange={(e) => setPassLabel(e.target.value)}
+                className="input input-bordered input-sm"
+                disabled={isUpdatingPass}
+              />
+            </div>
+            {isAdmin && (
+              <div className="form-control w-32">
+                <label className="label py-0">
+                  <span className="label-text text-xs font-medium">
+                    Season
+                  </span>
+                </label>
+                <SeasonTypeahead
+                  value={passSeason}
+                  onChange={setPassSeason}
+                  disabled={isUpdatingPass}
+                  className="input input-bordered input-sm"
+                />
+              </div>
+            )}
+            <button
+              onClick={() =>
+                updatePass({
+                  id: pass.id,
+                  label: passLabel.trim(),
+                  season: passSeason,
+                })
+              }
+              disabled={
+                !passLabel.trim() || !passSeason.trim() || isUpdatingPass
+              }
+              className="btn btn-primary btn-sm"
+            >
+              {isUpdatingPass ? <LoadingSpinner /> : "Save"}
+            </button>
+            <button
+              onClick={() => {
+                setPassLabel(pass.label);
+                setPassSeason(pass.season);
+                setEditingPass(false);
+              }}
+              className="btn btn-ghost btn-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setEditingPass(true)}
+            className="btn btn-ghost btn-xs text-base-content/60"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-3.5 w-3.5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+              />
+            </svg>
+            Edit pass details
+          </button>
+        )}
+      </div>
+
+      {/* Patron rows */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-base-content/80">
+            Family Members ({pass.patrons.length})
+          </h4>
+        </div>
+
+        {pass.patrons.length === 0 && (
+          <p className="py-4 text-center text-sm text-base-content/50">
+            No members yet — add your first member below
+          </p>
+        )}
+
+        {pass.patrons.map((patron) =>
+          editingPatronId === patron.id ? (
+            <InlinePatronEditor
+              key={patron.id}
+              patron={patron}
+              onSave={(data) => updatePatron(data)}
+              onCancel={() => setEditingPatronId(null)}
+              isSaving={isUpdatingPatron}
+            />
+          ) : (
+            <div
+              key={patron.id}
+              className="flex items-center justify-between rounded-lg bg-base-200/50 px-3 py-2"
+            >
+              <div className="flex items-center gap-3">
+                <div className="avatar placeholder">
+                  <div className="w-8 rounded-full bg-neutral text-neutral-content">
+                    <span className="text-xs">
+                      {patron.firstName.charAt(0)}
+                      {patron.lastName.charAt(0)}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm font-medium capitalize">
+                    {patron.firstName} {patron.lastName}
+                  </span>
+                  <span className="ml-2 text-xs text-base-content/60">
+                    {patron.birthDate
+                      ? `${new Date().getFullYear() - patron.birthDate.getFullYear()}y`
+                      : ""}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingPatronId(patron.id)}
+                className="btn btn-ghost btn-xs"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+                  />
+                </svg>
+                Edit
+              </button>
+            </div>
+          ),
+        )}
+
+        <InlineAddMember passId={pass.id} onAdded={invalidateAll} />
+      </div>
+    </div>
+  );
+};
+
+// ── Main page ─────────────────────────────────────────────────────────
 
 function PassesPage() {
   const currentYear = new Date().getFullYear().toString();
@@ -24,19 +434,14 @@ function PassesPage() {
   const [expandedPasses, setExpandedPasses] = useState<Set<string>>(new Set());
   const [selectedSeason, setSelectedSeason] = useState<string>("");
 
-  // Get user settings to check if admin
   const { data: userSettings } = api.profile.getSettingsByUser.useQuery();
   const isAdmin = userSettings?.isAdmin ?? false;
 
-  // Get available seasons for admin filtering
   const { data: availableSeasons } = api.passes.getAllSeasons.useQuery(
     undefined,
-    {
-      enabled: isAdmin,
-    },
+    { enabled: isAdmin },
   );
 
-  // Get passes data with season filtering
   const { data, isLoading } = api.passes.getAll.useQuery(
     selectedSeason ? { season: selectedSeason } : undefined,
   );
@@ -44,96 +449,114 @@ function PassesPage() {
   const filteredPasses = data?.filter((d) => filterPasses(d, filter));
 
   const ctx = api.useUtils();
+
+  // ── Create pass with members ──────────────────────────────────────
+
   const { mutate: createPass, isLoading: isCreating } =
     api.passes.createSeasonPass.useMutation({
-      onSuccess: () => {
-        toast.success("Season pass created successfully!");
+      onSuccess: (newPass) => {
+        toast.success(`Pass "${newPass.label}" created!`);
         setShowNewPassForm(false);
-        reset();
+        resetNewPass();
         void ctx.passes.getAll.invalidate();
+        // Auto-expand the new pass so the user sees it immediately
+        setExpandedPasses((prev) => new Set(prev).add(newPass.id));
       },
       onError: handleApiError,
     });
+
+  const {
+    register: registerNewPass,
+    handleSubmit: handleNewPassSubmit,
+    reset: resetNewPass,
+    control: newPassControl,
+    formState: { isValid: newPassValid },
+  } = useForm<NewPassFormData>({
+    defaultValues: { label: "", season: currentYear, members: [] },
+  });
+
+  const {
+    fields: memberFields,
+    append: addMember,
+    remove: removeMember,
+  } = useFieldArray({ control: newPassControl, name: "members" });
+
+  const onNewPassSubmit = (data: NewPassFormData) => {
+    createPass({
+      seasonPass: { label: data.label, season: data.season },
+      patrons: data.members
+        .filter((m) => m.firstName.trim() && m.lastName.trim())
+        .map((m) => ({
+          firstName: m.firstName.trim(),
+          lastName: m.lastName.trim(),
+          birthDate: m.birthDate ? new Date(m.birthDate) : null,
+        })),
+    });
+  };
+
+  // ── Copy to current year ──────────────────────────────────────────
 
   const { mutate: copyPassToCurrentYear, isLoading: isCopying } =
     api.passes.copySeasonPassToCurrentYear.useMutation({
       onSuccess: (newPass) => {
         toast.success(
-          `Pass "${newPass.label}" copied to ${currentYear} successfully!`,
+          `Pass "${newPass.label}" copied to ${currentYear}!`,
         );
         void ctx.passes.getAll.invalidate();
       },
       onError: handleApiError,
     });
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    control,
-    formState: { isValid, isDirty },
-  } = useForm<PassFormData>({
-    defaultValues: {
-      season: currentYear,
-    },
-  });
-
-  const onSubmit = (data: PassFormData) => {
-    createPass({
-      seasonPass: data,
-      patrons: [],
-    });
-  };
-
   const handleCopyToCurrentYear = (passId: string, passLabel: string) => {
     if (
       confirm(
-        `Copy "${passLabel}" and all its patrons to ${currentYear}? This will create a new season pass for the current year.`,
+        `Copy "${passLabel}" and all its members to ${currentYear}?`,
       )
     ) {
       copyPassToCurrentYear({ passId });
     }
   };
 
+  // ── Toggle expand ─────────────────────────────────────────────────
+
   const togglePassExpansion = (passId: string) => {
     setExpandedPasses((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(passId)) {
-        newSet.delete(passId);
-      } else {
-        newSet.add(passId);
-      }
-      return newSet;
+      const next = new Set(prev);
+      if (next.has(passId)) next.delete(passId);
+      else next.add(passId);
+      return next;
     });
   };
+
+  // ── Render ────────────────────────────────────────────────────────
 
   return (
     <PageLayout>
       {isLoading ? (
         <LoadingPage />
       ) : (
-        <div className="flex h-full flex-col gap-6 p-6">
-          {/* Header Section */}
+        <div className="flex h-full flex-col gap-6 p-4 sm:p-6">
+          {/* Header */}
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h1 className="text-3xl font-bold text-base-content">
+                <h1 className="text-2xl font-bold text-base-content sm:text-3xl">
                   Season Passes
                 </h1>
-                <p className="mt-1 text-base-content/70">
-                  Manage family passes and patron information
+                <p className="mt-1 text-sm text-base-content/60">
+                  Create, manage, and update family season passes
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="stats bg-base-200 shadow">
-                  <div className="stat">
-                    <div className="stat-title text-xs">Total Passes</div>
+                <div className="stats stats-horizontal bg-base-200 shadow-sm">
+                  <div className="stat px-4 py-2">
+                    <div className="stat-title text-xs">Passes</div>
                     <div className="stat-value text-lg">
                       {data?.length ?? 0}
                     </div>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title text-xs">Total Patrons</div>
+                  <div className="stat px-4 py-2">
+                    <div className="stat-title text-xs">Members</div>
                     <div className="stat-value text-lg">
                       {data?.reduce(
                         (acc, pass) => acc + pass.patrons.length,
@@ -145,9 +568,9 @@ function PassesPage() {
               </div>
             </div>
 
-            {/* Search and Actions Bar */}
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
+            {/* Search bar + actions */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="min-w-[200px] flex-1">
                 <div className="relative">
                   <input
                     id="pass-filter"
@@ -155,7 +578,7 @@ function PassesPage() {
                     onChange={(e) => setFilter(e.target.value)}
                     type="text"
                     className="input input-bordered w-full pl-10"
-                    placeholder="Search passes or patrons..."
+                    placeholder="Search passes or members..."
                   />
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -172,177 +595,252 @@ function PassesPage() {
                 </div>
               </div>
 
-              {/* Admin Season Filter */}
               {isAdmin && availableSeasons && availableSeasons.length > 1 && (
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="season-filter"
-                    className="text-sm font-medium text-base-content/70"
-                  >
-                    Season:
-                  </label>
-                  <select
-                    id="season-filter"
-                    value={selectedSeason}
-                    onChange={(e) => setSelectedSeason(e.target.value)}
-                    className="select select-bordered select-sm"
-                  >
-                    <option value="">All Seasons</option>
-                    {availableSeasons.map((season) => (
-                      <option key={season} value={season}>
-                        {season}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  id="season-filter"
+                  value={selectedSeason}
+                  onChange={(e) => setSelectedSeason(e.target.value)}
+                  className="select select-bordered select-sm"
+                >
+                  <option value="">All Seasons</option>
+                  {availableSeasons.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
               )}
 
               <button
-                onClick={() => setShowNewPassForm(!showNewPassForm)}
-                className="btn btn-primary"
+                onClick={() => {
+                  setShowNewPassForm(!showNewPassForm);
+                  if (!showNewPassForm) resetNewPass();
+                }}
+                className={`btn ${showNewPassForm ? "btn-ghost" : "btn-primary"}`}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 4.5v15m7.5-7.5h-15"
-                  />
-                </svg>
-                New Pass
+                {showNewPassForm ? (
+                  "Cancel"
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-5 w-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 4.5v15m7.5-7.5h-15"
+                      />
+                    </svg>
+                    New Pass
+                  </>
+                )}
               </button>
             </div>
 
-            {/* New Pass Form */}
+            {/* ── New Pass Creation Form (with inline member rows) ─── */}
             {showNewPassForm && (
-              <div className="card border border-primary/20 bg-base-100 shadow-lg">
-                <div className="card-body">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="card-title text-lg">
-                      Create New Season Pass
-                    </h3>
-                    <button
-                      onClick={() => setShowNewPassForm(false)}
-                      className="btn btn-circle btn-ghost btn-sm"
+              <form
+                onSubmit={handleNewPassSubmit(onNewPassSubmit)}
+                className="card border border-primary/20 bg-base-100 shadow-lg"
+              >
+                <div className="card-body gap-5">
+                  <h3 className="card-title text-lg">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-5 w-5"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="h-5 w-5"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18 18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="flex gap-3">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Z"
+                      />
+                    </svg>
+                    Create New Season Pass
+                  </h3>
+
+                  {/* Pass name + season row */}
+                  <div className="flex flex-wrap gap-3">
+                    <div className="form-control min-w-[200px] flex-1">
+                      <label className="label py-0">
+                        <span className="label-text text-xs font-medium">
+                          Family / Pass Name
+                        </span>
+                      </label>
                       <input
-                        {...register("label", { required: true })}
-                        placeholder="Family name (e.g., Johnson, Anderson)"
-                        className="input input-bordered flex-1"
+                        {...registerNewPass("label", { required: true })}
+                        placeholder="e.g. Johnson, Anderson"
+                        className="input input-bordered"
                         disabled={isCreating}
                       />
-                      <div className="w-32">
-                        <Controller
-                          name="season"
-                          control={control}
-                          rules={{ required: true }}
-                          render={({ field }) => (
-                            <SeasonTypeahead
-                              value={field.value}
-                              onChange={field.onChange}
-                              placeholder="Season"
-                              disabled={isCreating}
-                            />
-                          )}
-                        />
-                      </div>
+                    </div>
+                    <div className="form-control w-32">
+                      <label className="label py-0">
+                        <span className="label-text text-xs font-medium">
+                          Season
+                        </span>
+                      </label>
+                      <Controller
+                        name="season"
+                        control={newPassControl}
+                        rules={{ required: true }}
+                        render={({ field }) => (
+                          <SeasonTypeahead
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Year"
+                            disabled={isCreating}
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Members section */}
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-base-content/80">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                          stroke="currentColor"
+                          className="mr-1 inline h-4 w-4"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+                          />
+                        </svg>
+                        Family Members
+                        {memberFields.length > 0 && (
+                          <span className="badge badge-sm ml-1">
+                            {memberFields.length}
+                          </span>
+                        )}
+                      </h4>
                       <button
-                        type="submit"
-                        disabled={!isValid || !isDirty || isCreating}
-                        className="btn btn-primary"
+                        type="button"
+                        onClick={() =>
+                          addMember({ firstName: "", lastName: "" })
+                        }
+                        disabled={isCreating}
+                        className="btn btn-outline btn-primary btn-xs"
                       >
-                        {isCreating ? <LoadingSpinner /> : "Create Pass"}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                          stroke="currentColor"
+                          className="h-3.5 w-3.5"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 4.5v15m7.5-7.5h-15"
+                          />
+                        </svg>
+                        Add Member
                       </button>
                     </div>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* Passes List */}
-          {!!filteredPasses?.length ? (
-            <div className="grid gap-4">
-              {filteredPasses.map((pass) => (
-                <div
-                  key={pass.id}
-                  className="card bg-base-100 shadow-lg transition-shadow duration-200 hover:shadow-xl"
-                >
-                  <div className="card-body">
-                    {/* Pass Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <h2 className="card-title text-xl">{pass.label}</h2>
-                          <div className="text-sm text-base-content/70">
-                            Season {pass.season}
-                          </div>
-                        </div>
-                        <div className="badge badge-outline">
-                          {pass.patrons.length}{" "}
-                          {pass.patrons.length === 1 ? "patron" : "patrons"}
-                        </div>
+                    {memberFields.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-base-300 p-4 text-center text-sm text-base-content/50">
+                        <p>No members added yet</p>
+                        <p className="text-xs">
+                          Click &ldquo;Add Member&rdquo; to include family
+                          members with this pass
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => togglePassExpansion(pass.id)}
-                          className="btn btn-ghost btn-sm"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className={`h-5 w-5 transition-transform ${
-                              expandedPasses.has(pass.id) ? "rotate-180" : ""
-                            }`}
+                    ) : (
+                      <div className="space-y-2">
+                        {memberFields.map((field, idx) => (
+                          <div
+                            key={field.id}
+                            className="flex flex-wrap items-end gap-2 rounded-lg bg-base-200/40 p-2"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="m19.5 8.25-7.5 7.5-7.5-7.5"
-                            />
-                          </svg>
-                          {expandedPasses.has(pass.id) ? "Collapse" : "Expand"}
-                        </button>
-                        {/* Copy to Current Year button - only show if not current year */}
-                        {pass.season !== currentYear && (
-                          <button
-                            onClick={() =>
-                              handleCopyToCurrentYear(pass.id, pass.label)
-                            }
-                            disabled={isCopying}
-                            className="btn btn-outline btn-sm gap-1"
-                            title={`Copy "${pass.label}" to ${currentYear}`}
-                          >
-                            {isCopying ? (
-                              <LoadingSpinner />
-                            ) : (
+                            <div className="form-control min-w-[100px] flex-1">
+                              {idx === 0 && (
+                                <label className="label py-0">
+                                  <span className="label-text text-xs">
+                                    First Name
+                                  </span>
+                                </label>
+                              )}
+                              <input
+                                {...registerNewPass(
+                                  `members.${idx}.firstName`,
+                                  { required: true },
+                                )}
+                                placeholder="First"
+                                className="input input-bordered input-sm"
+                                disabled={isCreating}
+                              />
+                            </div>
+                            <div className="form-control min-w-[100px] flex-1">
+                              {idx === 0 && (
+                                <label className="label py-0">
+                                  <span className="label-text text-xs">
+                                    Last Name
+                                  </span>
+                                </label>
+                              )}
+                              <input
+                                {...registerNewPass(
+                                  `members.${idx}.lastName`,
+                                  { required: true },
+                                )}
+                                placeholder="Last"
+                                className="input input-bordered input-sm"
+                                disabled={isCreating}
+                              />
+                            </div>
+                            <div className="form-control min-w-[130px]">
+                              {idx === 0 && (
+                                <label className="label py-0">
+                                  <span className="label-text text-xs">
+                                    Birthday (opt.)
+                                  </span>
+                                </label>
+                              )}
+                              <Controller
+                                name={`members.${idx}.birthDate`}
+                                control={newPassControl}
+                                render={({ field: f }) => (
+                                  <DatePicker
+                                    value={
+                                      f.value ? dayjs(f.value) : null
+                                    }
+                                    format="MM/DD/YYYY"
+                                    className="input input-bordered input-sm w-full"
+                                    onChange={(d) =>
+                                      f.onChange(
+                                        d?.toISOString() ?? undefined,
+                                      )
+                                    }
+                                    disabled={isCreating}
+                                  />
+                                )}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeMember(idx)}
+                              disabled={isCreating}
+                              className="btn btn-circle btn-ghost btn-sm text-error"
+                              title="Remove member"
+                            >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
@@ -354,166 +852,215 @@ function PassesPage() {
                                 <path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 2.25.654 9.06 9.06 0 0 1 2.25-.654H12a1.125 1.125 0 0 1 1.125 1.125v3.375c0 .621.504 1.125 1.125 1.125h3.375c.621 0 1.125-.504 1.125-1.125V8.625c0-.621-.504-1.125-1.125-1.125H15.75Z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                                  d="M6 18 18 6M6 6l12 12"
                                 />
                               </svg>
-                            )}
-                            Copy to {currentYear}
-                          </button>
-                        )}
-                        <Link
-                          href={`passes/${pass.id}`}
-                          className="btn btn-primary btn-sm"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="h-4 w-4"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-                            />
-                          </svg>
-                          Manage
-                        </Link>
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    </div>
+                    )}
+                  </div>
 
-                    {/* Patrons Quick View */}
-                    {pass.patrons.length > 0 && (
-                      <div className="mt-4">
-                        <div className="mb-3 flex flex-wrap gap-2">
-                          {pass.patrons
-                            .slice(
-                              0,
-                              expandedPasses.has(pass.id) ? undefined : 3,
-                            )
-                            .map((patron) => (
-                              <div
-                                key={patron.id}
-                                className="flex items-center gap-2 rounded-lg bg-base-200 px-3 py-2"
-                              >
-                                <div className="avatar placeholder">
-                                  <div className="w-8 rounded-full bg-neutral text-neutral-content">
-                                    <span className="text-xs">
-                                      {patron.firstName.charAt(0)}
-                                      {patron.lastName.charAt(0)}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-sm font-medium capitalize">
-                                    {patron.firstName} {patron.lastName}
-                                  </div>
-                                  <div className="text-xs text-base-content/70">
-                                    {!!patron.birthDate
-                                      ? `${
-                                          new Date().getFullYear() -
-                                          patron.birthDate.getFullYear()
-                                        } years old`
-                                      : "Age not specified"}
-                                  </div>
-                                </div>
-                                <Link
-                                  href={`passes/patrons/${patron.id}`}
-                                  className="btn btn-ghost btn-xs"
-                                >
+                  {/* Submit */}
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNewPassForm(false);
+                        resetNewPass();
+                      }}
+                      className="btn btn-ghost"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!newPassValid || isCreating}
+                      className="btn btn-primary"
+                    >
+                      {isCreating ? (
+                        <LoadingSpinner />
+                      ) : (
+                        <>
+                          Create Pass
+                          {memberFields.length > 0 &&
+                            ` with ${memberFields.length} member${memberFields.length > 1 ? "s" : ""}`}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* ── Passes List ───────────────────────────────────────── */}
+          {!!filteredPasses?.length ? (
+            <div className="grid gap-3">
+              {filteredPasses.map((pass) => {
+                const isExpanded = expandedPasses.has(pass.id);
+
+                return (
+                  <div
+                    key={pass.id}
+                    className={`card bg-base-100 shadow transition-all duration-200 ${
+                      isExpanded
+                        ? "ring-2 ring-primary/20 shadow-lg"
+                        : "hover:shadow-md"
+                    }`}
+                  >
+                    <div className="card-body p-4 sm:p-6">
+                      {/* Pass header row */}
+                      <div
+                        className="flex cursor-pointer items-center justify-between"
+                        onClick={() => togglePassExpansion(pass.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="avatar placeholder">
+                            <div className="w-10 rounded-lg bg-primary/10 text-primary">
+                              <span className="text-sm font-bold">
+                                {pass.label.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <h2 className="text-lg font-semibold leading-tight">
+                              {pass.label}
+                            </h2>
+                            <div className="flex items-center gap-2 text-sm text-base-content/60">
+                              <span>Season {pass.season}</span>
+                              <span>·</span>
+                              <span>
+                                {pass.patrons.length}{" "}
+                                {pass.patrons.length === 1
+                                  ? "member"
+                                  : "members"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {pass.season !== currentYear && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyToCurrentYear(pass.id, pass.label);
+                              }}
+                              disabled={isCopying}
+                              className="btn btn-outline btn-xs hidden gap-1 sm:inline-flex"
+                              title={`Copy to ${currentYear}`}
+                            >
+                              {isCopying ? (
+                                <LoadingSpinner />
+                              ) : (
+                                <>
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     strokeWidth={1.5}
                                     stroke="currentColor"
-                                    className="h-3 w-3"
+                                    className="h-3.5 w-3.5"
                                   >
                                     <path
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
-                                      d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+                                      d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124M15.75 17.25h-3.375c-.621 0-1.125-.504-1.125-1.125V11.25c0-.621.504-1.125 1.125-1.125h3.375c.621 0 1.125.504 1.125 1.125v4.875c0 .621-.504 1.125-1.125 1.125Z"
                                     />
                                   </svg>
-                                </Link>
-                              </div>
-                            ))}
-                          {!expandedPasses.has(pass.id) &&
-                            pass.patrons.length > 3 && (
-                              <button
-                                onClick={() => togglePassExpansion(pass.id)}
-                                className="flex items-center gap-1 rounded-lg bg-base-300 px-3 py-2 text-sm transition-colors hover:bg-base-200"
-                              >
-                                +{pass.patrons.length - 3} more
-                              </button>
-                            )}
+                                  {currentYear}
+                                </>
+                              )}
+                            </button>
+                          )}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className={`h-5 w-5 text-base-content/40 transition-transform duration-200 ${
+                              isExpanded ? "rotate-180" : ""
+                            }`}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                            />
+                          </svg>
                         </div>
                       </div>
-                    )}
 
-                    {pass.patrons.length === 0 && (
-                      <div className="mt-4 py-8 text-center text-base-content/50">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="mx-auto mb-2 h-12 w-12 opacity-50"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
-                          />
-                        </svg>
-                        <p>No patrons added yet</p>
-                        <p className="text-sm">
-                          Click &quot;Manage&quot; to add family members
-                        </p>
-                      </div>
-                    )}
+                      {/* Collapsed patron preview chips */}
+                      {!isExpanded && pass.patrons.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {pass.patrons.slice(0, 4).map((p) => (
+                            <span
+                              key={p.id}
+                              className="badge badge-ghost badge-sm capitalize"
+                            >
+                              {p.firstName} {p.lastName}
+                            </span>
+                          ))}
+                          {pass.patrons.length > 4 && (
+                            <span className="badge badge-ghost badge-sm">
+                              +{pass.patrons.length - 4}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Expanded management panel */}
+                      {isExpanded && (
+                        <PassManagementPanel
+                          pass={pass}
+                          isAdmin={isAdmin}
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16">
               <PeopleGrid />
               <div className="mt-8 text-center">
                 <h3 className="mb-2 text-xl font-semibold text-base-content">
-                  No Season Passes Yet
+                  {filter
+                    ? "No passes match your search"
+                    : "No Season Passes Yet"}
                 </h3>
-                <p className="mb-6 text-base-content/70">
-                  Create your first season pass to get started
+                <p className="mb-6 text-base-content/60">
+                  {filter
+                    ? "Try a different search term"
+                    : "Create your first season pass to get started"}
                 </p>
-                <button
-                  onClick={() => setShowNewPassForm(true)}
-                  className="btn btn-primary"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="h-5 w-5"
+                {!filter && (
+                  <button
+                    onClick={() => setShowNewPassForm(true)}
+                    className="btn btn-primary"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 4.5v15m7.5-7.5h-15"
-                    />
-                  </svg>
-                  Create First Pass
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="h-5 w-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 4.5v15m7.5-7.5h-15"
+                      />
+                    </svg>
+                    Create First Pass
+                  </button>
+                )}
               </div>
             </div>
           )}

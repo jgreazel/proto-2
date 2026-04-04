@@ -1,3 +1,7 @@
+/**
+ * @deprecated This page is superseded by inline patron editing in the
+ * single-screen passes management at /passes. Kept for backwards compatibility.
+ */
 import dayjs from "dayjs";
 import Link from "next/link";
 import { useParams } from "next/navigation";
