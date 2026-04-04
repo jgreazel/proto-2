@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import { LoadingSpinner } from "~/components/loading";
@@ -11,6 +11,8 @@ import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
 import dayjs from "dayjs";
+import useKeyboardShortcuts from "~/helpers/useKeyboardShortcuts";
+import KeyboardShortcutsHelp from "~/components/keyboardShortcutsHelp";
 type Item = RouterOutputs["items"]["getAll"][number]["item"];
 type Patron = RouterOutputs["passes"]["getAll"][number]["patrons"][number];
 
@@ -636,6 +638,7 @@ const CheckInDrawer = ({ onClose }: { onClose: () => void }) => {
 function CheckoutPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [feed, setFeed] = useState<"concession" | "admission">("concession");
   const [cart, setCart] = useState<Item[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -703,6 +706,130 @@ function CheckoutPage() {
     },
   });
 
+  // ── Checkout handler (used by button and keyboard shortcut) ──
+  const handleCheckout = useCallback(() => {
+    if (!cart.length || isLoading) return;
+    const uniq = new Set(cart.map((c) => c.id));
+    const input: RouterInputs["items"]["checkout"] = [];
+    uniq.forEach((x) => {
+      input.push({ id: x, amountSold: cart.filter((c) => c.id === x).length });
+    });
+    mutate(input);
+  }, [cart, isLoading, mutate]);
+
+  // ── Keyboard Shortcuts ──
+  const shortcutGroups = useMemo(
+    () => [
+      {
+        title: "Navigation",
+        shortcuts: [
+          { keys: "C", description: "Open Check-In" },
+          { keys: "H", description: "Open History" },
+          { keys: "Esc", description: "Close drawer / dialog" },
+        ],
+      },
+      {
+        title: "Cart",
+        shortcuts: [
+          { keys: "P", description: "Complete purchase" },
+          { keys: "X", description: "Clear cart" },
+        ],
+      },
+      {
+        title: "Menu",
+        shortcuts: [
+          { keys: "1", description: "Concessions tab" },
+          { keys: "2", description: "Passes tab" },
+        ],
+      },
+      {
+        title: "Help",
+        shortcuts: [{ keys: "?", description: "Toggle this help" }],
+      },
+    ],
+    [],
+  );
+
+  useKeyboardShortcuts(
+    useMemo(
+      () => [
+        {
+          key: "?",
+          shift: true,
+          handler: () => setShowShortcuts((v) => !v),
+        },
+        {
+          key: "Escape",
+          global: true,
+          handler: () => {
+            if (showShortcuts) {
+              setShowShortcuts(false);
+            } else if (showCheckIn) {
+              setShowCheckIn(false);
+            } else if (showHistory) {
+              setShowHistory(false);
+            } else if (showClearConfirm) {
+              setShowClearConfirm(false);
+            }
+          },
+        },
+        {
+          key: "c",
+          handler: () => {
+            if (!showHistory && !showShortcuts) setShowCheckIn(true);
+          },
+        },
+        {
+          key: "h",
+          handler: () => {
+            if (!showCheckIn && !showShortcuts) setShowHistory(true);
+          },
+        },
+        {
+          key: "p",
+          handler: () => {
+            if (!showCheckIn && !showHistory && !showShortcuts) handleCheckout();
+          },
+        },
+        {
+          key: "x",
+          handler: () => {
+            if (!showCheckIn && !showHistory && !showShortcuts) {
+              if (showClearConfirm) {
+                setCart([]);
+                setShowClearConfirm(false);
+              } else if (cart.length > 0) {
+                setShowClearConfirm(true);
+              }
+            }
+          },
+        },
+        {
+          key: "1",
+          handler: () => {
+            if (!showCheckIn && !showHistory && !showShortcuts)
+              setFeed("concession");
+          },
+        },
+        {
+          key: "2",
+          handler: () => {
+            if (!showCheckIn && !showHistory && !showShortcuts)
+              setFeed("admission");
+          },
+        },
+      ],
+      [
+        showCheckIn,
+        showHistory,
+        showShortcuts,
+        showClearConfirm,
+        cart.length,
+        handleCheckout,
+      ],
+    ),
+  );
+
   const shoppingList = (
     <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-lg">
       <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
@@ -755,7 +882,7 @@ function CheckoutPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-primary-content">🍿 Point of Sale</h1>
+            <h1 className="text-2xl font-bold text-primary-content">Point of Sale</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -766,6 +893,7 @@ function CheckoutPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
               </svg>
               Check In
+              <kbd className="kbd kbd-xs border-white/30 bg-white/10 text-primary-content/70 hidden sm:inline">C</kbd>
             </button>
             <button
               className="btn btn-sm gap-2 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
@@ -775,7 +903,16 @@ function CheckoutPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
               History
+              <kbd className="kbd kbd-xs border-white/30 bg-white/10 text-primary-content/70 hidden sm:inline">H</kbd>
             </button>
+            <div className="tooltip tooltip-bottom" data-tip="Keyboard shortcuts (?)">
+              <button
+                className="btn btn-circle btn-sm border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
+                onClick={() => setShowShortcuts((v) => !v)}
+              >
+                ?
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -996,24 +1133,7 @@ function CheckoutPage() {
                       <button
                         className="btn btn-primary btn-sm gap-2"
                         disabled={!cart.length}
-                        onClick={() => {
-                          const uniq = new Set(cart.map((c) => c.id));
-                          let input: RouterInputs["items"]["checkout"];
-                          uniq.forEach((x) => {
-                            const toAdd = {
-                              id: x,
-                              amountSold: cart.filter((c) => c.id === x)
-                                .length,
-                            };
-
-                            if (!input) {
-                              input = [toAdd];
-                            } else {
-                              input.push(toAdd);
-                            }
-                          });
-                          mutate(input!);
-                        }}
+                        onClick={handleCheckout}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -1057,6 +1177,13 @@ function CheckoutPage() {
       {/* Check-In Drawer */}
       {showCheckIn && (
         <CheckInDrawer onClose={() => setShowCheckIn(false)} />
+      )}
+      {/* Keyboard Shortcuts Help */}
+      {showShortcuts && (
+        <KeyboardShortcutsHelp
+          groups={shortcutGroups}
+          onClose={() => setShowShortcuts(false)}
+        />
       )}
     </PageLayout>
   );

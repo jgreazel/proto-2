@@ -51,7 +51,7 @@ const Feedback = ({ onClose }: { onClose: () => void }) => {
             </svg>
           </button>
         </form>
-        <div className="text-lg font-semibold">💬 We&apos;d love to hear from you!</div>
+        <div className="text-lg font-semibold">We&apos;d love to hear from you!</div>
         <p className="text-sm text-base-content/70">
           Got a cool idea? Spotted something wonky? Your feedback helps us make
           Guard Shack better for everyone — no thought is too small!
@@ -94,7 +94,11 @@ const Feedback = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-export const LinkListItems = ({ isAdmin }: { isAdmin?: boolean }) => {
+export const LinkListItems = ({
+  isAdmin,
+}: {
+  isAdmin?: boolean;
+}) => {
   return (
     <>
       <li>
@@ -223,11 +227,9 @@ export const LinkListItems = ({ isAdmin }: { isAdmin?: boolean }) => {
 const EndMenu = ({
   username,
   isAdmin,
-  onFeedback,
 }: {
   username: string;
   isAdmin: boolean;
-  onFeedback: () => void;
 }) => {
   return (
     <>
@@ -450,7 +452,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
                 </svg>
                 <span className="hidden sm:inline">Feedback</span>
               </button>
-              <EndMenu username={user.username!} isAdmin={isAdmin} onFeedback={() => setShowFeedback(true)} />
+              <EndMenu username={user.username!} isAdmin={isAdmin} />
             </div>
           )}
         </div>

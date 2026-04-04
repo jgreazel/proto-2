@@ -274,8 +274,8 @@ const ItemList = (props: {
             onClick={() => setSelectedCategory(null)}
             className={`badge cursor-pointer transition-colors ${
               selectedCategory === null
-                ? "badge-primary"
-                : "badge-outline hover:badge-primary"
+                ? "badge-primary text-primary-content"
+                : "badge-outline hover:bg-primary/20"
             }`}
           >
             All ({typeFiltered.length})
@@ -288,8 +288,8 @@ const ItemList = (props: {
               }
               className={`badge cursor-pointer transition-colors ${
                 selectedCategory === cat
-                  ? "badge-primary"
-                  : "badge-outline hover:badge-primary"
+                  ? "badge-primary text-primary-content"
+                  : "badge-outline hover:bg-primary/20"
               }`}
             >
               {cat} ({count})
@@ -302,8 +302,8 @@ const ItemList = (props: {
               }
               className={`badge cursor-pointer transition-colors ${
                 selectedCategory === ""
-                  ? "badge-warning"
-                  : "badge-ghost hover:badge-warning"
+                  ? "badge-warning text-warning-content"
+                  : "badge-ghost hover:bg-warning/20"
               }`}
             >
               Uncategorized ({uncategorizedCount})
@@ -633,7 +633,7 @@ function ItemsPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-white sm:text-3xl">
-                📦 Inventory Management
+                Inventory Management
               </h1>
               <p className="mt-1 text-sm font-medium text-white/80">
                 Manage your {itemType} items, track stock levels, and monitor
