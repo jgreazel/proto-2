@@ -464,6 +464,38 @@ const ItemFeed = (props: {
   );
 };
 
+// ── History Drawer ──────────────────────────────────────
+
+const HistoryDrawer = ({ onClose }: { onClose: () => void }) => (
+  <>
+    <div
+      className="fixed inset-0 z-40 bg-black/30 transition-opacity"
+      onClick={onClose}
+    />
+    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-base-300 bg-base-100 shadow-2xl">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-base-content/60">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+          <h2 className="font-semibold">Recent Transactions</h2>
+        </div>
+        <button className="btn btn-circle btn-ghost btn-sm" onClick={onClose}>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        <TransactionHistory />
+      </div>
+    </div>
+  </>
+);
+
 // ── Check-In Drawer ────────────────────────────────────
 
 const CheckInDrawer = ({ onClose }: { onClose: () => void }) => {
@@ -772,23 +804,19 @@ function CheckoutPage() {
               Check In
             </button>
             <button
-              className={`btn btn-sm gap-2 ${showHistory ? "bg-white text-primary border-none shadow-sm hover:bg-white/90" : "border-white/20 bg-white/20 text-primary-content hover:bg-white/30"}`}
-              onClick={() => {
-                setShowHistory((v) => !v);
-                setShowClearConfirm(false);
-              }}
+              className="btn btn-sm gap-2 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
+              onClick={() => setShowHistory(true)}
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
-              {showHistory ? "Back to Register" : "History"}
+              History
             </button>
           </div>
         </div>
       </div>
       {/* Sales */}
-      {!showHistory && (
-        <div className="flex flex-col gap-4 p-4 md:flex-row md:gap-6 md:p-6">
+      <div className="flex flex-col gap-4 p-4 md:flex-row md:gap-6 md:p-6">
           {/* Item Browser (desktop) */}
           <div className="hidden md:block md:flex-1">{shoppingList}</div>
 
@@ -1058,50 +1086,9 @@ function CheckoutPage() {
           {/* Item Browser (mobile) */}
           <div className="block md:hidden">{shoppingList}</div>
         </div>
-      )}{" "}
-      {/* Transaction History */}
+      {/* History Drawer */}
       {showHistory && (
-        <div className="mx-auto max-w-6xl p-6">
-          <div className="grid gap-6">
-            <div className="rounded-lg border border-warning/20 bg-warning/10 p-4">
-              <div className="flex items-start gap-3">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-                  />
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-warning">
-                    Voiding transactions:
-                  </p>
-                  <ul className="mt-1 space-y-1 text-sm text-base-content/70">
-                    <li>
-                      • Voiding purchases will refund the sale and restore
-                      inventory
-                    </li>
-                    <li>
-                      • Voiding admissions will remove the check-in record
-                    </li>
-                    <li>• This action cannot be undone</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-base-300 bg-base-100 shadow-lg">
-              <TransactionHistory />
-            </div>
-          </div>
-        </div>
+        <HistoryDrawer onClose={() => setShowHistory(false)} />
       )}
       {/* Check-In Drawer */}
       {showCheckIn && (
