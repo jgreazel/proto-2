@@ -1,3 +1,8 @@
+/**
+ * @deprecated Time Clock admin feature is no longer in active use.
+ * Kept for potential future use as an optional module.
+ * Not linked from any navigation — only accessible via direct URL.
+ */
 import { DatePicker, Popconfirm, Select, Table, TimePicker } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useState } from "react";

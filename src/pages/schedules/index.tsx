@@ -1,3 +1,8 @@
+/**
+ * @deprecated Schedules feature is no longer in active use.
+ * Kept for potential future use as an optional module.
+ * Not linked from any navigation — only accessible via direct URL.
+ */
 import { Controller, useForm } from "react-hook-form";
 import dayjs, { type Dayjs } from "dayjs";
 import { TimePicker, Calendar, DatePicker } from "antd";

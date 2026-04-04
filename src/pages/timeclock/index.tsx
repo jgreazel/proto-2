@@ -1,3 +1,8 @@
+/**
+ * @deprecated Time Clock feature is no longer in active use.
+ * Kept for potential future use as an optional module.
+ * Not linked from any navigation — only accessible via direct URL.
+ */
 import dayjs, { Dayjs } from "dayjs";
 import { PageLayout } from "~/components/layout";
 import { type RouterOutputs, api } from "~/utils/api";
