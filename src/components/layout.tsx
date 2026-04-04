@@ -29,7 +29,7 @@ const Feedback = ({ onClose }: { onClose: () => void }) => {
       <form method="dialog" className="modal-backdrop">
         <button onClick={onClose}>close</button>
       </form>
-      <div className="modal-box flex flex-col gap-2">
+      <div className="modal-box flex flex-col gap-3">
         <form method="dialog">
           <button
             onClick={onClose}
@@ -51,23 +51,28 @@ const Feedback = ({ onClose }: { onClose: () => void }) => {
             </svg>
           </button>
         </form>
-        <div className="font-medium">Leave Feedback</div>
+        <div className="text-lg font-semibold">💬 We&apos;d love to hear from you!</div>
+        <p className="text-sm text-base-content/70">
+          Got a cool idea? Spotted something wonky? Your feedback helps us make
+          Guard Shack better for everyone — no thought is too small!
+        </p>
         <textarea
           disabled={isLoading}
           value={val}
           onChange={(e) => setVal(e.target.value)}
           className="textarea textarea-bordered w-full"
-          placeholder="Experiencing bugs or have an idea?"
+          placeholder="What's on your mind?"
+          rows={4}
         ></textarea>
         <div className="flex justify-end">
           <button
-            disabled={isLoading}
+            disabled={isLoading || !val.trim()}
             onClick={() => {
               mutate({ message: val });
             }}
             className="btn btn-primary"
           >
-            Submit
+            Send Feedback
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -218,12 +223,12 @@ export const LinkListItems = ({ isAdmin }: { isAdmin?: boolean }) => {
 const EndMenu = ({
   username,
   isAdmin,
+  onFeedback,
 }: {
   username: string;
   isAdmin: boolean;
+  onFeedback: () => void;
 }) => {
-  const [show, setShow] = useState(false);
-
   return (
     <>
       <div className="dropdown dropdown-end z-50">
@@ -249,25 +254,6 @@ const EndMenu = ({
         >
           <div className="p-1 font-medium capitalize">Hi, {username}</div>
           <div className="divider m-0"></div>
-          <li className="w-max" onClick={() => setShow(true)}>
-            <a>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.068.157 2.148.279 3.238.364.466.037.893.281 1.153.671L12 21l2.652-3.978c.26-.39.687-.634 1.153-.67 1.09-.086 2.17-.208 3.238-.365 1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
-                />
-              </svg>
-              Leave Feedback
-            </a>
-          </li>
           <li className="w-max">
             <Link href={"/users/profile"}>
               <svg
@@ -332,7 +318,6 @@ const EndMenu = ({
           </li>
         </ul>
       </div>
-      {show && <Feedback onClose={() => setShow(false)} />}
     </>
   );
 };
@@ -365,6 +350,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
       enabled: isSignedIn,
     });
   const router = useRouter();
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // user should load fast, just return empty until then
   if (!userLoaded) return <div></div>;
@@ -392,59 +378,85 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
   const isAdmin = userSettings?.isAdmin ?? false;
 
   return (
-    <div className="navbar bg-base-100 shadow-md">
-      <div className="navbar-start">
-        {/* Mobile hamburger — hidden on md+ */}
-        {!disabled && (
-          <div className="dropdown z-50 md:hidden">
-            <div tabIndex={0} role="button" className="btn btn-ghost">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+    <>
+      <div className="navbar bg-base-100 shadow-md">
+        <div className="navbar-start">
+          {/* Mobile hamburger — hidden on md+ */}
+          {!disabled && (
+            <div className="dropdown z-50 md:hidden">
+              <div tabIndex={0} role="button" className="btn btn-ghost">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h8m-8 6h16"
+                  />
+                </svg>
+              </div>
+              <ul
+                tabIndex={0}
+                className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow-xl"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h8m-8 6h16"
-                />
-              </svg>
+                {isLoading ? (
+                  <li className="p-2">Loading...</li>
+                ) : (
+                  <LinkListItems isAdmin={isAdmin} />
+                )}
+              </ul>
             </div>
-            <ul
-              tabIndex={0}
-              className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow-xl"
-            >
-              {isLoading ? (
-                <li className="p-2">Loading...</li>
-              ) : (
-                <LinkListItems isAdmin={isAdmin} />
-              )}
-            </ul>
-          </div>
-        )}
+          )}
 
-        {home}
-      </div>
-
-      {/* Desktop inline nav — hidden on mobile */}
-      {!disabled && isSignedIn && (
-        <div className="navbar-center hidden md:flex">
-          <div className="flex items-center gap-1">
-            <DesktopNavLink href="/register" label="Register" currentPath={router.pathname} />
-            <DesktopNavLink href="/passes" label="Passes" currentPath={router.pathname} />
-          </div>
+          {home}
         </div>
-      )}
 
-      <div className="navbar-end">
-        {!!isSignedIn && !disabled && (
-          <EndMenu username={user.username!} isAdmin={isAdmin} />
+        {/* Desktop inline nav — hidden on mobile */}
+        {!disabled && isSignedIn && (
+          <div className="navbar-center hidden md:flex">
+            <div className="flex items-center gap-1">
+              <DesktopNavLink href="/register" label="Register" currentPath={router.pathname} />
+              <DesktopNavLink href="/passes" label="Passes" currentPath={router.pathname} />
+            </div>
+          </div>
         )}
+
+        <div className="navbar-end">
+          {!!isSignedIn && !disabled && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowFeedback(true)}
+                className="btn btn-ghost btn-sm gap-1.5 text-base-content/60 hover:text-primary"
+                title="Share your thoughts!"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.068.157 2.148.279 3.238.364.466.037.893.281 1.153.671L12 21l2.652-3.978c.26-.39.687-.634 1.153-.67 1.09-.086 2.17-.208 3.238-.365 1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Feedback</span>
+              </button>
+              <EndMenu username={user.username!} isAdmin={isAdmin} onFeedback={() => setShowFeedback(true)} />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      {showFeedback && <Feedback onClose={() => setShowFeedback(false)} />}
+    </>
   );
 };
 
