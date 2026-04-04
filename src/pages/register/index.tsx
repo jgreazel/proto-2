@@ -740,17 +740,17 @@ function CheckoutPage() {
   return (
     <PageLayout>
       {/* Header */}
-      <div className="border-b border-base-300 bg-base-100 px-6 py-4">
+      <div className="bg-gradient-to-r from-primary to-secondary px-6 py-4 shadow-md">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2">
+            <div className="rounded-lg bg-white/20 p-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="h-6 w-6 text-primary"
+                className="h-6 w-6 text-primary-content"
               >
                 <path
                   strokeLinecap="round"
@@ -759,11 +759,11 @@ function CheckoutPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold">Point of Sale</h1>
+            <h1 className="text-2xl font-bold text-primary-content">🍿 Point of Sale</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="btn btn-ghost btn-sm gap-2"
+              className="btn btn-sm gap-2 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
               onClick={() => setShowCheckIn(true)}
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
@@ -772,7 +772,7 @@ function CheckoutPage() {
               Check In
             </button>
             <button
-              className={`btn btn-sm gap-2 ${showHistory ? "btn-primary" : "btn-ghost"}`}
+              className={`btn btn-sm gap-2 ${showHistory ? "bg-white text-primary border-none shadow-sm hover:bg-white/90" : "border-white/20 bg-white/20 text-primary-content hover:bg-white/30"}`}
               onClick={() => {
                 setShowHistory((v) => !v);
                 setShowClearConfirm(false);
