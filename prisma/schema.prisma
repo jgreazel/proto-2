@@ -167,14 +167,14 @@ model TimeClockEvent {
 }
 
 model UserSettings {
-    id                String    @id @default(cuid())
-    userId            String    @unique
-    defaultHourCodeId String?
-    defaultHourCode   HourCode? @relation(fields: [defaultHourCodeId], references: [id])
-    canModifyHourCode Boolean   @default(false)
-    clockPIN          String?   @unique
-    isAdmin           Boolean   @default(false)
-    canSchedule       Boolean   @default(false)
+    id                  String    @id @default(cuid())
+    userId              String    @unique
+    defaultHourCodeId   String?
+    defaultHourCode     HourCode? @relation(fields: [defaultHourCodeId], references: [id])
+    canModifyHourCode   Boolean   @default(false)
+    clockPIN            String?   @unique
+    isAdmin             Boolean   @default(false)
+    canSchedule         Boolean   @default(false)
 
     createdBy String
     createdAt DateTime @default(now())
@@ -196,5 +196,18 @@ model ItemChangeLog {
     createdAt DateTime @default(now())
 
     @@index([itemId])
+    @@index([userId])
+}
+
+model SavedReport {
+    id         String   @id @default(cuid())
+    name       String   @db.VarChar(100)
+    reportType String   @db.VarChar(30) // "purchase" | "admission" | "itemchangelog" | "overview"
+    datePreset String?  @db.VarChar(30) // "Today" | "Yesterday" | "Last 7 Days" etc.
+    customStart DateTime?
+    customEnd   DateTime?
+    userId     String
+    createdAt  DateTime @default(now())
+
     @@index([userId])
 }

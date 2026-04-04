@@ -326,4 +326,39 @@ export const reportsRouter = createTRPCRouter({
           : null,
       };
     }),
+
+  // ── Saved Reports ──────────────────────────────────────
+  getSavedReports: privateProcedure.query(async ({ ctx }) => {
+    return ctx.db.savedReport.findMany({
+      where: { userId: ctx.userId },
+      orderBy: { createdAt: "desc" },
+    });
+  }),
+
+  createSavedReport: privateProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(100),
+        reportType: z.string(),
+        datePreset: z.string().optional().nullable(),
+        customStart: z.date().optional().nullable(),
+        customEnd: z.date().optional().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.savedReport.create({
+        data: {
+          ...input,
+          userId: ctx.userId,
+        },
+      });
+    }),
+
+  deleteSavedReport: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.savedReport.delete({
+        where: { id: input.id, userId: ctx.userId },
+      });
+    }),
 });

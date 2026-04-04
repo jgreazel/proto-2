@@ -1,8 +1,20 @@
-import { type ReactElement, type Ref, forwardRef, useState } from "react";
+import { type ReactElement, type Ref, forwardRef, useState, useMemo } from "react";
 import { DatePicker } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { LoadingSpinner } from "~/components/loading";
+import toast from "react-hot-toast";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 
@@ -806,73 +818,119 @@ export const ItemChangeLogTable = forwardRef<
   );
 });
 
+// ── Helper: CSV export ──────────────────────────────────
+function downloadCsv(filename: string, rows: string[][]) {
+  const csv = rows
+    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Helper: delta badge ─────────────────────────────────
+function DeltaBadge({ current, previous }: { current: number; previous: number }) {
+  if (previous === 0 && current === 0) return null;
+  if (previous === 0) return <span className="badge badge-success badge-xs ml-1">New</span>;
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return <span className="badge badge-ghost badge-xs ml-1">—</span>;
+  return (
+    <span className={`badge badge-xs ml-1 ${pct > 0 ? "badge-success" : "badge-error"}`}>
+      {pct > 0 ? "↑" : "↓"}{Math.abs(pct)}%
+    </span>
+  );
+}
+
+// ── Presets ──────────────────────────────────────────────
+const PRESETS: { label: string; range: () => [Dayjs, Dayjs] }[] = [
+  { label: "Today", range: () => [dayjs().startOf("day"), dayjs()] },
+  {
+    label: "Yesterday",
+    range: () => [
+      dayjs().subtract(1, "day").startOf("day"),
+      dayjs().subtract(1, "day").endOf("day"),
+    ],
+  },
+  { label: "Last 7 Days", range: () => [dayjs().subtract(6, "day").startOf("day"), dayjs()] },
+  { label: "Last 30 Days", range: () => [dayjs().subtract(29, "day").startOf("day"), dayjs()] },
+  { label: "This Month", range: () => [dayjs().startOf("month"), dayjs()] },
+];
+
+type TabKey = "overview" | "purchase" | "admission" | "itemchangelog";
+
 export function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<
-    "purchase" | "admission" | "itemchangelog"
-  >("purchase");
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [comparing, setComparing] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showSavedMenu, setShowSavedMenu] = useState(false);
 
   const startDate = dateRange?.[0]?.toDate() ?? new Date();
   const endDate = dateRange?.[1]?.endOf("day").toDate() ?? new Date();
 
-  const purchaseReport: RouterInputs["reports"]["getNew"]["purchaseReport"] = {
-    startDate,
-    endDate,
-    includeAdmissions: false,
-    includeConcessions: true,
-  };
-  const admissionReport: RouterInputs["reports"]["getNew"]["admissionReport"] =
-    {
-      startDate,
-      endDate,
-    };
-  const itemChangeLogReport: RouterInputs["reports"]["getNew"]["itemChangeLogReport"] =
-    {
-      startDate,
-      endDate,
-    };
+  // Compute previous period (same duration, shifted back)
+  const duration = dateRange
+    ? dateRange[1].diff(dateRange[0], "millisecond")
+    : 0;
+  const prevStart = dateRange
+    ? dateRange[0].subtract(duration + 1, "millisecond").startOf("day").toDate()
+    : new Date();
+  const prevEnd = dateRange
+    ? dateRange[0].subtract(1, "millisecond").toDate()
+    : new Date();
 
-  const { data, isFetching } = api.reports.getNew.useQuery(
+  const queryInput = {
+    purchaseReport: { startDate, endDate, includeAdmissions: false, includeConcessions: true } as RouterInputs["reports"]["getNew"]["purchaseReport"],
+    admissionReport: { startDate, endDate } as RouterInputs["reports"]["getNew"]["admissionReport"],
+    timecardReport: null,
+    itemChangeLogReport: { startDate, endDate } as RouterInputs["reports"]["getNew"]["itemChangeLogReport"],
+  };
+
+  const { data, isFetching } = api.reports.getNew.useQuery(queryInput, {
+    enabled: !!dateRange,
+    onError: handleApiError,
+  });
+
+  const { data: prevData } = api.reports.getNew.useQuery(
     {
-      purchaseReport,
-      admissionReport,
+      purchaseReport: { startDate: prevStart, endDate: prevEnd, includeAdmissions: false, includeConcessions: true },
+      admissionReport: { startDate: prevStart, endDate: prevEnd },
       timecardReport: null,
-      itemChangeLogReport,
+      itemChangeLogReport: { startDate: prevStart, endDate: prevEnd },
     },
     {
-      enabled: !!dateRange,
+      enabled: !!dateRange && comparing,
       onError: handleApiError,
     },
   );
 
-  const presets: { label: string; range: () => [Dayjs, Dayjs] }[] = [
-    {
-      label: "Today",
-      range: () => [dayjs().startOf("day"), dayjs()],
+  // ── Saved reports ───────────────────────────────────────
+  const { data: savedReports, refetch: refetchSaved } =
+    api.reports.getSavedReports.useQuery();
+  const { mutate: createSaved } = api.reports.createSavedReport.useMutation({
+    onSuccess: () => {
+      toast.success("Report saved");
+      setShowSaveModal(false);
+      setSaveName("");
+      void refetchSaved();
     },
-    {
-      label: "Yesterday",
-      range: () => [
-        dayjs().subtract(1, "day").startOf("day"),
-        dayjs().subtract(1, "day").endOf("day"),
-      ],
+    onError: handleApiError,
+  });
+  const { mutate: deleteSaved } = api.reports.deleteSavedReport.useMutation({
+    onSuccess: () => {
+      toast.success("Deleted");
+      void refetchSaved();
     },
-    {
-      label: "Last 7 Days",
-      range: () => [dayjs().subtract(6, "day").startOf("day"), dayjs()],
-    },
-    {
-      label: "Last 30 Days",
-      range: () => [dayjs().subtract(29, "day").startOf("day"), dayjs()],
-    },
-    {
-      label: "This Month",
-      range: () => [dayjs().startOf("month"), dayjs()],
-    },
-  ];
+    onError: handleApiError,
+  });
 
-  const handlePreset = (p: (typeof presets)[number]) => {
+  const handlePreset = (p: (typeof PRESETS)[number]) => {
     setSelectedPreset(p.label);
     const [s, e] = p.range();
     setDateRange([s, e]);
@@ -885,8 +943,117 @@ export function ReportsPage() {
     }
   };
 
+  const loadSaved = (s: NonNullable<typeof savedReports>[number]) => {
+    if (s.datePreset) {
+      const preset = PRESETS.find((p) => p.label === s.datePreset);
+      if (preset) handlePreset(preset);
+    } else if (s.customStart && s.customEnd) {
+      setSelectedPreset(null);
+      setDateRange([dayjs(s.customStart), dayjs(s.customEnd)]);
+    }
+    setActiveTab(s.reportType as TabKey);
+    setShowSavedMenu(false);
+  };
+
+  // ── Charts data ─────────────────────────────────────────
+  const dailyRevenue = useMemo(() => {
+    if (!data?.purchaseReport?.transactions) return [];
+    const byDay: Record<string, number> = {};
+    data.purchaseReport.transactions.forEach((t) => {
+      if (!t) return;
+      if (!t.isVoided) {
+        const day = dayjs(t.createdAt).format("MMM D");
+        byDay[day] = (byDay[day] ?? 0) + t.total;
+      }
+    });
+    return Object.entries(byDay).map(([day, cents]) => ({
+      day,
+      revenue: cents / 100,
+    }));
+  }, [data?.purchaseReport?.transactions]);
+
+  const dailyAdmissions = useMemo(() => {
+    if (!data?.admissionReport?.admissionEvents) return [];
+    const byDay: Record<string, { members: number; tickets: number }> = {};
+    data.admissionReport.admissionEvents.forEach((e) => {
+      const day = dayjs(e.createdAt).format("MMM D");
+      if (!byDay[day]) byDay[day] = { members: 0, tickets: 0 };
+      if (e.type === "admission") byDay[day]!.members++;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      else byDay[day]!.tickets += (e.amountSold as number) ?? 1;
+    });
+    return Object.entries(byDay).map(([day, v]) => ({ day, ...v }));
+  }, [data?.admissionReport?.admissionEvents]);
+
+  // ── CSV export ──────────────────────────────────────────
+  const handleExport = () => {
+    if (activeTab === "purchase" && data?.purchaseReport) {
+      const rows = [["ID", "Date", "Items", "Total", "Cashier", "Status", "Void Info"]];
+      data.purchaseReport.transactions.forEach((t) => {
+        if (!t) return;
+        rows.push([
+          `#${t.id.slice(-8)}`,
+          dayjs(t.createdAt).format("MM/DD/YYYY h:mm A"),
+          t.items.map((i) => `${i.amountSold}x ${i.label}`).join("; "),
+          dbUnitToDollars(t.total),
+          t.createdBy,
+          t.isVoided ? "VOIDED" : "Completed",
+          t.isVoided ? `${t.voidedBy ?? ""} - ${t.voidReason ?? ""}` : "",
+        ]);
+      });
+      downloadCsv(`sales-report-${dayjs().format("YYYY-MM-DD")}.csv`, rows);
+    } else if (activeTab === "admission" && data?.admissionReport) {
+      const rows = [["Patron", "Type", "Date", "Time", "Staff"]];
+      data.admissionReport.admissionEvents.forEach((e) => {
+        rows.push([
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          e.type === "admission" ? `${e.patron.firstName} ${e.patron.lastName}` : "Non-member",
+          e.type === "admission" ? "Member" : "Ticket",
+          dayjs(e.createdAt).format("MM/DD/YYYY"),
+          dayjs(e.createdAt).format("h:mm A"),
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          (e.createdBy as string) ?? "",
+        ]);
+      });
+      downloadCsv(`admissions-report-${dayjs().format("YYYY-MM-DD")}.csv`, rows);
+    } else if (activeTab === "itemchangelog" && data?.itemChangeLogReport) {
+      const rows = [["Item", "Change Note", "Modified By", "Date"]];
+      data.itemChangeLogReport.changeLogs.forEach((l) => {
+        rows.push([
+          l.item.label,
+          l.changeNote ?? "",
+          l.userId,
+          dayjs(l.createdAt).format("MM/DD/YYYY h:mm A"),
+        ]);
+      });
+      downloadCsv(`changes-report-${dayjs().format("YYYY-MM-DD")}.csv`, rows);
+    } else if (activeTab === "overview") {
+      // Export summary as CSV
+      const rows = [["Metric", "Value"]];
+      const ps = data?.purchaseReport?.summary;
+      const ar = data?.admissionReport;
+      if (ps) {
+        rows.push(["Revenue", dbUnitToDollars(ps.concessionTotal)]);
+        rows.push(["Voided", dbUnitToDollars(ps.voidedConcessionTotal)]);
+        rows.push(["Net Revenue", dbUnitToDollars(ps.concessionTotal - ps.voidedConcessionTotal)]);
+        rows.push(["Transactions", String(ps.totalTransactions)]);
+      }
+      if (ar) {
+        const members = ar.admissionEvents.filter((e) => e.type === "admission").length;
+        rows.push(["Member Admissions", String(members)]);
+        rows.push(["Total Entries", String(ar.admissionEvents.length)]);
+      }
+      downloadCsv(`overview-report-${dayjs().format("YYYY-MM-DD")}.csv`, rows);
+    }
+    toast.success("CSV downloaded");
+  };
+
+  // ── Print href ──────────────────────────────────────────
   const printHref =
-    activeTab === "purchase"
+    activeTab === "purchase" || activeTab === "overview"
       ? {
           pathname: "/reports/print/purchase" as const,
           query: {
@@ -912,11 +1079,30 @@ export function ReportsPage() {
           },
         };
 
-  const tabs = [
-    { key: "purchase" as const, label: "Sales", emoji: "💰" },
-    { key: "admission" as const, label: "Admissions", emoji: "🎟️" },
-    { key: "itemchangelog" as const, label: "Changes", emoji: "📋" },
+  const tabs: { key: TabKey; label: string; emoji: string }[] = [
+    { key: "overview", label: "Overview", emoji: "📊" },
+    { key: "purchase", label: "Sales", emoji: "💰" },
+    { key: "admission", label: "Admissions", emoji: "🎟️" },
+    { key: "itemchangelog", label: "Changes", emoji: "📋" },
   ];
+
+  // Summary helpers
+  const ps = data?.purchaseReport?.summary;
+  const admissionEvents = data?.admissionReport?.admissionEvents;
+  const memberCount = admissionEvents?.filter((x) => x.type === "admission").length ?? 0;
+  const ticketCount = admissionEvents
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    ?.filter((x) => x.type === "transaction").reduce((s, x) => s + (x.amountSold as number), 0) ?? 0;
+  const changeCount = data?.itemChangeLogReport?.changeLogs.length ?? 0;
+
+  // Previous period helpers (for comparison)
+  const prevPs = prevData?.purchaseReport?.summary;
+  const prevMember = prevData?.admissionReport?.admissionEvents?.filter((x) => x.type === "admission").length ?? 0;
+  const prevTicket = prevData?.admissionReport?.admissionEvents
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    ?.filter((x) => x.type === "transaction").reduce((s, x) => s + (x.amountSold as number), 0) ?? 0;
 
   return (
     <PageLayout>
@@ -926,48 +1112,37 @@ export function ReportsPage() {
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-base-100/20">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="h-5 w-5 text-primary-content"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
-                    />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-primary-content">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
                   </svg>
                 </div>
-                <h1 className="text-xl font-bold text-primary-content">
-                  Reports
-                </h1>
+                <h1 className="text-xl font-bold text-primary-content">Reports</h1>
               </div>
-              {dateRange && data && (
-                <Link
-                  href={printHref}
-                  className="btn btn-sm gap-2 border-white/20 bg-base-100/20 text-primary-content hover:bg-base-100/30"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="h-4 w-4"
+              <div className="flex items-center gap-2">
+                {dateRange && data && activeTab !== "overview" && (
+                  <button
+                    className="btn btn-sm gap-1 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
+                    onClick={handleExport}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12Zm-2.25 0h.008v.008H16.5V12Z"
-                    />
-                  </svg>
-                  Print
-                </Link>
-              )}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    CSV
+                  </button>
+                )}
+                {dateRange && data && activeTab !== "overview" && (
+                  <Link
+                    href={printHref}
+                    className="btn btn-sm gap-1 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12Zm-2.25 0h.008v.008H16.5V12Z" />
+                    </svg>
+                    Print
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -975,9 +1150,9 @@ export function ReportsPage() {
         {/* Control Bar */}
         <div className="sticky top-0 z-10 border-b border-base-300 bg-base-100/95 shadow-sm backdrop-blur">
           <div className="mx-auto max-w-7xl space-y-3 px-4 py-3 sm:px-6">
-            {/* Date presets + custom picker */}
+            {/* Date presets + saved reports + custom picker */}
             <div className="flex flex-wrap items-center gap-2">
-              {presets.map((p) => (
+              {PRESETS.map((p) => (
                 <button
                   key={p.label}
                   className={`btn btn-xs sm:btn-sm ${
@@ -988,7 +1163,63 @@ export function ReportsPage() {
                   {p.label}
                 </button>
               ))}
-              <div className="ml-auto">
+
+              {/* Saved reports dropdown */}
+              <div className="relative">
+                <button
+                  className="btn btn-ghost btn-xs sm:btn-sm gap-1"
+                  onClick={() => setShowSavedMenu((v) => !v)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-3.5 w-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
+                  </svg>
+                  <span className="hidden sm:inline">Saved</span>
+                  {savedReports?.length ? (
+                    <span className="badge badge-primary badge-xs">{savedReports.length}</span>
+                  ) : null}
+                </button>
+                {showSavedMenu && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setShowSavedMenu(false)} />
+                    <div className="absolute left-0 top-full z-30 mt-1 w-64 rounded-lg border border-base-300 bg-base-100 p-2 shadow-xl">
+                      <div className="mb-2 flex items-center justify-between px-2">
+                        <span className="text-xs font-semibold text-base-content/60">SAVED REPORTS</span>
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => { setShowSavedMenu(false); setShowSaveModal(true); }}
+                        >
+                          + Save Current
+                        </button>
+                      </div>
+                      {!savedReports?.length && (
+                        <p className="px-2 py-3 text-center text-xs text-base-content/40">No saved reports yet</p>
+                      )}
+                      {savedReports?.map((s) => (
+                        <div
+                          key={s.id}
+                          className="group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 hover:bg-base-200"
+                          onClick={() => loadSaved(s)}
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{s.name}</p>
+                            <p className="text-xs text-base-content/50">
+                              {s.datePreset ?? "Custom range"} · {s.reportType}
+                            </p>
+                          </div>
+                          <button
+                            className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100"
+                            onClick={(e) => { e.stopPropagation(); deleteSaved({ id: s.id }); }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="ml-auto flex items-center gap-2">
                 <RangePicker
                   value={dateRange}
                   onChange={handleCustomRange}
@@ -998,29 +1229,39 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {/* Report tabs + date label */}
+            {/* Report tabs + compare toggle + date label */}
             <div className="flex items-center justify-between">
-              <div className="join">
-                {tabs.map((t) => (
-                  <button
-                    key={t.key}
-                    className={`btn join-item btn-xs sm:btn-sm gap-1 ${
-                      activeTab === t.key ? "btn-primary" : ""
-                    }`}
-                    onClick={() => setActiveTab(t.key)}
-                  >
-                    <span>{t.emoji}</span>
-                    <span className="hidden sm:inline">{t.label}</span>
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                <div className="join">
+                  {tabs.map((t) => (
+                    <button
+                      key={t.key}
+                      className={`btn join-item btn-xs sm:btn-sm gap-1 ${
+                        activeTab === t.key ? "btn-primary" : ""
+                      }`}
+                      onClick={() => setActiveTab(t.key)}
+                    >
+                      <span>{t.emoji}</span>
+                      <span className="hidden sm:inline">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {dateRange && (
+                  <label className="flex cursor-pointer items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary toggle-xs"
+                      checked={comparing}
+                      onChange={(e) => setComparing(e.target.checked)}
+                    />
+                    <span className="text-xs text-base-content/60">Compare</span>
+                  </label>
+                )}
               </div>
               {dateRange && (
                 <span className="text-xs text-base-content/50">
-                  {dateRange[0].format("MMM D")} —{" "}
-                  {dateRange[1].format("MMM D, YYYY")}
-                  {isFetching && (
-                    <span className="loading loading-dots loading-xs ml-2" />
-                  )}
+                  {dateRange[0].format("MMM D")} — {dateRange[1].format("MMM D, YYYY")}
+                  {isFetching && <span className="loading loading-dots loading-xs ml-2" />}
                 </span>
               )}
             </div>
@@ -1041,24 +1282,133 @@ export function ReportsPage() {
               </p>
               <button
                 className="btn btn-primary btn-sm"
-                onClick={() => handlePreset(presets[0]!)}
+                onClick={() => handlePreset(PRESETS[0]!)}
               >
                 Start with Today
               </button>
             </div>
           )}
 
-          {/* Loading (first fetch) */}
+          {/* Loading */}
           {isFetching && !data && (
             <div className="flex flex-col items-center justify-center rounded-xl border border-base-300 bg-base-100 py-20">
               <LoadingSpinner />
-              <p className="mt-4 text-sm text-base-content/60">
-                Crunching the numbers…
-              </p>
+              <p className="mt-4 text-sm text-base-content/60">Crunching the numbers…</p>
             </div>
           )}
 
-          {/* Report content */}
+          {/* ── OVERVIEW TAB ───────────────────────────── */}
+          {data && activeTab === "overview" && (
+            <div className="space-y-6">
+              {/* Unified summary cards */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <SummaryCard
+                  label="Revenue"
+                  value={dbUnitToDollars(ps?.concessionTotal ?? 0)}
+                  color="text-success"
+                  delta={comparing && prevPs ? <DeltaBadge current={ps?.concessionTotal ?? 0} previous={prevPs.concessionTotal} /> : null}
+                />
+                <SummaryCard
+                  label="Voided"
+                  value={dbUnitToDollars(ps?.voidedConcessionTotal ?? 0)}
+                  color="text-error"
+                  delta={comparing && prevPs ? <DeltaBadge current={ps?.voidedConcessionTotal ?? 0} previous={prevPs.voidedConcessionTotal} /> : null}
+                />
+                <SummaryCard
+                  label="Net Revenue"
+                  value={dbUnitToDollars((ps?.concessionTotal ?? 0) - (ps?.voidedConcessionTotal ?? 0))}
+                  color="text-primary"
+                  delta={comparing && prevPs ? <DeltaBadge current={(ps?.concessionTotal ?? 0) - (ps?.voidedConcessionTotal ?? 0)} previous={prevPs.concessionTotal - prevPs.voidedConcessionTotal} /> : null}
+                />
+                <SummaryCard
+                  label="Transactions"
+                  value={String(ps?.totalTransactions ?? 0)}
+                  delta={comparing && prevPs ? <DeltaBadge current={ps?.totalTransactions ?? 0} previous={prevPs.totalTransactions} /> : null}
+                />
+                <SummaryCard
+                  label="Members In"
+                  value={String(memberCount)}
+                  color="text-info"
+                  delta={comparing && prevData ? <DeltaBadge current={memberCount} previous={prevMember} /> : null}
+                />
+                <SummaryCard
+                  label="Tickets Sold"
+                  value={String(ticketCount)}
+                  color="text-warning"
+                  delta={comparing && prevData ? <DeltaBadge current={ticketCount} previous={prevTicket} /> : null}
+                />
+              </div>
+
+              {/* Charts */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Revenue chart */}
+                <div className="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm">
+                  <h3 className="mb-3 text-sm font-semibold text-base-content/70">Daily Revenue</h3>
+                  {dailyRevenue.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={dailyRevenue}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--bc) / 0.1)" />
+                        <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `$${v}`} />
+                        <Tooltip formatter={(v) => [`$${Number(v).toFixed(2)}`, "Revenue"]} />
+                        <Bar dataKey="revenue" fill="oklch(var(--su))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-[220px] items-center justify-center text-sm text-base-content/40">No revenue data</div>
+                  )}
+                </div>
+
+                {/* Admissions chart */}
+                <div className="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm">
+                  <h3 className="mb-3 text-sm font-semibold text-base-content/70">Daily Admissions</h3>
+                  {dailyAdmissions.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={dailyAdmissions}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--bc) / 0.1)" />
+                        <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="members" stroke="oklch(var(--in))" strokeWidth={2} name="Members" dot={{ r: 3 }} />
+                        <Line type="monotone" dataKey="tickets" stroke="oklch(var(--wa))" strokeWidth={2} name="Tickets" dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-[220px] items-center justify-center text-sm text-base-content/40">No admission data</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick stats row */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-base-300 bg-base-100 p-4">
+                  <p className="text-xs font-medium uppercase text-base-content/50">Total Entries</p>
+                  <p className="mt-1 text-2xl font-bold">{memberCount + ticketCount}</p>
+                  {comparing && prevData && <DeltaBadge current={memberCount + ticketCount} previous={prevMember + prevTicket} />}
+                </div>
+                <div className="rounded-xl border border-base-300 bg-base-100 p-4">
+                  <p className="text-xs font-medium uppercase text-base-content/50">Avg Transaction</p>
+                  <p className="mt-1 text-2xl font-bold">
+                    {ps && ps.totalTransactions > 0
+                      ? dbUnitToDollars(Math.round(ps.concessionTotal / ps.totalTransactions))
+                      : "$0.00"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-base-300 bg-base-100 p-4">
+                  <p className="text-xs font-medium uppercase text-base-content/50">Item Changes</p>
+                  <p className="mt-1 text-2xl font-bold">{changeCount}</p>
+                </div>
+              </div>
+
+              {comparing && dateRange && (
+                <p className="text-center text-xs text-base-content/40">
+                  Comparing to {dayjs(prevStart).format("MMM D")} — {dayjs(prevEnd).format("MMM D, YYYY")}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Individual report tabs */}
           {data?.purchaseReport && activeTab === "purchase" && (
             <PurchaseReportTable data={data.purchaseReport} />
           )}
@@ -1070,7 +1420,81 @@ export function ReportsPage() {
           )}
         </div>
       </div>
+
+      {/* Save Report Modal */}
+      {showSaveModal && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-sm">
+            <h3 className="text-lg font-bold">Save Report</h3>
+            <p className="mt-1 text-sm text-base-content/60">
+              Save your current view for quick access later
+            </p>
+            <input
+              className="input input-bordered mt-4 w-full"
+              placeholder="Report name…"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && saveName.trim()) {
+                  createSaved({
+                    name: saveName.trim(),
+                    reportType: activeTab,
+                    datePreset: selectedPreset,
+                    customStart: selectedPreset ? null : dateRange?.[0]?.toDate(),
+                    customEnd: selectedPreset ? null : dateRange?.[1]?.toDate(),
+                  });
+                }
+              }}
+            />
+            <div className="modal-action">
+              <button className="btn btn-ghost" onClick={() => setShowSaveModal(false)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={!saveName.trim()}
+                onClick={() =>
+                  createSaved({
+                    name: saveName.trim(),
+                    reportType: activeTab,
+                    datePreset: selectedPreset,
+                    customStart: selectedPreset ? null : dateRange?.[0]?.toDate(),
+                    customEnd: selectedPreset ? null : dateRange?.[1]?.toDate(),
+                  })
+                }
+              >
+                Save
+              </button>
+            </div>
+          </div>
+          <div className="modal-backdrop" onClick={() => setShowSaveModal(false)} />
+        </div>
+      )}
     </PageLayout>
+  );
+}
+
+// ── Summary Card component ──────────────────────────────
+function SummaryCard({
+  label,
+  value,
+  color,
+  delta,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+  delta?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-wide text-base-content/50">{label}</p>
+      <p className={`mt-1 text-xl font-bold ${color ?? "text-base-content"}`}>
+        {value}
+        {delta}
+      </p>
+    </div>
   );
 }
 
