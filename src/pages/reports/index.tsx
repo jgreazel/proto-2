@@ -864,8 +864,11 @@ type TabKey = "overview" | "purchase" | "admission" | "itemchangelog";
 
 export function ReportsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>([
+    dayjs().startOf("day"),
+    dayjs(),
+  ]);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>("Today");
   const [comparing, setComparing] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -1276,24 +1279,6 @@ export function ReportsPage() {
 
         {/* Content */}
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-          {/* Empty state */}
-          {!dateRange && !isFetching && (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-base-300 bg-base-100 py-20">
-              <div className="mb-4 text-5xl">📊</div>
-              <h3 className="mb-2 text-lg font-semibold text-base-content">
-                Pick a date range to get started
-              </h3>
-              <p className="mb-6 text-sm text-base-content/50">
-                Use the quick presets above or select a custom range
-              </p>
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => handlePreset(PRESETS[0]!)}
-              >
-                Start with Today
-              </button>
-            </div>
-          )}
 
           {/* Loading */}
           {isFetching && !data && (
