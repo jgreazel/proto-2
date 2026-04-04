@@ -22,6 +22,36 @@ type NewPassFormData = {
 
 type Patron = RouterOutputs["passes"]["getAll"][number]["patrons"][number];
 
+// Deterministic color palette for avatars and accents
+const AVATAR_COLORS = [
+  "bg-primary text-primary-content",
+  "bg-secondary text-secondary-content",
+  "bg-accent text-accent-content",
+  "bg-info text-info-content",
+  "bg-success text-success-content",
+  "bg-warning text-warning-content",
+] as const;
+
+const BORDER_COLORS = [
+  "border-l-primary",
+  "border-l-secondary",
+  "border-l-accent",
+  "border-l-info",
+  "border-l-success",
+  "border-l-warning",
+] as const;
+
+const hashStr = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+
+const avatarColor = (id: string) =>
+  AVATAR_COLORS[hashStr(id) % AVATAR_COLORS.length]!;
+const borderColor = (id: string) =>
+  BORDER_COLORS[hashStr(id) % BORDER_COLORS.length]!;
+
 // ── Inline patron editor (replaces the patron chip when editing) ──────
 
 const InlinePatronEditor = ({
@@ -372,11 +402,11 @@ const PassManagementPanel = ({
           ) : (
             <div
               key={patron.id}
-              className="flex items-center justify-between rounded-lg bg-base-200/50 px-3 py-2"
+              className="flex items-center justify-between rounded-lg bg-base-200/60 px-3 py-2.5 transition-colors hover:bg-base-200"
             >
               <div className="flex items-center gap-3">
                 <div className="avatar placeholder">
-                  <div className="w-8 rounded-full bg-neutral text-neutral-content">
+                  <div className={`w-8 rounded-full ${avatarColor(patron.id)}`}>
                     <span className="text-xs">
                       {patron.firstName.charAt(0)}
                       {patron.lastName.charAt(0)}
@@ -535,9 +565,9 @@ function PassesPage() {
       {isLoading ? (
         <LoadingPage />
       ) : (
-        <div className="flex h-full flex-col gap-6 p-4 sm:p-6">
+        <div className="flex h-full flex-col gap-6 bg-base-200/50 p-4 sm:p-6">
           {/* Header */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 rounded-xl bg-gradient-to-r from-primary/5 via-base-100 to-secondary/5 p-4 shadow-sm sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold text-base-content sm:text-3xl">
@@ -548,16 +578,16 @@ function PassesPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="stats stats-horizontal bg-base-200 shadow-sm">
+                <div className="stats stats-horizontal bg-base-100 shadow-sm">
                   <div className="stat px-4 py-2">
                     <div className="stat-title text-xs">Passes</div>
-                    <div className="stat-value text-lg">
+                    <div className="stat-value text-lg text-primary">
                       {data?.length ?? 0}
                     </div>
                   </div>
                   <div className="stat px-4 py-2">
                     <div className="stat-title text-xs">Members</div>
-                    <div className="stat-value text-lg">
+                    <div className="stat-value text-lg text-secondary">
                       {data?.reduce(
                         (acc, pass) => acc + pass.patrons.length,
                         0,
@@ -904,13 +934,13 @@ function PassesPage() {
                 return (
                   <div
                     key={pass.id}
-                    className={`card bg-base-100 shadow transition-all duration-200 ${
+                    className={`card border-l-4 bg-base-100 transition-all duration-200 ${borderColor(pass.id)} ${
                       isExpanded
                         ? "ring-2 ring-primary/20 shadow-lg"
-                        : "hover:shadow-md"
+                        : "shadow-sm hover:shadow-md"
                     }`}
                   >
-                    <div className="card-body p-4 sm:p-6">
+                    <div className="card-body p-4 sm:p-5">
                       {/* Pass header row */}
                       <div
                         className="flex cursor-pointer items-center justify-between"
@@ -918,7 +948,7 @@ function PassesPage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="avatar placeholder">
-                            <div className="w-10 rounded-lg bg-primary/10 text-primary">
+                            <div className={`w-10 rounded-lg ${avatarColor(pass.id)}`}>
                               <span className="text-sm font-bold">
                                 {pass.label.charAt(0).toUpperCase()}
                               </span>
@@ -1000,14 +1030,15 @@ function PassesPage() {
                           {pass.patrons.slice(0, 4).map((p) => (
                             <span
                               key={p.id}
-                              className="badge badge-ghost badge-sm capitalize"
+                              className="inline-flex items-center gap-1.5 rounded-full bg-base-200 px-2.5 py-1 text-xs font-medium capitalize"
                             >
+                              <span className={`inline-block h-2 w-2 rounded-full ${avatarColor(p.id).split(" ")[0]}`} />
                               {p.firstName} {p.lastName}
                             </span>
                           ))}
                           {pass.patrons.length > 4 && (
-                            <span className="badge badge-ghost badge-sm">
-                              +{pass.patrons.length - 4}
+                            <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-xs font-medium">
+                              +{pass.patrons.length - 4} more
                             </span>
                           )}
                         </div>
@@ -1026,7 +1057,7 @@ function PassesPage() {
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16">
+            <div className="flex flex-col items-center justify-center rounded-xl bg-base-100 py-16 shadow-sm">
               <PeopleGrid />
               <div className="mt-8 text-center">
                 <h3 className="mb-2 text-xl font-semibold text-base-content">
