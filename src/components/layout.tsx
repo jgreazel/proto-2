@@ -234,7 +234,13 @@ export const LinkListItems = ({ isAdmin }: { isAdmin?: boolean }) => {
   );
 };
 
-const EndMenu = ({ username }: { username: string }) => {
+const EndMenu = ({
+  username,
+  isAdmin,
+}: {
+  username: string;
+  isAdmin: boolean;
+}) => {
   const [show, setShow] = useState(false);
 
   return (
@@ -300,6 +306,46 @@ const EndMenu = ({ username }: { username: string }) => {
               Profile
             </Link>
           </li>
+          {isAdmin && (
+            <>
+              <div className="divider mb-1 mt-1 text-xs uppercase">
+                Admin Tools
+              </div>
+              <li>
+                <Link href="/items">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                  </svg>
+                  Items
+                </Link>
+              </li>
+              <li>
+                <Link href="/files">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+                  </svg>
+                  Files
+                </Link>
+              </li>
+              <li>
+                <Link href="/reports">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                  </svg>
+                  Reports
+                </Link>
+              </li>
+              <li>
+                <Link href="/users">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                  </svg>
+                  Manage Users
+                </Link>
+              </li>
+            </>
+          )}
+          <div className="divider m-0"></div>
           <li className="w-max self-end text-accent">
             <SignOutButton />
           </li>
@@ -307,6 +353,27 @@ const EndMenu = ({ username }: { username: string }) => {
       </div>
       {show && <Feedback onClose={() => setShow(false)} />}
     </>
+  );
+};
+
+const DesktopNavLink = ({
+  href,
+  label,
+  currentPath,
+}: {
+  href: string;
+  label: string;
+  currentPath: string;
+}) => {
+  const isActive =
+    currentPath === href || currentPath.startsWith(href + "/");
+  return (
+    <Link
+      href={href}
+      className={`btn btn-ghost btn-sm ${isActive ? "bg-base-200 font-semibold" : ""}`}
+    >
+      {label}
+    </Link>
   );
 };
 
@@ -338,7 +405,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
           d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
         />
       </svg>
-      Guard Shack
+      <span className="hidden sm:inline">Guard Shack</span>
     </Link>
   );
 
@@ -346,10 +413,10 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
 
   return (
     <div className="navbar rounded-lg bg-base-100 shadow-md">
-      {/* // small screens */}
       <div className="navbar-start">
+        {/* Mobile hamburger — hidden on md+ */}
         {!disabled && (
-          <div className="dropdown z-50">
+          <div className="dropdown z-50 md:hidden">
             <div tabIndex={0} role="button" className="btn btn-ghost">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -379,23 +446,42 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
           </div>
         )}
 
-        <div className="breadcrumbs w-full text-sm">
-          <ul>
-            <li>{home}</li>
-            {breadcrumbs
-              .filter((x) => !!x)
-              .map((x) => (
-                <li key={x}>
-                  <span className="badge capitalize">{`${
-                    x === "[id]" ? "Details" : x
-                  }`}</span>
-                </li>
-              ))}
-          </ul>
-        </div>
+        {home}
+
+        {/* Breadcrumbs — only on inner pages, hidden on home */}
+        {breadcrumbs.filter((x) => !!x).length > 0 && (
+          <div className="breadcrumbs hidden text-sm md:flex">
+            <ul>
+              {breadcrumbs
+                .filter((x) => !!x)
+                .map((x) => (
+                  <li key={x}>
+                    <span className="badge capitalize">{`${
+                      x === "[id]" ? "Details" : x
+                    }`}</span>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
       </div>
+
+      {/* Desktop inline nav — hidden on mobile */}
+      {!disabled && isSignedIn && (
+        <div className="navbar-center hidden md:flex">
+          <div className="flex items-center gap-1">
+            <DesktopNavLink href="/checkout" label="Checkout" currentPath={router.pathname} />
+            <DesktopNavLink href="/passes" label="Passes" currentPath={router.pathname} />
+            <DesktopNavLink href="/schedules" label="Schedules" currentPath={router.pathname} />
+            <DesktopNavLink href="/timeclock" label="Time Clock" currentPath={router.pathname} />
+          </div>
+        </div>
+      )}
+
       <div className="navbar-end">
-        {!!isSignedIn && !disabled && <EndMenu username={user.username!} />}
+        {!!isSignedIn && !disabled && (
+          <EndMenu username={user.username!} isAdmin={isAdmin} />
+        )}
       </div>
     </div>
   );
