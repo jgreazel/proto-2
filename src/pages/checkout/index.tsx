@@ -3,9 +3,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import { LoadingSpinner } from "~/components/loading";
-import { getStartOfDay, getEndOfDay } from "~/helpers/dateHelpers";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
-import filterPasses from "~/helpers/filterPasses";
 import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import NoData from "~/components/noData";
@@ -463,227 +461,8 @@ const ItemFeed = (props: {
   );
 };
 
-type Patron = RouterOutputs["passes"]["getAll"][number]["patrons"][number];
-
-const AdmissionFeed = () => {
-  const currentYear = new Date().getFullYear().toString();
-  const { data: passesData, isLoading: isFetchingPasses } =
-    api.passes.getAll.useQuery({ season: currentYear });
-  const today = new Date();
-  const {
-    data: eventData,
-    isLoading: isFetchingEvents,
-    refetch,
-  } = api.passes.getAdmissions.useQuery({
-    range: [getStartOfDay(today), getEndOfDay(today)],
-    includeVoided: false, // Exclude voided admissions so people can check in again
-  });
-
-  // Also fetch voided admissions to show context
-  const { data: voidedEventData } = api.passes.getAdmissions.useQuery({
-    range: [getStartOfDay(today), getEndOfDay(today)],
-    includeVoided: true,
-  });
-  const { mutate, isLoading: isCreating } = api.passes.admitPatron.useMutation({
-    onSuccess: async (data) => {
-      toast.success(`Enjoy your swim, ${data.patron.firstName}!`);
-      await refetch();
-    },
-    onError: handleApiError,
-  });
-  const [filter, setFilter] = useState("");
-
-  const onClick = (data: Patron) => {
-    if (isCreating) return;
-    mutate({ patronId: data.id });
-  };
-
-  if (isFetchingPasses || isFetchingEvents)
-    return (
-      <div className="my-4 flex justify-center">
-        <div className="loading loading-spinner"></div>
-      </div>
-    );
-
-  const filteredPasses = passesData?.filter((p) => filterPasses(p, filter));
-
-  return (
-    <div className="p-6">
-      {/* Search Header */}
-      <div className="mb-6">
-        <label
-          htmlFor="pass-filter"
-          className="mb-2 block text-sm font-medium text-base-content"
-        >
-          Search Season Pass Holders
-        </label>
-        <div className="relative">
-          <input
-            id="pass-filter"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            type="text"
-            className="input input-bordered w-full pl-10"
-            placeholder="Search by name..."
-          />
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-base-content/40"
-          >
-            <path
-              fillRule="evenodd"
-              d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Pass Holders List */}
-      {!!filteredPasses && filteredPasses.length > 0 ? (
-        <div className="space-y-4">
-          {filteredPasses.map(({ label, patrons, id }) => (
-            <div
-              className="overflow-hidden rounded-lg border border-base-300"
-              key={id}
-            >
-              <div className="border-b border-base-300 bg-base-200 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="badge badge-primary badge-sm">{label}</div>
-                  <span className="text-sm text-base-content/60">
-                    {patrons.length}{" "}
-                    {patrons.length === 1 ? "member" : "members"}
-                  </span>
-                </div>
-              </div>
-              <div className="divide-y divide-base-200">
-                {patrons.map((p) => {
-                  const isCheckedIn = eventData?.find(
-                    (e) => e.patronId === p.id,
-                  );
-                  const hasVoidedAdmission = voidedEventData?.find(
-                    (e) => e.patronId === p.id && e.isVoided,
-                  );
-                  return (
-                    <div
-                      className="hover:bg-base-50 flex items-center justify-between p-4 transition-colors"
-                      key={p.id}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`h-3 w-3 rounded-full ${
-                            isCheckedIn
-                              ? "bg-success"
-                              : hasVoidedAdmission
-                              ? "bg-warning"
-                              : "bg-base-300"
-                          }`}
-                        />
-                        <div>
-                          <div className="font-medium capitalize text-base-content">
-                            {`${p.firstName} ${p.lastName}`}
-                          </div>
-                          <div className="text-sm text-base-content/60">
-                            {isCheckedIn ? (
-                              "Already checked in today"
-                            ) : hasVoidedAdmission ? (
-                              <span className="text-warning">
-                                Previous check-in was voided
-                              </span>
-                            ) : (
-                              "Ready to check in"
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        {isCheckedIn ? (
-                          <div className="flex items-center gap-2 text-success">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="h-4 w-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                              />
-                            </svg>
-                            <span className="text-sm font-medium">
-                              Checked In
-                            </span>
-                          </div>
-                        ) : (
-                          <button
-                            className="btn btn-primary btn-sm gap-2"
-                            onClick={() => onClick(p)}
-                            disabled={isCreating}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="h-4 w-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
-                              />
-                            </svg>
-                            Check In
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="py-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-base-200 p-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-8 w-8 text-base-content/40"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
-              />
-            </svg>
-          </div>
-          <h3 className="mb-2 text-lg font-medium text-base-content">
-            {filter ? "No matching passes found" : "No season passes available"}
-          </h3>
-          <p className="text-base-content/60">
-            {filter
-              ? "Try adjusting your search terms"
-              : "Season passes will appear here when available"}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
 function CheckoutPage() {
-  const [mode, setMode] = useState<"sales" | "checkin" | "recent">("sales");
+  const [showHistory, setShowHistory] = useState(false);
   const [feed, setFeed] = useState<"concession" | "admission">("concession");
   const [cart, setCart] = useState<Item[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -783,7 +562,7 @@ function CheckoutPage() {
 
   return (
     <PageLayout>
-      {/* Mode Selection Header */}
+      {/* Header */}
       <div className="border-b border-base-300 bg-base-100 px-6 py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -805,45 +584,22 @@ function CheckoutPage() {
             </div>
             <h1 className="text-2xl font-bold">Point of Sale</h1>
           </div>
-          <div role="tablist" className="tabs-boxed tabs">
-            <a
-              role="tab"
-              className={`tab gap-2 ${mode === "sales" && "tab-active"}`}
-              onClick={() => {
-                setMode("sales");
-                setShowClearConfirm(false);
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
-              </svg>
-              Checkout
-            </a>
-            <a
-              role="tab"
-              className={`tab gap-2 ${mode === "checkin" && "tab-active"}`}
-              onClick={() => setMode("checkin")}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-              </svg>
-              Check-In
-            </a>
-            <a
-              role="tab"
-              className={`tab gap-2 ${mode === "recent" && "tab-active"}`}
-              onClick={() => setMode("recent")}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-              </svg>
-              History
-            </a>
-          </div>
+          <button
+            className={`btn btn-sm gap-2 ${showHistory ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => {
+              setShowHistory((v) => !v);
+              setShowClearConfirm(false);
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            {showHistory ? "Back to Checkout" : "Recent Transactions"}
+          </button>
         </div>
       </div>
-      {/* Sales Mode */}
-      {mode === "sales" && (
+      {/* Sales */}
+      {!showHistory && (
         <div className="flex flex-col gap-4 p-4 md:flex-row md:gap-6 md:p-6">
           {/* Item Browser (desktop) */}
           <div className="hidden md:block md:flex-1">{shoppingList}</div>
@@ -1115,152 +871,44 @@ function CheckoutPage() {
           <div className="block md:hidden">{shoppingList}</div>
         </div>
       )}{" "}
-      {/* Check-In Mode */}
-      {mode === "checkin" && (
-        <div className="mx-auto max-w-4xl">
+      {/* Transaction History */}
+      {showHistory && (
+        <div className="mx-auto max-w-6xl p-6">
           <div className="grid gap-6">
-            {/* Header Section */}
-            <div className="rounded-lg border border-base-300 bg-base-100 p-6 shadow-lg">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="rounded-lg bg-primary/10 p-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="h-6 w-6 text-primary"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
-                    />
-                  </svg>
-                </div>
+            <div className="rounded-lg border border-warning/20 bg-warning/10 p-4">
+              <div className="flex items-start gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+                  />
+                </svg>
                 <div>
-                  <h2 className="text-xl font-semibold text-base-content">
-                    Season Pass Check-In
-                  </h2>
-                  <p className="text-sm text-base-content/60">
-                    Admit guests with valid season passes
+                  <p className="text-sm font-medium text-warning">
+                    Voiding transactions:
                   </p>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div className="rounded-lg border border-info/20 bg-info/10 p-4">
-                <div className="flex items-start gap-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-info"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-info">
-                      How to check in guests:
-                    </p>
-                    <ul className="mt-1 space-y-1 text-sm text-base-content/70">
-                      <li>
-                        • Search for the guest&apos;s name using the search bar
-                        below
-                      </li>
-                      <li>• Click the check-in button next to their name</li>
-                      <li>
-                        • Already checked-in guests won&apos;t show a button
-                      </li>
-                    </ul>
-                  </div>
+                  <ul className="mt-1 space-y-1 text-sm text-base-content/70">
+                    <li>
+                      • Voiding purchases will refund the sale and restore
+                      inventory
+                    </li>
+                    <li>
+                      • Voiding admissions will remove the check-in record
+                    </li>
+                    <li>• This action cannot be undone</li>
+                  </ul>
                 </div>
               </div>
             </div>
 
-            {/* Check-in Interface */}
-            <div className="rounded-lg border border-base-300 bg-base-100 shadow-lg">
-              <AdmissionFeed />
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Recent Sales Mode */}
-      {mode === "recent" && (
-        <div className="mx-auto max-w-6xl">
-          <div className="grid gap-6">
-            {/* Header Section */}
-            <div className="rounded-lg border border-base-300 bg-base-100 p-6 shadow-lg">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="rounded-lg bg-primary/10 p-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="h-6 w-6 text-primary"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-base-content">
-                    Transaction History
-                  </h2>
-                  <p className="text-sm text-base-content/60">
-                    View and revert recent purchases and admission events
-                  </p>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div className="rounded-lg border border-warning/20 bg-warning/10 p-4">
-                <div className="flex items-start gap-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-warning">
-                      Voiding transactions:
-                    </p>
-                    <ul className="mt-1 space-y-1 text-sm text-base-content/70">
-                      <li>
-                        • Voiding purchases will refund the sale and restore
-                        inventory
-                      </li>
-                      <li>
-                        • Voiding admissions will remove the check-in record
-                      </li>
-                      <li>• This action cannot be undone</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Sales Interface */}
             <div className="rounded-lg border border-base-300 bg-base-100 shadow-lg">
               <TransactionHistory />
             </div>
