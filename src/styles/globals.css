@@ -5,6 +5,32 @@
 body {
   /* @apply bg-sky-50 text-slate-800; */
 }
+
+/* Fade-in animation for page content */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+/* Smooth transitions on interactive elements globally */
+.card {
+  @apply transition-shadow duration-200;
+}
+
+.btn {
+  @apply transition-all duration-150;
+}
+
 /* todo: style date-picker from theme styles */
 
 .react-datepicker {

@@ -345,7 +345,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
   const isAdmin = userSettings?.isAdmin ?? false;
 
   return (
-    <div className="navbar rounded-lg bg-base-100 shadow">
+    <div className="navbar rounded-lg bg-base-100 shadow-md">
       {/* // small screens */}
       <div className="navbar-start">
         {!disabled && (
