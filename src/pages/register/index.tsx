@@ -168,8 +168,8 @@ const TransactionHistory = () => {
                         {dbUnitToDollars(transaction.total)}
                       </span>
                       <span
-                        className="tooltip tooltip-bottom cursor-help truncate text-xs text-base-content/50"
-                        data-tip={transaction.items
+                        className="truncate text-xs text-base-content/50"
+                        title={transaction.items
                           .map((item) => `${item.amountSold}× ${item.label}`)
                           .join(", ")}
                       >
