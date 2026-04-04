@@ -365,7 +365,6 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
       enabled: isSignedIn,
     });
   const router = useRouter();
-  const breadcrumbs = router.pathname.split("/").slice(1);
 
   // user should load fast, just return empty until then
   if (!userLoaded) return <div></div>;
@@ -392,77 +391,131 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
 
   const isAdmin = userSettings?.isAdmin ?? false;
 
+  // Build navigable breadcrumb segments from the current path
+  const pathSegments = router.pathname.split("/").filter(Boolean);
+  const hasBreadcrumbs = pathSegments.length > 0 && router.pathname !== "/";
+
+  const breadcrumbItems = pathSegments.map((segment, index) => {
+    const href = "/" + pathSegments.slice(0, index + 1).join("/");
+    const isLast = index === pathSegments.length - 1;
+    const label = segment === "[id]" ? "Details" : segment.replace(/-/g, " ");
+    return { href, label, isLast };
+  });
+
   return (
-    <div className="navbar rounded-lg bg-base-100 shadow-md">
-      <div className="navbar-start">
-        {/* Mobile hamburger — hidden on md+ */}
-        {!disabled && (
-          <div className="dropdown z-50 md:hidden">
-            <div tabIndex={0} role="button" className="btn btn-ghost">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+    <>
+      <div className="navbar bg-base-100 shadow-md">
+        <div className="navbar-start">
+          {/* Mobile hamburger — hidden on md+ */}
+          {!disabled && (
+            <div className="dropdown z-50 md:hidden">
+              <div tabIndex={0} role="button" className="btn btn-ghost">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h8m-8 6h16"
+                  />
+                </svg>
+              </div>
+              <ul
+                tabIndex={0}
+                className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow-xl"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h8m-8 6h16"
-                />
-              </svg>
+                {isLoading ? (
+                  <li className="p-2">Loading...</li>
+                ) : (
+                  <LinkListItems isAdmin={isAdmin} />
+                )}
+              </ul>
             </div>
-            <ul
-              tabIndex={0}
-              className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow-xl"
-            >
-              {isLoading ? (
-                <li className="p-2">Loading...</li>
-              ) : (
-                <LinkListItems isAdmin={isAdmin} />
-              )}
-            </ul>
+          )}
+
+          {home}
+        </div>
+
+        {/* Desktop inline nav — hidden on mobile */}
+        {!disabled && isSignedIn && (
+          <div className="navbar-center hidden md:flex">
+            <div className="flex items-center gap-1">
+              <DesktopNavLink href="/checkout" label="Checkout" currentPath={router.pathname} />
+              <DesktopNavLink href="/passes" label="Passes" currentPath={router.pathname} />
+            </div>
           </div>
         )}
 
-        {home}
-
-        {/* Breadcrumbs — only on inner pages, hidden on home */}
-        {breadcrumbs.filter((x) => !!x).length > 0 && (
-          <div className="breadcrumbs hidden text-sm md:flex">
-            <ul>
-              {breadcrumbs
-                .filter((x) => !!x)
-                .map((x) => (
-                  <li key={x}>
-                    <span className="badge capitalize">{`${
-                      x === "[id]" ? "Details" : x
-                    }`}</span>
-                  </li>
-                ))}
-            </ul>
-          </div>
-        )}
+        <div className="navbar-end">
+          {!!isSignedIn && !disabled && (
+            <EndMenu username={user.username!} isAdmin={isAdmin} />
+          )}
+        </div>
       </div>
 
-      {/* Desktop inline nav — hidden on mobile */}
-      {!disabled && isSignedIn && (
-        <div className="navbar-center hidden md:flex">
-          <div className="flex items-center gap-1">
-            <DesktopNavLink href="/checkout" label="Checkout" currentPath={router.pathname} />
-            <DesktopNavLink href="/passes" label="Passes" currentPath={router.pathname} />
+      {/* Breadcrumb bar — below navbar on inner pages */}
+      {hasBreadcrumbs && (
+        <div className="border-b border-base-200 bg-base-100/80 px-4 py-2 text-sm">
+          <div className="flex items-center gap-1.5 text-base-content/60">
+            <Link
+              href="/"
+              className="transition-colors hover:text-base-content"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="m9.293 2.293 .707.707m0 0 7 7-1.414 1.414L10 5.828l-5.586 5.586L3 10l7-7Z"
+                  clipRule="evenodd"
+                />
+                <path
+                  fillRule="evenodd"
+                  d="M10 5.828V18h4v-4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v4h4"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </Link>
+            {breadcrumbItems.map((crumb) => (
+              <span key={crumb.href} className="flex items-center gap-1.5">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5 flex-shrink-0"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {crumb.isLast ? (
+                  <span className="font-medium capitalize text-base-content">
+                    {crumb.label}
+                  </span>
+                ) : (
+                  <Link
+                    href={crumb.href}
+                    className="capitalize transition-colors hover:text-base-content"
+                  >
+                    {crumb.label}
+                  </Link>
+                )}
+              </span>
+            ))}
           </div>
         </div>
       )}
-
-      <div className="navbar-end">
-        {!!isSignedIn && !disabled && (
-          <EndMenu username={user.username!} isAdmin={isAdmin} />
-        )}
-      </div>
-    </div>
+    </>
   );
 };
 
