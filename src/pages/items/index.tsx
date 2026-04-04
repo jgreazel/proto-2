@@ -289,97 +289,23 @@ function ItemsPage() {
 
   return (
     <PageLayout>
-      <div className="flex h-full w-full flex-col gap-8">
-        {/* Header Section */}
-        <div className="flex w-full flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold text-base-content">
-              Inventory Management
-            </h1>
-            <p className="text-base text-base-content/70">
-              Manage your {itemType} items, track stock levels, and monitor
-              profitability
-            </p>
-          </div>
-
-          {/* Controls */}
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div role="tablist" className="tabs-boxed tabs">
-                <a
-                  role="tab"
-                  className={`tab ${itemType === "concession" && "tab-active"}`}
-                  onClick={() => setItemType("concession")}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="mr-2 h-4 w-4"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.016A3.001 3.001 0 0 0 20.25 8.734V21"
-                    />
-                  </svg>
-                  Concessions
-                </a>
-                <a
-                  role="tab"
-                  className={`tab ${itemType === "admission" && "tab-active"}`}
-                  onClick={() => setItemType("admission")}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="mr-2 h-4 w-4"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
-                    />
-                  </svg>
-                  Admissions
-                </a>
-              </div>
-
-              <label
-                htmlFor="item-filter"
-                className="input input-bordered flex w-full items-center gap-2 sm:w-80"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  className="h-4 w-4 opacity-70"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <input
-                  id="item-filter"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  type="text"
-                  className="grow"
-                  placeholder="Search inventory..."
-                />
-              </label>
+      <div className="flex h-full w-full flex-col">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-accent to-primary px-6 py-5 shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-primary-content sm:text-3xl">
+                📦 Inventory Management
+              </h1>
+              <p className="mt-1 text-sm text-primary-content/70">
+                Manage your {itemType} items, track stock levels, and monitor
+                profitability
+              </p>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="items/restock" className="btn btn-outline btn-sm">
+            <div className="flex gap-2">
+              <Link href="items/restock" className="btn btn-sm border-white/20 bg-white/20 text-primary-content hover:bg-white/30">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -396,7 +322,7 @@ function ItemsPage() {
                 </svg>
                 Bulk Restock
               </Link>
-              <Link href="items/0" className="btn btn-primary btn-sm">
+              <Link href="items/0" className="btn btn-sm border-none bg-white text-primary shadow-sm hover:bg-white/90">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -415,27 +341,100 @@ function ItemsPage() {
               </Link>
             </div>
           </div>
+
+          {/* Controls row — inside the banner */}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div role="tablist" className="tabs-boxed tabs bg-white/15">
+              <a
+                role="tab"
+                className={`tab text-primary-content ${itemType === "concession" ? "!bg-white/25 font-semibold" : "hover:bg-white/10"}`}
+                onClick={() => setItemType("concession")}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="mr-2 h-4 w-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.016A3.001 3.001 0 0 0 20.25 8.734V21"
+                  />
+                </svg>
+                Concessions
+              </a>
+              <a
+                role="tab"
+                className={`tab text-primary-content ${itemType === "admission" ? "!bg-white/25 font-semibold" : "hover:bg-white/10"}`}
+                onClick={() => setItemType("admission")}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="mr-2 h-4 w-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
+                  />
+                </svg>
+                Admissions
+              </a>
+            </div>
+
+            <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-content/60"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <input
+                id="item-filter"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                type="text"
+                className="input w-full border-white/20 bg-white/20 pl-10 text-primary-content placeholder:text-primary-content/50 focus:border-white/40 focus:bg-white/30 focus:outline-none"
+                placeholder="Search inventory..."
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Category Management Section - Only for Concession Items */}
-        {itemType === "concession" && (
-          <CategoryManager
-            onCategoryUpdate={() => {
-              // Refetch data when categories are updated
-              api.items.getAll.useQuery();
-            }}
-          />
-        )}
+        {/* Content */}
+        <div className="flex flex-col gap-8 p-6">
+          {itemType === "concession" && (
+            <CategoryManager
+              onCategoryUpdate={() => {
+                // Refetch data when categories are updated
+                api.items.getAll.useQuery();
+              }}
+            />
+          )}
 
-        <ItemList
-          filter={filter}
-          category={itemType}
-          editingItemId={editingItemId}
-          setEditingItemId={setEditingItemId}
-        />
+          <ItemList
+            filter={filter}
+            category={itemType}
+            editingItemId={editingItemId}
+            setEditingItemId={setEditingItemId}
+          />
+        </div>
       </div>
     </PageLayout>
   );
 }
 
-export default isAuth(ItemsPage, "admin");
+export default isAuth(ItemsPage, "inventory");
