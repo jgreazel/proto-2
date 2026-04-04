@@ -334,14 +334,14 @@ const NewItemDrawer = ({ onClose }: { onClose: () => void }) => {
             <div role="tablist" className="tabs-boxed tabs tabs-sm">
               <a
                 role="tab"
-                className={`tab ${tab === "concession" && "tab-active"}`}
+                className={`tab ${tab === "concession" ? "tab-active" : "text-base-content/70"}`}
                 onClick={() => setTab("concession")}
               >
                 Concession
               </a>
               <a
                 role="tab"
-                className={`tab ${tab === "admission" && "tab-active"}`}
+                className={`tab ${tab === "admission" ? "tab-active" : "text-base-content/70"}`}
                 onClick={() => setTab("admission")}
               >
                 Admission
