@@ -3,13 +3,16 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import { LoadingSpinner } from "~/components/loading";
+import { getStartOfDay, getEndOfDay } from "~/helpers/dateHelpers";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
+import filterPasses from "~/helpers/filterPasses";
 import handleApiError from "~/helpers/handleApiError";
 import { type RouterOutputs, api, type RouterInputs } from "~/utils/api";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
 import dayjs from "dayjs";
 type Item = RouterOutputs["items"]["getAll"][number]["item"];
+type Patron = RouterOutputs["passes"]["getAll"][number]["patrons"][number];
 
 const TransactionHistory = () => {
   const [hoursBack, setHoursBack] = useState(24);
@@ -461,8 +464,182 @@ const ItemFeed = (props: {
   );
 };
 
+// ── Check-In Drawer ────────────────────────────────────
+
+const CheckInDrawer = ({ onClose }: { onClose: () => void }) => {
+  const currentYear = new Date().getFullYear().toString();
+  const { data: passesData, isLoading: isFetchingPasses } =
+    api.passes.getAll.useQuery({ season: currentYear });
+  const today = new Date();
+  const {
+    data: eventData,
+    isLoading: isFetchingEvents,
+    refetch,
+  } = api.passes.getAdmissions.useQuery({
+    range: [getStartOfDay(today), getEndOfDay(today)],
+    includeVoided: false,
+  });
+  const { data: voidedEventData } = api.passes.getAdmissions.useQuery({
+    range: [getStartOfDay(today), getEndOfDay(today)],
+    includeVoided: true,
+  });
+  const { mutate, isLoading: isCreating } = api.passes.admitPatron.useMutation({
+    onSuccess: async (data) => {
+      toast.success(`Enjoy your swim, ${data.patron.firstName}!`);
+      await refetch();
+    },
+    onError: handleApiError,
+  });
+  const [filter, setFilter] = useState("");
+
+  const onClick = (p: Patron) => {
+    if (isCreating) return;
+    mutate({ patronId: p.id });
+  };
+
+  const filteredPasses = passesData?.filter((p) => filterPasses(p, filter));
+  const checkedInCount =
+    eventData?.filter((e) => !e.isVoided).length ?? 0;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/30 transition-opacity"
+        onClick={onClose}
+      />
+      {/* Drawer */}
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-base-300 bg-base-100 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold">Guest Check-In</h2>
+            {checkedInCount > 0 && (
+              <div className="badge badge-success badge-sm gap-1">
+                {checkedInCount} today
+              </div>
+            )}
+          </div>
+          <button className="btn btn-circle btn-ghost btn-sm" onClick={onClose}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="border-b border-base-200 px-4 py-3">
+          <label className="input input-bordered input-sm flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4 opacity-50">
+              <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
+            </svg>
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              type="text"
+              className="grow"
+              placeholder="Search by name…"
+              autoFocus
+            />
+          </label>
+        </div>
+
+        {/* Pass list */}
+        <div className="flex-1 overflow-y-auto">
+          {(isFetchingPasses || isFetchingEvents) && (
+            <div className="flex justify-center py-8">
+              <span className="loading loading-spinner" />
+            </div>
+          )}
+
+          {!isFetchingPasses &&
+            !isFetchingEvents &&
+            (filteredPasses && filteredPasses.length > 0 ? (
+              <div className="divide-y divide-base-200">
+                {filteredPasses.map(({ label, patrons, id }) => (
+                  <div key={id}>
+                    <div className="bg-base-200/50 px-4 py-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-base-content/50">
+                        {label}
+                      </span>
+                    </div>
+                    {patrons.map((p) => {
+                      const isCheckedIn = eventData?.find(
+                        (e) => e.patronId === p.id,
+                      );
+                      const hasVoidedAdmission = voidedEventData?.find(
+                        (e) => e.patronId === p.id && e.isVoided,
+                      );
+                      return (
+                        <div
+                          className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-base-200/30"
+                          key={p.id}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={`h-2.5 w-2.5 rounded-full ${
+                                isCheckedIn
+                                  ? "bg-success"
+                                  : hasVoidedAdmission
+                                  ? "bg-warning"
+                                  : "bg-base-300"
+                              }`}
+                            />
+                            <div>
+                              <div className="text-sm font-medium capitalize">
+                                {p.firstName} {p.lastName}
+                              </div>
+                              {isCheckedIn && (
+                                <div className="text-xs text-success">
+                                  Checked in
+                                </div>
+                              )}
+                              {!isCheckedIn && hasVoidedAdmission && (
+                                <div className="text-xs text-warning">
+                                  Voided — can re-check-in
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {!isCheckedIn && (
+                            <button
+                              className="btn btn-primary btn-xs"
+                              onClick={() => onClick(p)}
+                              disabled={isCreating}
+                            >
+                              {isCreating ? (
+                                <span className="loading loading-spinner loading-xs" />
+                              ) : (
+                                "Check In"
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-8 text-center">
+                <p className="text-sm text-base-content/50">
+                  {filter
+                    ? "No matching passes"
+                    : "No season passes available"}
+                </p>
+              </div>
+            ))}
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ── Main Page ──────────────────────────────────────────
+
 function CheckoutPage() {
   const [showHistory, setShowHistory] = useState(false);
+  const [showCheckIn, setShowCheckIn] = useState(false);
   const [feed, setFeed] = useState<"concession" | "admission">("concession");
   const [cart, setCart] = useState<Item[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -584,18 +761,29 @@ function CheckoutPage() {
             </div>
             <h1 className="text-2xl font-bold">Point of Sale</h1>
           </div>
-          <button
-            className={`btn btn-sm gap-2 ${showHistory ? "btn-primary" : "btn-ghost"}`}
-            onClick={() => {
-              setShowHistory((v) => !v);
-              setShowClearConfirm(false);
-            }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-            {showHistory ? "Back to Checkout" : "Recent Transactions"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="btn btn-ghost btn-sm gap-2"
+              onClick={() => setShowCheckIn(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+              </svg>
+              Check In
+            </button>
+            <button
+              className={`btn btn-sm gap-2 ${showHistory ? "btn-primary" : "btn-ghost"}`}
+              onClick={() => {
+                setShowHistory((v) => !v);
+                setShowClearConfirm(false);
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              {showHistory ? "Back to Register" : "History"}
+            </button>
+          </div>
         </div>
       </div>
       {/* Sales */}
@@ -914,6 +1102,10 @@ function CheckoutPage() {
             </div>
           </div>
         </div>
+      )}
+      {/* Check-In Drawer */}
+      {showCheckIn && (
+        <CheckInDrawer onClose={() => setShowCheckIn(false)} />
       )}
     </PageLayout>
   );
