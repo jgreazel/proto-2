@@ -402,7 +402,7 @@ const PassManagementPanel = ({
           ) : (
             <div
               key={patron.id}
-              className="flex items-center justify-between rounded-lg bg-base-200/60 px-3 py-2.5 transition-colors hover:bg-base-200"
+              className="flex items-center justify-between rounded-lg bg-base-100 px-3 py-2.5 ring-1 ring-base-content/5 transition-colors hover:ring-primary/20"
             >
               <div className="flex items-center gap-3">
                 <div className="avatar placeholder">
@@ -565,9 +565,9 @@ function PassesPage() {
       {isLoading ? (
         <LoadingPage />
       ) : (
-        <div className="flex h-full flex-col gap-6 bg-base-200/50 p-4 sm:p-6">
+        <div className="flex min-h-full flex-col gap-6 bg-primary/[0.03] p-4 sm:p-6">
           {/* Header */}
-          <div className="flex flex-col gap-4 rounded-xl bg-gradient-to-r from-primary/5 via-base-100 to-secondary/5 p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 rounded-xl bg-base-100 p-4 shadow-sm ring-1 ring-base-content/5 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold text-base-content sm:text-3xl">
@@ -798,7 +798,7 @@ function PassesPage() {
                         {memberFields.map((field, idx) => (
                           <div
                             key={field.id}
-                            className="flex flex-wrap items-end gap-2 rounded-lg bg-base-200/40 p-2"
+                            className="flex flex-wrap items-end gap-2 rounded-lg bg-base-100 p-2 ring-1 ring-base-content/5"
                           >
                             <div className="form-control min-w-[100px] flex-1">
                               {idx === 0 && (
@@ -1030,14 +1030,14 @@ function PassesPage() {
                           {pass.patrons.slice(0, 4).map((p) => (
                             <span
                               key={p.id}
-                              className="inline-flex items-center gap-1.5 rounded-full bg-base-200 px-2.5 py-1 text-xs font-medium capitalize"
+                              className="inline-flex items-center gap-1.5 rounded-full bg-base-100 px-2.5 py-1 text-xs font-medium capitalize ring-1 ring-base-content/10"
                             >
                               <span className={`inline-block h-2 w-2 rounded-full ${avatarColor(p.id).split(" ")[0]}`} />
                               {p.firstName} {p.lastName}
                             </span>
                           ))}
                           {pass.patrons.length > 4 && (
-                            <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-xs font-medium">
+                            <span className="inline-flex items-center rounded-full bg-base-100 px-2.5 py-1 text-xs font-medium ring-1 ring-base-content/10">
                               +{pass.patrons.length - 4} more
                             </span>
                           )}
@@ -1057,7 +1057,7 @@ function PassesPage() {
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl bg-base-100 py-16 shadow-sm">
+            <div className="flex flex-col items-center justify-center rounded-xl bg-base-100 py-16 shadow-sm ring-1 ring-base-content/5">
               <PeopleGrid />
               <div className="mt-8 text-center">
                 <h3 className="mb-2 text-xl font-semibold text-base-content">
