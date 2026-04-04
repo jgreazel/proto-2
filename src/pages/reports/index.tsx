@@ -886,7 +886,7 @@ export function ReportsPage() {
     : new Date();
 
   const queryInput = {
-    purchaseReport: { startDate, endDate, includeAdmissions: false, includeConcessions: true } as RouterInputs["reports"]["getNew"]["purchaseReport"],
+    purchaseReport: { startDate, endDate, includeAdmissions: true, includeConcessions: true } as RouterInputs["reports"]["getNew"]["purchaseReport"],
     admissionReport: { startDate, endDate } as RouterInputs["reports"]["getNew"]["admissionReport"],
     timecardReport: null,
     itemChangeLogReport: { startDate, endDate } as RouterInputs["reports"]["getNew"]["itemChangeLogReport"],
@@ -899,7 +899,7 @@ export function ReportsPage() {
 
   const { data: prevData } = api.reports.getNew.useQuery(
     {
-      purchaseReport: { startDate: prevStart, endDate: prevEnd, includeAdmissions: false, includeConcessions: true },
+      purchaseReport: { startDate: prevStart, endDate: prevEnd, includeAdmissions: true, includeConcessions: true },
       admissionReport: { startDate: prevStart, endDate: prevEnd },
       timecardReport: null,
       itemChangeLogReport: { startDate: prevStart, endDate: prevEnd },
@@ -1307,29 +1307,43 @@ export function ReportsPage() {
           {data && activeTab === "overview" && (
             <div className="space-y-6">
               {/* Unified summary cards */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 <SummaryCard
-                  label="Revenue"
-                  value={dbUnitToDollars(ps?.concessionTotal ?? 0)}
+                  label="Total Revenue"
+                  value={dbUnitToDollars((ps?.concessionTotal ?? 0) + (ps?.admissionTotal ?? 0))}
                   color="text-success"
-                  delta={comparing && prevPs ? <DeltaBadge current={ps?.concessionTotal ?? 0} previous={prevPs.concessionTotal} /> : null}
+                  delta={comparing && prevPs ? <DeltaBadge current={(ps?.concessionTotal ?? 0) + (ps?.admissionTotal ?? 0)} previous={(prevPs.concessionTotal ?? 0) + (prevPs.admissionTotal ?? 0)} /> : null}
                 />
                 <SummaryCard
                   label="Voided"
-                  value={dbUnitToDollars(ps?.voidedConcessionTotal ?? 0)}
+                  value={dbUnitToDollars((ps?.voidedConcessionTotal ?? 0) + (ps?.voidedAdmissionTotal ?? 0))}
                   color="text-error"
-                  delta={comparing && prevPs ? <DeltaBadge current={ps?.voidedConcessionTotal ?? 0} previous={prevPs.voidedConcessionTotal} /> : null}
+                  delta={comparing && prevPs ? <DeltaBadge current={(ps?.voidedConcessionTotal ?? 0) + (ps?.voidedAdmissionTotal ?? 0)} previous={(prevPs.voidedConcessionTotal ?? 0) + (prevPs.voidedAdmissionTotal ?? 0)} /> : null}
                 />
                 <SummaryCard
                   label="Net Revenue"
-                  value={dbUnitToDollars((ps?.concessionTotal ?? 0) - (ps?.voidedConcessionTotal ?? 0))}
+                  value={dbUnitToDollars((ps?.concessionTotal ?? 0) + (ps?.admissionTotal ?? 0) - (ps?.voidedConcessionTotal ?? 0) - (ps?.voidedAdmissionTotal ?? 0))}
                   color="text-primary"
-                  delta={comparing && prevPs ? <DeltaBadge current={(ps?.concessionTotal ?? 0) - (ps?.voidedConcessionTotal ?? 0)} previous={prevPs.concessionTotal - prevPs.voidedConcessionTotal} /> : null}
+                  delta={comparing && prevPs ? <DeltaBadge current={(ps?.concessionTotal ?? 0) + (ps?.admissionTotal ?? 0) - (ps?.voidedConcessionTotal ?? 0) - (ps?.voidedAdmissionTotal ?? 0)} previous={(prevPs.concessionTotal ?? 0) + (prevPs.admissionTotal ?? 0) - (prevPs.voidedConcessionTotal ?? 0) - (prevPs.voidedAdmissionTotal ?? 0)} /> : null}
                 />
                 <SummaryCard
                   label="Transactions"
                   value={String(ps?.totalTransactions ?? 0)}
                   delta={comparing && prevPs ? <DeltaBadge current={ps?.totalTransactions ?? 0} previous={prevPs.totalTransactions} /> : null}
+                />
+              </div>
+
+              {/* Revenue breakdown */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <SummaryCard
+                  label="Concession Sales"
+                  value={dbUnitToDollars(ps?.concessionTotal ?? 0)}
+                  delta={comparing && prevPs ? <DeltaBadge current={ps?.concessionTotal ?? 0} previous={prevPs.concessionTotal} /> : null}
+                />
+                <SummaryCard
+                  label="Pass / Ticket Sales"
+                  value={dbUnitToDollars(ps?.admissionTotal ?? 0)}
+                  delta={comparing && prevPs ? <DeltaBadge current={ps?.admissionTotal ?? 0} previous={prevPs.admissionTotal ?? 0} /> : null}
                 />
                 <SummaryCard
                   label="Members In"
