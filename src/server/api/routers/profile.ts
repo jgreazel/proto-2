@@ -5,6 +5,7 @@ import { hashSync } from "bcrypt-ts";
 
 import {
   createTRPCRouter,
+  adminProcedure,
   privateProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
@@ -42,7 +43,7 @@ export const profileRouter = createTRPCRouter({
       return msg;
     }),
 
-  getUsers: privateProcedure.query(async ({ ctx }) => {
+  getUsers: adminProcedure.query(async ({ ctx }) => {
     // await inRateWindow(ctx.userId);
 
     const users = await clerkClient.users.getUserList({ limit: 500 });
@@ -60,7 +61,7 @@ export const profileRouter = createTRPCRouter({
     return result;
   }),
 
-  createUser: privateProcedure
+  createUser: adminProcedure
     .input(
       z.object({
         username: z.string(),
@@ -68,11 +69,10 @@ export const profileRouter = createTRPCRouter({
         lastName: z.string(),
         password: z.string().min(8),
         email: z.string().email().nullable().optional(),
+        isAdmin: z.boolean(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // await inRateWindow(ctx.userId);
-
       try {
         const hashPw = hashSync(input.password, 10);
         const toAdd = {
@@ -90,6 +90,15 @@ export const profileRouter = createTRPCRouter({
             message: "User not created",
           });
         }
+
+        await ctx.db.userSettings.create({
+          data: {
+            userId: user.id,
+            createdBy: ctx.userId,
+            isAdmin: input.isAdmin,
+          },
+        });
+
         return user;
       } catch (e) {
         throw new TRPCError({
@@ -99,48 +108,17 @@ export const profileRouter = createTRPCRouter({
       }
     }),
 
-  createSettings: privateProcedure
+  updateSettings: adminProcedure
     .input(
       z.object({
         userId: z.string(),
-        canSchedule: z.boolean(),
         isAdmin: z.boolean(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // await inRateWindow(ctx.userId);
-
-      const result = await ctx.db.userSettings.create({
-        data: {
-          userId: input.userId,
-          createdBy: ctx.userId,
-          canSchedule: input.canSchedule,
-          isAdmin: input.isAdmin,
-        },
-      });
-      if (!result) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failure to create record",
-        });
-      }
-      return result;
-    }),
-
-  updateSettings: privateProcedure
-    .input(
-      z.object({
-        userId: z.string(),
-        canSchedule: z.boolean(),
-        isAdmin: z.boolean(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // await inRateWindow(ctx.userId);
       const result = await ctx.db.userSettings.update({
         where: { userId: input.userId },
         data: {
-          canSchedule: input.canSchedule,
           isAdmin: input.isAdmin,
         },
       });
@@ -156,11 +134,37 @@ export const profileRouter = createTRPCRouter({
   getSettingsByUser: privateProcedure
     .input(z.object({ userId: z.string() }).optional())
     .query(async ({ ctx, input }) => {
-      // await inRateWindow(ctx.userId);
-
       const setting = await ctx.db.userSettings.findFirst({
         where: { userId: input?.userId ?? ctx.userId },
       });
       return setting ?? undefined;
+    }),
+
+  deleteUser: adminProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      if (input.userId === ctx.userId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You cannot delete your own account",
+        });
+      }
+
+      try {
+        // Remove settings from our DB first
+        await ctx.db.userSettings.deleteMany({
+          where: { userId: input.userId },
+        });
+
+        // Then delete from Clerk
+        await clerkClient.users.deleteUser(input.userId);
+
+        return { success: true };
+      } catch (e) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: (e as Error).message,
+        });
+      }
     }),
 });

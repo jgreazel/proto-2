@@ -27,34 +27,32 @@ type Patron = Pass["patrons"][number];
 
 // ── Color helpers ──────────────────────────────────────────────────────
 
-const AVATAR_COLORS = [
-  "bg-primary text-primary-content",
-  "bg-secondary text-secondary-content",
-  "bg-accent text-accent-content",
-  "bg-info text-info-content",
-  "bg-success text-success-content",
-  "bg-warning text-warning-content",
-] as const;
+// Color is keyed to the first letter of the pass label so users can
+// visually scan for a letter group (all "S" passes share one hue, etc.)
+const LETTER_COLORS: Record<string, { bg: string; border: string }> = {};
+const HUES = [
+  { bg: "bg-blue-100 text-blue-700",     border: "border-l-blue-400" },
+  { bg: "bg-emerald-100 text-emerald-700", border: "border-l-emerald-400" },
+  { bg: "bg-amber-100 text-amber-700",   border: "border-l-amber-400" },
+  { bg: "bg-violet-100 text-violet-700", border: "border-l-violet-400" },
+  { bg: "bg-rose-100 text-rose-700",     border: "border-l-rose-400" },
+  { bg: "bg-cyan-100 text-cyan-700",     border: "border-l-cyan-400" },
+  { bg: "bg-orange-100 text-orange-700", border: "border-l-orange-400" },
+  { bg: "bg-teal-100 text-teal-700",     border: "border-l-teal-400" },
+  { bg: "bg-pink-100 text-pink-700",     border: "border-l-pink-400" },
+];
 
-const BORDER_COLORS = [
-  "border-l-primary",
-  "border-l-secondary",
-  "border-l-accent",
-  "border-l-info",
-  "border-l-success",
-  "border-l-warning",
-] as const;
-
-const hashStr = (s: string) => {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
+const hueForLetter = (label: string) => {
+  const ch = label.charAt(0).toUpperCase();
+  if (!LETTER_COLORS[ch]) {
+    const idx = (ch.charCodeAt(0) - 65) % HUES.length;
+    LETTER_COLORS[ch] = HUES[Math.abs(idx)]!;
+  }
+  return LETTER_COLORS[ch]!;
 };
 
-const avatarColor = (id: string) =>
-  AVATAR_COLORS[hashStr(id) % AVATAR_COLORS.length]!;
-const borderColor = (id: string) =>
-  BORDER_COLORS[hashStr(id) % BORDER_COLORS.length]!;
+const avatarColor = (label: string) => hueForLetter(label).bg;
+const cardBorder = (label: string) => hueForLetter(label).border;
 
 // ── Inline patron editor ──────────────────────────────────────────────
 
@@ -308,7 +306,7 @@ const EditPassDrawer = ({
         <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="avatar placeholder">
-              <div className={`w-8 rounded-lg ${avatarColor(pass.id)}`}>
+              <div className={`w-8 rounded-lg ${avatarColor(pass.label)}`}>
                 <span className="text-xs font-bold">
                   {pass.label.charAt(0).toUpperCase()}
                 </span>
@@ -465,7 +463,7 @@ const EditPassDrawer = ({
                   >
                     <div className="flex items-center gap-3">
                       <div className="avatar placeholder">
-                        <div className={`w-8 rounded-full ${avatarColor(patron.id)}`}>
+                        <div className="w-8 rounded-full bg-base-300 text-base-content">
                           <span className="text-xs">
                             {patron.firstName.charAt(0)}
                             {patron.lastName.charAt(0)}
@@ -737,7 +735,7 @@ const PassCard = ({
 }) => (
   <button
     onClick={onClick}
-    className={`card border-l-4 text-left transition-all duration-150 ${borderColor(pass.id)} ${
+    className={`card border-l-4 ${cardBorder(pass.label)} text-left transition-all duration-150 ${
       isSelected
         ? "ring-2 ring-primary/30 shadow-lg"
         : "shadow-sm hover:shadow-md"
@@ -746,7 +744,7 @@ const PassCard = ({
     <div className="card-body p-4">
       <div className="flex items-center gap-3">
         <div className="avatar placeholder">
-          <div className={`w-10 rounded-lg ${avatarColor(pass.id)}`}>
+          <div className={`w-10 rounded-lg ${avatarColor(pass.label)}`}>
             <span className="text-sm font-bold">
               {pass.label.charAt(0).toUpperCase()}
             </span>
@@ -775,7 +773,7 @@ const PassCard = ({
               className="inline-flex items-center gap-1.5 rounded-full bg-base-200/60 px-2.5 py-0.5 text-xs font-medium capitalize"
             >
               <span
-                className={`inline-block h-2 w-2 rounded-full ${avatarColor(p.id).split(" ")[0]}`}
+                className="inline-block h-2 w-2 rounded-full bg-base-content/20"
               />
               {p.firstName} {p.lastName}
             </span>
@@ -911,7 +909,7 @@ function PassesPage() {
       ) : (
         <div className="flex h-full w-full flex-col">
           {/* Header Banner */}
-          <div className="bg-gradient-to-r from-secondary to-accent px-6 py-5 shadow-md">
+          <div className="bg-primary px-6 py-5 shadow-md">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white sm:text-3xl">
@@ -925,13 +923,13 @@ function PassesPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowNewPass(true)}
-                  className="btn btn-sm border-none bg-white text-secondary shadow-sm hover:bg-white/90"
+                  className="btn btn-sm border-none bg-white text-primary shadow-sm hover:bg-white/90"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
                   New Pass
-                  <kbd className="kbd kbd-xs border-white/30 bg-secondary/10 text-secondary/70 hidden sm:inline">N</kbd>
+                  <kbd className="kbd kbd-xs border-white/30 bg-primary/10 text-primary/70 hidden sm:inline">N</kbd>
                 </button>
                 <div className="tooltip tooltip-bottom" data-tip="Keyboard shortcuts (?)">
                   <button

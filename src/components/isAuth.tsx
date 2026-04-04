@@ -12,10 +12,9 @@ export default function isAuth(Component: any, role?: Role) {
 
     if (isLoading) return <LoadingPage />;
 
-    // don't need to address "employee". If they have data but aren't admin, they're an "employee"
-    const isNotAllowed = data && !data.isAdmin && role === "admin";
+    const isNotAllowed = role === "admin" ? !data?.isAdmin : false;
+
     if (!data || isNotAllowed) {
-      // is voiding this causing the blink?
       void router.push("/unauthorized");
     }
 

@@ -101,3 +101,24 @@ const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
 });
 
 export const privateProcedure = t.procedure.use(enforceUserIsAuthed);
+
+const enforceUserIsAdmin = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.userId) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const settings = await ctx.db.userSettings.findFirst({
+    where: { userId: ctx.userId },
+  });
+
+  if (!settings?.isAdmin) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Admin access required",
+    });
+  }
+
+  return next({ ctx: { userId: ctx.userId } });
+});
+
+export const adminProcedure = t.procedure.use(enforceUserIsAdmin);

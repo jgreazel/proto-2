@@ -1,5 +1,3 @@
-// import { clerkClient } from "@clerk/nextjs";
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
@@ -9,16 +7,14 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
+  CopyObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-// import inRateWindow from "../helpers/inRateWindow";
 
 const Bucket = process.env.AWS_BUCKET;
 
 export const documentsRouter = createTRPCRouter({
   getAll: privateProcedure.query(async ({ ctx }) => {
-    // await inRateWindow(ctx.userId);
-
     const response = await ctx.s3.send(new ListObjectsCommand({ Bucket }));
     return response.Contents ?? [];
   }),
@@ -30,8 +26,6 @@ export const documentsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      // await inRateWindow(ctx.userId);
-
       const cmd = new GetObjectCommand({ Bucket, Key: input.key });
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const src = await getSignedUrl(ctx.s3, cmd, { expiresIn: 3600 });
@@ -41,7 +35,6 @@ export const documentsRouter = createTRPCRouter({
   getStandardUploadPresignedUrl: privateProcedure
     .input(z.object({ key: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // await inRateWindow(ctx.userId);
       const { s3 } = ctx;
 
       const putObjectCommand = new PutObjectCommand({
@@ -52,10 +45,28 @@ export const documentsRouter = createTRPCRouter({
       return await getSignedUrl(s3, putObjectCommand);
     }),
 
+  renameItem: privateProcedure
+    .input(z.object({ oldKey: z.string(), newKey: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const copyCmd = new CopyObjectCommand({
+        Bucket,
+        CopySource: `${Bucket ?? ""}/${input.oldKey}`,
+        Key: input.newKey,
+      });
+      await ctx.s3.send(copyCmd);
+
+      const deleteCmd = new DeleteObjectCommand({
+        Bucket,
+        Key: input.oldKey,
+      });
+      await ctx.s3.send(deleteCmd);
+
+      return { key: input.newKey };
+    }),
+
   deleteItem: privateProcedure
     .input(z.object({ key: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // await inRateWindow(ctx.userId);
       const deleteCmd = new DeleteObjectCommand({ Bucket, Key: input.key });
       return await ctx.s3.send(deleteCmd);
     }),

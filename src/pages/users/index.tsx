@@ -1,484 +1,487 @@
-import { InputNumber, Select } from "antd";
 import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import isAuth from "~/components/isAuth";
 import { PageLayout } from "~/components/layout";
 import { LoadingPage } from "~/components/loading";
-import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import handleApiError from "~/helpers/handleApiError";
-import moneyMask from "~/helpers/moneyMask";
-import { type RouterOutputs, api } from "~/utils/api";
+import { api } from "~/utils/api";
 
-type UserFormData = {
-  username: string;
+// ── Types ──────────────────────────────────────────────
+
+type UserWithSettings = {
+  id: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  settings?: {
+    isAdmin: boolean;
+  } | null;
+};
+
+type CreateFormData = {
   firstName: string;
   lastName: string;
+  username: string;
   password: string;
+  confirmPassword: string;
   email: string;
-};
-
-const NewUserModal = ({ onClose }: { onClose: () => void }) => {
-  const { register, handleSubmit, reset, formState } = useForm<UserFormData>();
-  const ctx = api.useUtils();
-
-  // todo fix clerk server code...
-  const { mutate, isLoading } = api.profile.createUser.useMutation({
-    onSuccess: async () => {
-      toast.success("Created!");
-      await ctx.profile.getUsers.invalidate();
-      reset();
-      onClose();
-    },
-    onError: handleApiError,
-  });
-
-  const handleFormSubmit = (data: UserFormData) => {
-    mutate({ ...data, email: !!data.email ? data.email : null });
-  };
-
-  return (
-    <dialog id="hour-code-modal" className="modal modal-open">
-      <div className="modal-box">
-        <form method="dialog">
-          <button
-            onClick={onClose}
-            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </form>
-        <form onSubmit={handleSubmit(handleFormSubmit)}>
-          <div id="modal-content" className="flex flex-col gap-2">
-            <h4 className="text-lg font-medium">New User</h4>
-            <div role="alert" className="alert">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="h-6 w-6 shrink-0 stroke-info"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-              <span>
-                After creating a new user, you&apos;ll also need to add their
-                permissions from the user table.
-              </span>
-            </div>
-
-            <label className="text-xs font-medium">First Name</label>
-            <input
-              id="firstname"
-              type="text"
-              placeholder="Ex: John"
-              className="input input-bordered"
-              {...register("firstName", {
-                required: true,
-                disabled: isLoading,
-              })}
-            />
-            <label className="text-xs font-medium">Last Name</label>
-            <input
-              id="lastname"
-              type="text"
-              placeholder="Ex: Doe"
-              className="input input-bordered"
-              {...register("lastName", {
-                required: true,
-                disabled: isLoading,
-              })}
-            />
-
-            <label className="text-xs font-medium">Username</label>
-            <input
-              id="username"
-              type="text"
-              className="input input-bordered"
-              {...register("username", {
-                required: true,
-                disabled: isLoading,
-              })}
-            />
-            <label className="text-xs font-medium">Password</label>
-            <input
-              id="password"
-              type="text"
-              className="input input-bordered"
-              {...register("password", {
-                required: true,
-                disabled: isLoading,
-                minLength: 8,
-              })}
-            />
-            <label className="form-control">
-              <div className="label">
-                <span className="text-xs font-medium">Email</span>
-              </div>
-              <input
-                id="email"
-                type="text"
-                placeholder="Ex: name@example.com"
-                className="input input-bordered"
-                {...register("email", {
-                  disabled: isLoading,
-                  pattern: {
-                    value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-                    message: "Invalid email format",
-                  },
-                })}
-              />
-              <div className="label">
-                {formState.errors.email && (
-                  <span className="label-text-alt">
-                    {formState.errors.email.message}
-                  </span>
-                )}
-              </div>
-            </label>
-          </div>
-          <div className="modal-action justify-end">
-            <button
-              disabled={!formState.isValid}
-              className="btn btn-primary"
-              type="submit"
-            >
-              Create
-            </button>
-          </div>
-        </form>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={onClose}>close</button>
-      </form>
-    </dialog>
-  );
-};
-
-const OptionsButton = () => {
-  const [showUser, setShowUser] = useState(false);
-
-  return (
-    <>
-      {showUser && <NewUserModal onClose={() => setShowUser(false)} />}
-      <details className="dropdown dropdown-end">
-        <summary className="btn btn-circle btn-ghost m-1">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="h-6 w-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-            />
-          </svg>
-        </summary>
-        <ul className="menu dropdown-content z-[1] w-max rounded-box bg-base-200 p-2 shadow-xl">
-          <li>
-            <span onClick={() => setShowUser(true)}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
-              New User
-            </span>
-          </li>
-        </ul>
-      </details>
-    </>
-  );
-};
-
-type PermissionForm = {
-  canSchedule: boolean;
   isAdmin: boolean;
 };
-const UserPermissionsModal = ({
-  onClose,
-  data,
-  userId,
+
+type EditFormData = {
+  isAdmin: boolean;
+};
+
+// ── Panel: Empty State ─────────────────────────────────
+
+const EmptyPanel = () => (
+  <div className="flex h-full flex-col items-center justify-center gap-2 text-base-content/40">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1}
+      stroke="currentColor"
+      className="h-12 w-12"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+      />
+    </svg>
+    <p className="text-sm">Select a user to edit, or create a new one.</p>
+  </div>
+);
+
+// ── Panel: Create User ─────────────────────────────────
+
+const CreatePanel = ({ onDone }: { onDone: () => void }) => {
+  const { register, handleSubmit, reset, formState } =
+    useForm<CreateFormData>({
+      mode: "onChange",
+      defaultValues: { isAdmin: false },
+    });
+  const utils = api.useUtils();
+
+  const { mutate, isLoading } = api.profile.createUser.useMutation({
+    onSuccess: async () => {
+      toast.success("User created!");
+      await utils.profile.getUsers.invalidate();
+      reset();
+      onDone();
+    },
+    onError: handleApiError,
+  });
+
+  const onSubmit = (d: CreateFormData) => {
+    mutate({
+      firstName: d.firstName,
+      lastName: d.lastName,
+      username: d.username,
+      password: d.password,
+      email: d.email || null,
+      isAdmin: d.isAdmin,
+    });
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col gap-3"
+    >
+      <h2 className="text-lg font-bold">New User</h2>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium">First Name</label>
+          <input
+            type="text"
+            placeholder="John"
+            className="input input-bordered input-sm"
+            {...register("firstName", {
+              required: "Required",
+              disabled: isLoading,
+            })}
+          />
+          {formState.errors.firstName && (
+            <span className="text-xs text-error">
+              {formState.errors.firstName.message}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium">Last Name</label>
+          <input
+            type="text"
+            placeholder="Doe"
+            className="input input-bordered input-sm"
+            {...register("lastName", {
+              required: "Required",
+              disabled: isLoading,
+            })}
+          />
+          {formState.errors.lastName && (
+            <span className="text-xs text-error">
+              {formState.errors.lastName.message}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium">Username</label>
+        <input
+          type="text"
+          className="input input-bordered input-sm"
+          {...register("username", {
+            required: "Required",
+            disabled: isLoading,
+          })}
+        />
+        {formState.errors.username && (
+          <span className="text-xs text-error">
+            {formState.errors.username.message}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium">Email (optional)</label>
+        <input
+          type="text"
+          placeholder="name@example.com"
+          className="input input-bordered input-sm"
+          {...register("email", {
+            disabled: isLoading,
+            pattern: {
+              value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+              message: "Invalid email",
+            },
+          })}
+        />
+        {formState.errors.email && (
+          <span className="text-xs text-error">
+            {formState.errors.email.message}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium">Password</label>
+          <input
+            type="password"
+            className="input input-bordered input-sm"
+            {...register("password", {
+              required: "Required",
+              disabled: isLoading,
+              minLength: { value: 8, message: "Min 8 characters" },
+            })}
+          />
+          {formState.errors.password && (
+            <span className="text-xs text-error">
+              {formState.errors.password.message}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium">Confirm Password</label>
+          <input
+            type="password"
+            className="input input-bordered input-sm"
+            {...register("confirmPassword", {
+              required: "Required",
+              disabled: isLoading,
+              validate: (v, fv) =>
+                v === fv.password || "Passwords don't match",
+            })}
+          />
+          {formState.errors.confirmPassword && (
+            <span className="text-xs text-error">
+              {formState.errors.confirmPassword.message}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <label className="label mt-1 w-fit cursor-pointer gap-3 rounded-lg border border-base-300 px-3 py-2">
+        <input
+          type="checkbox"
+          className="toggle toggle-sm toggle-primary"
+          {...register("isAdmin")}
+          disabled={isLoading}
+        />
+        <div>
+          <span className="label-text font-medium">Admin</span>
+          <p className="text-xs text-base-content/50">
+            Full access to items, files, reports &amp; user management
+          </p>
+        </div>
+      </label>
+
+      <div className="mt-2 flex justify-end">
+        <button
+          type="submit"
+          className="btn btn-primary btn-sm"
+          disabled={!formState.isValid || isLoading}
+        >
+          {isLoading ? (
+            <span className="loading loading-spinner loading-sm" />
+          ) : (
+            "Create User"
+          )}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// ── Panel: Edit User ───────────────────────────────────
+
+const EditPanel = ({
+  user,
+  onDone,
 }: {
-  onClose: () => void;
-  data?: PermissionForm;
-  userId: string;
+  user: UserWithSettings;
+  onDone: () => void;
 }) => {
-  const { reset, register, handleSubmit, formState } = useForm<PermissionForm>({
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const utils = api.useUtils();
+
+  const { register, handleSubmit, formState } = useForm<EditFormData>({
+    mode: "onChange",
     defaultValues: {
-      canSchedule: data?.canSchedule ?? false,
-      isAdmin: data?.isAdmin ?? false,
+      isAdmin: user.settings?.isAdmin ?? false,
     },
   });
 
-  const { data: hcOpts, isLoading: gettingHCs } =
-    api.schedules.getHourCodes.useQuery();
-
-  const utils = api.useUtils();
-  const onSuccess = (msg: string) => async () => {
-    toast.success(msg);
-    await utils.profile.getUsers.invalidate();
-    onClose();
-    reset();
-  };
-  const { mutate: create, isLoading } = api.profile.createSettings.useMutation({
-    onSuccess: onSuccess("Created!"),
-    onError: handleApiError,
-  });
-  const { mutate: update, isLoading: isUpdating } =
+  const { mutate: updateSettings, isLoading: isUpdating } =
     api.profile.updateSettings.useMutation({
-      onSuccess: onSuccess("Updated!"),
+      onSuccess: async () => {
+        toast.success("Settings updated!");
+        await utils.profile.getUsers.invalidate();
+      },
       onError: handleApiError,
     });
 
-  const isFetching = isLoading || gettingHCs || isUpdating;
+  const { mutate: deleteUser, isLoading: isDeleting } =
+    api.profile.deleteUser.useMutation({
+      onSuccess: async () => {
+        toast.success(`${user.firstName ?? "User"} deleted`);
+        await utils.profile.getUsers.invalidate();
+        onDone();
+      },
+      onError: handleApiError,
+    });
 
-  const options = hcOpts?.map((x) => ({
-    label: `${x.label} - ${dbUnitToDollars(x.hourlyRate)}`,
-    value: x.id,
-  }));
-  options?.unshift({ value: "", label: "---" });
+  const isBusy = isUpdating || isDeleting;
 
-  const handleGSSubmit = (formData: PermissionForm) => {
-    const input = {
-      userId,
-      ...formData,
-    };
-    !!data ? update(input) : create(input);
+  const onSubmit = (d: EditFormData) => {
+    updateSettings({
+      userId: user.id,
+      isAdmin: d.isAdmin,
+    });
   };
 
   return (
-    <dialog id="new-hour-code-modal" className="modal modal-open">
-      <div className="modal-box">
-        <form method="dialog">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-bold capitalize">
+            {user.firstName} {user.lastName}
+          </h2>
+          <p className="text-sm text-base-content/60">@{user.username}</p>
+        </div>
+        {user.settings?.isAdmin && (
+          <div className="badge badge-primary badge-sm">Admin</div>
+        )}
+        {!user.settings && (
+          <div className="badge badge-warning badge-sm">No settings</div>
+        )}
+      </div>
+
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="flex flex-col gap-3"
+      >
+        <label className="label w-fit cursor-pointer gap-3 rounded-lg border border-base-300 px-3 py-2">
+          <input
+            type="checkbox"
+            className="toggle toggle-sm toggle-primary"
+            {...register("isAdmin")}
+            disabled={isBusy}
+          />
+          <div>
+            <span className="label-text font-medium">Admin</span>
+            <p className="text-xs text-base-content/50">
+              Full access to items, files, reports &amp; user management
+            </p>
+          </div>
+        </label>
+
+        <div className="flex justify-end">
           <button
-            onClick={onClose}
-            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+            type="submit"
+            className="btn btn-primary btn-sm"
+            disabled={!formState.isDirty || !formState.isValid || isBusy}
+          >
+            {isUpdating ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              "Save"
+            )}
+          </button>
+        </div>
+      </form>
+
+      <div className="divider my-0 text-xs text-error/60">Danger Zone</div>
+
+      {!showDeleteConfirm ? (
+        <button
+          className="btn btn-outline btn-error btn-sm w-fit"
+          onClick={() => setShowDeleteConfirm(true)}
+          disabled={isBusy}
+        >
+          Delete User
+        </button>
+      ) : (
+        <div className="rounded-lg border border-error/30 bg-error/5 p-3">
+          <p className="mb-3 text-sm">
+            Permanently delete{" "}
+            <strong>
+              {user.firstName} {user.lastName}
+            </strong>
+            ? This cannot be undone.
+          </p>
+          <div className="flex gap-2">
+            <button
+              className="btn btn-error btn-sm"
+              onClick={() => deleteUser({ userId: user.id })}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <span className="loading loading-spinner loading-sm" />
+              ) : (
+                "Yes, Delete"
+              )}
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── User List Sidebar ──────────────────────────────────
+
+const UserListItem = ({
+  user,
+  isSelected,
+  onClick,
+}: {
+  user: UserWithSettings;
+  isSelected: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${
+      isSelected
+        ? "bg-primary/10 text-primary"
+        : "hover:bg-base-200"
+    }`}
+  >
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-base-300 text-xs font-bold uppercase">
+      {user.firstName?.[0]}
+      {user.lastName?.[0]}
+    </div>
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-sm font-medium capitalize">
+        {user.firstName} {user.lastName}
+      </p>
+      <p className="truncate text-xs text-base-content/50">
+        @{user.username}
+      </p>
+    </div>
+    {user.settings?.isAdmin && (
+      <div className="badge badge-primary badge-xs">Admin</div>
+    )}
+  </button>
+);
+
+// ── Main Page ──────────────────────────────────────────
+
+function UsersPage() {
+  const [filter, setFilter] = useState("");
+  const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [mode, setMode] = useState<"idle" | "create" | "edit">("idle");
+
+  const { data: users, isLoading } = api.profile.getUsers.useQuery();
+
+  const selectedUser = users?.find((u) => u.id === selectedId);
+
+  const isIn = (val?: string | null) =>
+    val?.toUpperCase().includes(filter.toUpperCase()) ?? false;
+  const filteredUsers = users?.filter(
+    (x) => isIn(x.username) || isIn(x.firstName) || isIn(x.lastName),
+  );
+
+  const handleSelectUser = (id: string) => {
+    setSelectedId(id);
+    setMode("edit");
+  };
+
+  const handleNewUser = () => {
+    setSelectedId(undefined);
+    setMode("create");
+  };
+
+  const handleDone = () => {
+    setSelectedId(undefined);
+    setMode("idle");
+  };
+
+  return (
+    <PageLayout>
+      <div className="flex h-full gap-6 p-6">
+        {/* ── Left: User List ── */}
+        <div className="flex w-64 shrink-0 flex-col gap-3">
+          <button
+            onClick={handleNewUser}
+            className="btn btn-primary btn-sm w-full"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              strokeWidth={1.5}
+              strokeWidth={2}
               stroke="currentColor"
-              className="h-6 w-6"
+              className="h-4 w-4"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
+                d="M12 4.5v15m7.5-7.5h-15"
               />
             </svg>
+            New User
           </button>
-        </form>
-        <form onSubmit={handleSubmit(handleGSSubmit)}>
-          <div id="modal-content" className="flex flex-col gap-2">
-            <h3 className="text-large font-medium">User Permissions</h3>
 
-            <div>
-              <label className="label w-fit cursor-pointer gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  {...register("isAdmin")}
-                  disabled={isFetching}
-                />
-                <span className="label-text">Is an Admin User</span>
-              </label>
-            </div>
-            <div>
-              <label className="label w-fit cursor-pointer gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  {...register("canSchedule")}
-                  disabled={isFetching}
-                />
-                <span className="label-text">Can create schedules</span>
-              </label>
-            </div>
-          </div>
-          <div className="modal-action">
-            <button
-              disabled={isFetching || !formState.isValid}
-              className="btn btn-primary"
-              type="submit"
-            >
-              {!data ? "Create" : "Update"}
-            </button>
-          </div>
-        </form>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={onClose}>close</button>
-      </form>
-    </dialog>
-  );
-};
-
-const UserTable = ({ filter }: { filter: string }) => {
-  const { data, isLoading } = api.profile.getUsers.useQuery();
-  const [modalId, setModalId] = useState<string | undefined>(undefined);
-  const ss = data?.find((u) => u.id === modalId)?.settings;
-  const modal = (
-    <UserPermissionsModal
-      userId={modalId!}
-      onClose={() => setModalId(undefined)}
-      data={
-        !!ss
-          ? {
-              canSchedule: !!ss.canSchedule,
-              isAdmin: !!ss.isAdmin,
-            }
-          : undefined
-      }
-    />
-  );
-
-  const isIn = (val?: string | null) =>
-    val?.toUpperCase().includes(filter.toUpperCase()) ?? false;
-
-  return isLoading ? (
-    <LoadingPage />
-  ) : (
-    <>
-      <table className="table table-zebra rounded-lg shadow-lg">
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Permissions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data
-            ?.filter(
-              (x) => isIn(x.username) || isIn(x.firstName) || isIn(x.lastName),
-            )
-            .map((x) => {
-              const isEdit = !!x.settings;
-              return (
-                <tr key={x.id}>
-                  <td>{x.username}</td>
-                  <td className="capitalize">{x.firstName ?? "-"}</td>
-                  <td className="capitalize">{x.lastName ?? "-"}</td>
-                  <td>
-                    {
-                      <div
-                        className="tooltip"
-                        data-tip={
-                          isEdit ? "Edit Permissions" : "Create Permissions"
-                        }
-                      >
-                        <button
-                          onClick={() => setModalId(x.id)}
-                          className="btn btn-circle btn-ghost btn-sm"
-                        >
-                          {isEdit ? (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="h-6 w-6"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z"
-                              />
-                            </svg>
-                          ) : (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="h-6 w-6"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 4.5v15m7.5-7.5h-15"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    }
-                  </td>
-                </tr>
-              );
-            })}
-        </tbody>
-      </table>
-      {!!modalId && modal}
-    </>
-  );
-};
-
-function UsersPage() {
-  const [filter, setFilter] = useState("");
-
-  return (
-    <PageLayout>
-      <div className="p-2">
-        <div className="flex flex-row gap-2">
-          <label
-            htmlFor="user-filter"
-            className="input input-bordered m-1 flex grow items-center gap-2"
-          >
-            <input
-              id="user-filter"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              type="text"
-              className="grow"
-              placeholder="Search"
-            />
+          <label className="input input-bordered input-sm flex items-center gap-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 16 16"
               fill="currentColor"
-              className="h-4 w-4 opacity-70"
+              className="h-4 w-4 opacity-50"
             >
               <path
                 fillRule="evenodd"
@@ -486,10 +489,49 @@ function UsersPage() {
                 clipRule="evenodd"
               />
             </svg>
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              type="text"
+              className="grow"
+              placeholder="Search users…"
+            />
           </label>
-          <OptionsButton />
+
+          {filter && (
+            <p className="text-xs text-base-content/50">
+              {filteredUsers?.length ?? 0} of {users?.length ?? 0} users
+            </p>
+          )}
+
+          <div className="flex flex-col gap-0.5 overflow-y-auto">
+            {isLoading ? (
+              <LoadingPage />
+            ) : (
+              filteredUsers?.map((u) => (
+                <UserListItem
+                  key={u.id}
+                  user={u}
+                  isSelected={selectedId === u.id && mode === "edit"}
+                  onClick={() => handleSelectUser(u.id)}
+                />
+              ))
+            )}
+          </div>
         </div>
-        <UserTable filter={filter} />
+
+        {/* ── Right: Detail Panel ── */}
+        <div className="min-w-0 max-w-md flex-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-6 shadow-lg">
+          {mode === "idle" && <EmptyPanel />}
+          {mode === "create" && <CreatePanel onDone={handleDone} />}
+          {mode === "edit" && selectedUser && (
+            <EditPanel
+              key={selectedUser.id}
+              user={selectedUser}
+              onDone={handleDone}
+            />
+          )}
+        </div>
       </div>
     </PageLayout>
   );
