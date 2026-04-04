@@ -347,7 +347,7 @@ function ItemsPage() {
             <div role="tablist" className="tabs-boxed tabs bg-black/15">
               <a
                 role="tab"
-                className={`tab font-medium text-white ${itemType === "concession" ? "!bg-white/30 font-bold" : "hover:bg-white/15"}`}
+                className={`tab ${itemType === "concession" ? "!bg-white !text-primary font-bold shadow-sm" : "font-medium text-white hover:bg-white/15"}`}
                 onClick={() => setItemType("concession")}
               >
                 <svg
@@ -368,7 +368,7 @@ function ItemsPage() {
               </a>
               <a
                 role="tab"
-                className={`tab font-medium text-white ${itemType === "admission" ? "!bg-white/30 font-bold" : "hover:bg-white/15"}`}
+                className={`tab ${itemType === "admission" ? "!bg-white !text-primary font-bold shadow-sm" : "font-medium text-white hover:bg-white/15"}`}
                 onClick={() => setItemType("admission")}
               >
                 <svg
@@ -437,4 +437,4 @@ function ItemsPage() {
   );
 }
 
-export default isAuth(ItemsPage, "inventory");
+export default isAuth(ItemsPage, "admin");
