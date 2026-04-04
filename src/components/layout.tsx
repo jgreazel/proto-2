@@ -453,6 +453,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
         <div className="navbar-center hidden md:flex">
           <div className="flex items-center gap-1">
             <DesktopNavLink href="/checkout" label="Checkout" currentPath={router.pathname} />
+            <DesktopNavLink href="/checkin" label="Check-In" currentPath={router.pathname} />
             <DesktopNavLink href="/passes" label="Passes" currentPath={router.pathname} />
           </div>
         </div>
