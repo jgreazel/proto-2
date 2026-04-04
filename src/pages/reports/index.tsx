@@ -1079,11 +1079,11 @@ export function ReportsPage() {
           },
         };
 
-  const tabs: { key: TabKey; label: string }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "purchase", label: "Sales" },
-    { key: "admission", label: "Admissions" },
-    { key: "itemchangelog", label: "Changes" },
+  const tabs: { key: TabKey; label: string; desc: string }[] = [
+    { key: "overview", label: "Overview", desc: "Dashboard with charts and key metrics from all reports" },
+    { key: "purchase", label: "Sales", desc: "Concession sales, revenue, and voided transactions" },
+    { key: "admission", label: "Admissions", desc: "Member check-ins and non-member ticket sales" },
+    { key: "itemchangelog", label: "Changes", desc: "Inventory item price and stock modifications" },
   ];
 
   // Summary helpers
@@ -1124,6 +1124,7 @@ export function ReportsPage() {
                   <button
                     className="btn btn-sm gap-1 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
                     onClick={handleExport}
+                    title="Download current report as a spreadsheet-ready CSV file"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -1135,6 +1136,7 @@ export function ReportsPage() {
                   <Link
                     href={printHref}
                     className="btn btn-sm gap-1 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
+                    title="Open a print-friendly version of this report"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12Zm-2.25 0h.008v.008H16.5V12Z" />
@@ -1169,6 +1171,7 @@ export function ReportsPage() {
                 <button
                   className="btn btn-ghost btn-xs sm:btn-sm gap-1"
                   onClick={() => setShowSavedMenu((v) => !v)}
+                  title="Save this view for quick access later, or load a previously saved report"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-3.5 w-3.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
@@ -1239,6 +1242,7 @@ export function ReportsPage() {
                       activeTab === t.key ? "btn-primary" : ""
                     }`}
                     onClick={() => setActiveTab(t.key)}
+                    title={t.desc}
                   >
                     {t.label}
                   </button>
@@ -1250,8 +1254,8 @@ export function ReportsPage() {
                     className={`btn btn-xs gap-1 ${comparing ? "btn-secondary" : "btn-ghost"}`}
                     onClick={() => setComparing((v) => !v)}
                     title={comparing
-                      ? `Comparing to ${dayjs(prevStart).format("MMM D")} – ${dayjs(prevEnd).format("MMM D")}`
-                      : "Compare to previous period"}
+                      ? `Click to hide comparison. Currently comparing to ${dayjs(prevStart).format("MMM D")} – ${dayjs(prevEnd).format("MMM D")}`
+                      : "Show ↑/↓ % changes compared to the same-length period right before your selected dates"}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-3.5 w-3.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
