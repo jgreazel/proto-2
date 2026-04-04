@@ -291,13 +291,13 @@ function ItemsPage() {
     <PageLayout>
       <div className="flex h-full w-full flex-col">
         {/* Header Banner */}
-        <div className="bg-gradient-to-r from-accent to-primary px-6 py-5 shadow-md">
+        <div className="bg-gradient-to-r from-primary to-accent px-6 py-5 shadow-md">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-primary-content sm:text-3xl">
+              <h1 className="text-2xl font-bold text-white sm:text-3xl">
                 📦 Inventory Management
               </h1>
-              <p className="mt-1 text-sm text-primary-content/70">
+              <p className="mt-1 text-sm font-medium text-white/80">
                 Manage your {itemType} items, track stock levels, and monitor
                 profitability
               </p>
@@ -305,7 +305,7 @@ function ItemsPage() {
 
             {/* Action Buttons */}
             <div className="flex gap-2">
-              <Link href="items/restock" className="btn btn-sm border-white/20 bg-white/20 text-primary-content hover:bg-white/30">
+              <Link href="items/restock" className="btn btn-sm border-white/30 bg-white/25 font-medium text-white hover:bg-white/35">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -344,10 +344,10 @@ function ItemsPage() {
 
           {/* Controls row — inside the banner */}
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <div role="tablist" className="tabs-boxed tabs bg-white/15">
+            <div role="tablist" className="tabs-boxed tabs bg-black/15">
               <a
                 role="tab"
-                className={`tab text-primary-content ${itemType === "concession" ? "!bg-white/25 font-semibold" : "hover:bg-white/10"}`}
+                className={`tab font-medium text-white ${itemType === "concession" ? "!bg-white/30 font-bold" : "hover:bg-white/15"}`}
                 onClick={() => setItemType("concession")}
               >
                 <svg
@@ -368,7 +368,7 @@ function ItemsPage() {
               </a>
               <a
                 role="tab"
-                className={`tab text-primary-content ${itemType === "admission" ? "!bg-white/25 font-semibold" : "hover:bg-white/10"}`}
+                className={`tab font-medium text-white ${itemType === "admission" ? "!bg-white/30 font-bold" : "hover:bg-white/15"}`}
                 onClick={() => setItemType("admission")}
               >
                 <svg
@@ -394,7 +394,7 @@ function ItemsPage() {
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 16 16"
                 fill="currentColor"
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-content/60"
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70"
               >
                 <path
                   fillRule="evenodd"
@@ -407,7 +407,7 @@ function ItemsPage() {
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 type="text"
-                className="input w-full border-white/20 bg-white/20 pl-10 text-primary-content placeholder:text-primary-content/50 focus:border-white/40 focus:bg-white/30 focus:outline-none"
+                className="input w-full border-white/30 bg-white/25 pl-10 font-medium text-white placeholder:text-white/60 focus:border-white/50 focus:bg-white/35 focus:outline-none"
                 placeholder="Search inventory..."
               />
             </div>
