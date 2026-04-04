@@ -10,12 +10,10 @@ import isAuth from "~/components/isAuth";
 import { InlineItemEdit } from "~/components/inlineItemEdit";
 import CategoryManager from "~/components/categoryManager";
 import handleApiError from "~/helpers/handleApiError";
-import type { InventoryItem } from "@prisma/client";
 import {
   AdmissionItemForm,
   ConcessionItemForm,
 } from "~/pages/items/[id]";
-import { SelectionHeader, RestockForm } from "~/pages/items/restock";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
@@ -380,7 +378,9 @@ const NewItemDrawer = ({ onClose }: { onClose: () => void }) => {
 };
 
 const RestockDrawer = ({ onClose }: { onClose: () => void }) => {
-  const [selected, setSelected] = useState<string[]>([]);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [changeNote, setChangeNote] = useState("");
+  const [filter, setFilter] = useState("");
   const { data, isLoading } = api.items.getAll.useQuery({
     category: "concession",
   });
@@ -388,12 +388,26 @@ const RestockDrawer = ({ onClose }: { onClose: () => void }) => {
   const { mutate, isLoading: isUpdating } = api.items.restockItems.useMutation({
     onSuccess: (x) => {
       void ctx.items.getAll.invalidate();
-      setSelected([]);
       toast.success(x.message);
       onClose();
     },
     onError: handleApiError,
   });
+
+  const selectedCount = Object.values(quantities).filter((q) => q > 0).length;
+
+  const handleSubmit = () => {
+    const items = Object.entries(quantities)
+      .filter(([, qty]) => qty > 0)
+      .map(([id, restockAmount]) => ({ id, restockAmount }));
+    if (items.length > 0 && changeNote.trim()) {
+      mutate({ items, changeNote });
+    }
+  };
+
+  const filteredItems = data?.filter((i) =>
+    i.item.label.toUpperCase().includes(filter.toUpperCase()),
+  );
 
   return (
     <>
@@ -401,16 +415,17 @@ const RestockDrawer = ({ onClose }: { onClose: () => void }) => {
         className="fixed inset-0 z-40 bg-black/30 transition-opacity"
         onClick={onClose}
       />
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col border-l border-base-300 bg-base-100 shadow-2xl">
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-base-300 bg-base-100 shadow-2xl">
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
           <div className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-primary">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
             </svg>
             <h2 className="font-semibold">Bulk Restock</h2>
-            {selected.length > 0 && (
+            {selectedCount > 0 && (
               <div className="badge badge-primary badge-sm">
-                {selected.length} selected
+                {selectedCount} item{selectedCount !== 1 && "s"}
               </div>
             )}
           </div>
@@ -421,25 +436,107 @@ const RestockDrawer = ({ onClose }: { onClose: () => void }) => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          <SelectionHeader
-            data={data}
-            isLoading={isLoading || isUpdating}
-            value={selected}
-            setValue={setSelected}
-          />
+        {/* Search */}
+        <div className="border-b border-base-200 px-4 py-3">
+          <label className="input input-bordered input-sm flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4 opacity-50">
+              <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
+            </svg>
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              type="text"
+              className="grow"
+              placeholder="Search items…"
+            />
+          </label>
+        </div>
 
-          {selected.length > 0 && (
-            <div className="mt-4">
-              <RestockForm
-                data={data as { item: InventoryItem }[]}
-                selected={selected}
-                onSubmit={mutate}
-                onCancel={onClose}
-              />
+        {/* Item list with inline quantity inputs */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="p-8"><LoadingPage /></div>
+          ) : (
+            <div className="divide-y divide-base-200">
+              {filteredItems?.map((i) => {
+                const qty = quantities[i.item.id] ?? 0;
+                const stock = i.item.inStock ?? 0;
+                return (
+                  <div
+                    key={i.item.id}
+                    className={`flex items-center gap-3 px-4 py-3 transition-colors ${qty > 0 ? "bg-primary/5" : "hover:bg-base-200/50"}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold" title={i.item.label}>
+                        {i.item.label}
+                      </div>
+                      <span
+                        className={`text-xs font-medium ${
+                          stock === 0
+                            ? "text-error"
+                            : stock <= 10
+                            ? "text-warning"
+                            : "text-success"
+                        }`}
+                      >
+                        {stock} in stock
+                        {qty > 0 && (
+                          <span className="text-success"> → {stock + qty}</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex w-24 shrink-0 items-center gap-1">
+                      <span className="text-xs text-base-content/50">+</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={qty || ""}
+                        onChange={(e) =>
+                          setQuantities((prev) => ({
+                            ...prev,
+                            [i.item.id]: parseInt(e.target.value) || 0,
+                          }))
+                        }
+                        className="input input-bordered input-sm w-full text-center"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
+
+        {/* Sticky footer */}
+        {selectedCount > 0 && (
+          <div className="border-t border-base-300 bg-base-100 px-4 py-3">
+            <textarea
+              className="textarea textarea-bordered textarea-sm mb-3 w-full"
+              placeholder="Change note (required) — e.g., Weekly delivery, Vendor order #123"
+              rows={2}
+              value={changeNote}
+              onChange={(e) => setChangeNote(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn btn-outline btn-sm flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!changeNote.trim() || isUpdating}
+                className="btn btn-primary btn-sm flex-1"
+              >
+                {isUpdating ? "Restocking…" : `Restock ${selectedCount} Item${selectedCount !== 1 ? "s" : ""}`}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
