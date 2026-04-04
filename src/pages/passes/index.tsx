@@ -530,7 +530,7 @@ function PassesPage() {
     api.passes.copySeasonPassToCurrentYear.useMutation({
       onSuccess: (newPass) => {
         toast.success(
-          `Pass "${newPass.label}" copied to ${currentYear}!`,
+          `Pass "${newPass.label}" renewed for ${currentYear}!`,
         );
         void ctx.passes.getAll.invalidate();
       },
@@ -540,7 +540,7 @@ function PassesPage() {
   const handleCopyToCurrentYear = (passId: string, passLabel: string) => {
     if (
       confirm(
-        `Copy "${passLabel}" and all its members to ${currentYear}?`,
+        `Renew "${passLabel}" for ${currentYear}? This creates a new pass with the same members.`,
       )
     ) {
       copyPassToCurrentYear({ passId });
@@ -980,7 +980,7 @@ function PassesPage() {
                               }}
                               disabled={isCopying}
                               className="btn btn-outline btn-xs hidden gap-1 sm:inline-flex"
-                              title={`Copy to ${currentYear}`}
+                              title={`Renew "${pass.label}" for ${currentYear} season`}
                             >
                               {isCopying ? (
                                 <LoadingSpinner />
@@ -997,10 +997,10 @@ function PassesPage() {
                                     <path
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
-                                      d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124M15.75 17.25h-3.375c-.621 0-1.125-.504-1.125-1.125V11.25c0-.621.504-1.125 1.125-1.125h3.375c.621 0 1.125.504 1.125 1.125v4.875c0 .621-.504 1.125-1.125 1.125Z"
+                                      d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"
                                     />
                                   </svg>
-                                  {currentYear}
+                                  Renew {currentYear}
                                 </>
                               )}
                             </button>
