@@ -13,7 +13,7 @@ import { PageLayout } from "~/components/layout";
 import { useRouter } from "next/router";
 import isAuth from "~/components/isAuth";
 
-const SelectionHeader = (props: {
+export const SelectionHeader = (props: {
   value: string[];
   setValue: (arg: (prev: string[]) => string[]) => void;
   data?: { item: InventoryItem }[];
@@ -86,13 +86,14 @@ const SelectionHeader = (props: {
   );
 };
 
-const RestockForm = (props: {
+export const RestockForm = (props: {
   selected: string[];
   data: { item: InventoryItem }[];
   onSubmit: (data: {
     items: { id: string; restockAmount: number }[];
     changeNote?: string;
   }) => void;
+  onCancel?: () => void;
 }) => {
   const { selected, data } = props;
   const { register, watch, handleSubmit, getValues, formState } = useForm<
@@ -219,9 +220,15 @@ const RestockForm = (props: {
           </div>
 
           <div className="flex flex-col justify-end gap-3 sm:flex-row">
-            <Link href="/items" className="btn btn-outline btn-sm">
-              Cancel & Return
-            </Link>
+            {props.onCancel ? (
+              <button type="button" onClick={props.onCancel} className="btn btn-outline btn-sm">
+                Cancel
+              </button>
+            ) : (
+              <Link href="/items" className="btn btn-outline btn-sm">
+                Cancel & Return
+              </Link>
+            )}
             <Button
               primary
               type="submit"

@@ -1,14 +1,21 @@
 import { useState } from "react";
 import { LoadingPage } from "~/components/loading";
+import toast from "react-hot-toast";
 
 import { type RouterOutputs, api } from "~/utils/api";
-import Link from "next/link";
 import { PageLayout } from "~/components/layout";
 import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
 import { InlineItemEdit } from "~/components/inlineItemEdit";
 import CategoryManager from "~/components/categoryManager";
+import handleApiError from "~/helpers/handleApiError";
+import type { InventoryItem } from "@prisma/client";
+import {
+  AdmissionItemForm,
+  ConcessionItemForm,
+} from "~/pages/items/[id]";
+import { SelectionHeader, RestockForm } from "~/pages/items/restock";
 
 type ItemWithCreatedBy = RouterOutputs["items"]["getAll"][number];
 
@@ -278,12 +285,174 @@ const ItemList = (props: {
   );
 };
 
+// === Drawer Components (same pattern as register page) ===
+
+const NewItemDrawer = ({ onClose }: { onClose: () => void }) => {
+  const ctx = api.useUtils();
+  const [tab, setTab] = useState<"admission" | "concession">("concession");
+
+  const { mutate: concessionMutation, isLoading: isCreating } =
+    api.items.createConcessionItem.useMutation({
+      onSuccess: () => {
+        void ctx.items.getAll.invalidate();
+        toast.success("Item Created!");
+        onClose();
+      },
+      onError: handleApiError,
+    });
+  const { mutate: admissionMutation, isLoading: isCreatingA } =
+    api.items.createAdmissionItem.useMutation({
+      onSuccess: () => {
+        void ctx.items.getAll.invalidate();
+        toast.success("Item Created!");
+        onClose();
+      },
+      onError: handleApiError,
+    });
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-black/30 transition-opacity"
+        onClick={onClose}
+      />
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-base-300 bg-base-100 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-primary">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <h2 className="font-semibold">Add New Item</h2>
+          </div>
+          <button className="btn btn-circle btn-ghost btn-sm" onClick={onClose}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex flex-col gap-4">
+            <div role="tablist" className="tabs-boxed tabs tabs-sm">
+              <a
+                role="tab"
+                className={`tab ${tab === "concession" && "tab-active"}`}
+                onClick={() => setTab("concession")}
+              >
+                Concession
+              </a>
+              <a
+                role="tab"
+                className={`tab ${tab === "admission" && "tab-active"}`}
+                onClick={() => setTab("admission")}
+              >
+                Admission
+              </a>
+            </div>
+            {tab === "admission" ? (
+              <AdmissionItemForm
+                isLoading={false}
+                isSubmitting={isCreatingA}
+                onSubmit={(data) =>
+                  admissionMutation({
+                    ...data,
+                    isDay: data.passType === "day",
+                    isSeasonal: data.passType === "seasonal",
+                    patronLimit:
+                      data.passType === "seasonal"
+                        ? data.patronLimit ?? 1
+                        : undefined,
+                  })
+                }
+              />
+            ) : (
+              <ConcessionItemForm
+                isLoading={false}
+                isSubmitting={isCreating}
+                onSubmit={concessionMutation}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+const RestockDrawer = ({ onClose }: { onClose: () => void }) => {
+  const [selected, setSelected] = useState<string[]>([]);
+  const { data, isLoading } = api.items.getAll.useQuery({
+    category: "concession",
+  });
+  const ctx = api.useUtils();
+  const { mutate, isLoading: isUpdating } = api.items.restockItems.useMutation({
+    onSuccess: (x) => {
+      void ctx.items.getAll.invalidate();
+      setSelected([]);
+      toast.success(x.message);
+      onClose();
+    },
+    onError: handleApiError,
+  });
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-black/30 transition-opacity"
+        onClick={onClose}
+      />
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col border-l border-base-300 bg-base-100 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-primary">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+            </svg>
+            <h2 className="font-semibold">Bulk Restock</h2>
+            {selected.length > 0 && (
+              <div className="badge badge-primary badge-sm">
+                {selected.length} selected
+              </div>
+            )}
+          </div>
+          <button className="btn btn-circle btn-ghost btn-sm" onClick={onClose}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          <SelectionHeader
+            data={data}
+            isLoading={isLoading || isUpdating}
+            value={selected}
+            setValue={setSelected}
+          />
+
+          {selected.length > 0 && (
+            <div className="mt-4">
+              <RestockForm
+                data={data as { item: InventoryItem }[]}
+                selected={selected}
+                onSubmit={mutate}
+                onCancel={onClose}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
 function ItemsPage() {
   const [filter, setFilter] = useState("");
   const [itemType, setItemType] = useState<"concession" | "admission">(
     "concession",
   );
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [showNewItem, setShowNewItem] = useState(false);
+  const [showRestock, setShowRestock] = useState(false);
 
   api.items.getAll.useQuery();
 
@@ -305,7 +474,10 @@ function ItemsPage() {
 
             {/* Action Buttons */}
             <div className="flex gap-2">
-              <Link href="items/restock" className="btn btn-sm border-white/30 bg-white/25 font-medium text-white hover:bg-white/35">
+              <button
+                onClick={() => setShowRestock(true)}
+                className="btn btn-sm border-white/30 bg-white/25 font-medium text-white hover:bg-white/35"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -321,8 +493,11 @@ function ItemsPage() {
                   />
                 </svg>
                 Bulk Restock
-              </Link>
-              <Link href="items/0" className="btn btn-sm border-none bg-white text-primary shadow-sm hover:bg-white/90">
+              </button>
+              <button
+                onClick={() => setShowNewItem(true)}
+                className="btn btn-sm border-none bg-white text-primary shadow-sm hover:bg-white/90"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -338,7 +513,7 @@ function ItemsPage() {
                   />
                 </svg>
                 Add New Item
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -433,6 +608,14 @@ function ItemsPage() {
           />
         </div>
       </div>
+
+      {/* Drawers */}
+      {showNewItem && (
+        <NewItemDrawer onClose={() => setShowNewItem(false)} />
+      )}
+      {showRestock && (
+        <RestockDrawer onClose={() => setShowRestock(false)} />
+      )}
     </PageLayout>
   );
 }

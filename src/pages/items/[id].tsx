@@ -16,7 +16,7 @@ import { useRouter } from "next/router";
 import toast from "react-hot-toast";
 import { CategoryTypeahead } from "~/components/categoryTypeahead";
 
-type AdmissionFormData = {
+export type AdmissionFormData = {
   label: string;
   sellingPrice: number;
   passType: "seasonal" | "day";
@@ -24,7 +24,7 @@ type AdmissionFormData = {
   changeNote?: string;
 };
 
-const AdmissionItemForm = (props: {
+export const AdmissionItemForm = (props: {
   onSubmit: (data: AdmissionFormData) => void;
   isSubmitting: boolean;
   isLoading: boolean;
@@ -61,79 +61,94 @@ const AdmissionItemForm = (props: {
 
   return (
     <form
-      className="flex grow flex-col gap-2"
+      className="flex flex-col gap-4"
       onSubmit={handleSubmit((values) => {
         onSubmit(values);
         !data && reset();
       })}
     >
-      <label className="text-xs font-medium">Label</label>
-      <input
-        id="label"
-        type="text"
-        placeholder="Ex: Adult Day Pass"
-        className="input input-bordered grow"
-        {...register("label", {
-          required: true,
-          disabled: isSubmitting || isLoading,
-        })}
-      />
-      <label className="text-xs font-medium">Selling Price</label>
-      <Controller
-        control={control}
-        name="sellingPrice"
-        render={({ field }) => (
-          <InputNumber
-            {...moneyMask}
-            placeholder="$0.00"
-            disabled={isSubmitting || isLoading}
-            min={0}
-            value={field.value}
-            onChange={(v) => field.onChange(v)}
-          />
-        )}
-      />
+      <div className="form-control">
+        <label className="label py-1">
+          <span className="label-text text-xs font-medium">Label</span>
+        </label>
+        <input
+          id="label"
+          type="text"
+          placeholder="Ex: Adult Day Pass"
+          className="input input-bordered input-sm"
+          {...register("label", {
+            required: true,
+            disabled: isSubmitting || isLoading,
+          })}
+        />
+      </div>
 
-      <div className="mb-4 flex items-center">
-        <input
-          id="passTypeDayPassOption"
-          type="radio"
-          value="day"
-          {...register("passType")}
-          className="radio"
-        />
-        <label
-          htmlFor="passTypeDayPassOption"
-          className="ms-2 text-sm font-medium text-base-content"
-        >
-          Day Pass
-        </label>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="form-control">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">
+              Selling Price
+            </span>
+          </label>
+          <Controller
+            control={control}
+            name="sellingPrice"
+            render={({ field }) => (
+              <InputNumber
+                {...moneyMask}
+                size="small"
+                placeholder="$0.00"
+                className="!w-full"
+                disabled={isSubmitting || isLoading}
+                min={0}
+                value={field.value}
+                onChange={(v) => field.onChange(v)}
+              />
+            )}
+          />
+        </div>
+
+        <div className="form-control">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">Pass Type</span>
+          </label>
+          <div className="flex gap-4">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                id="passTypeDayPassOption"
+                type="radio"
+                value="day"
+                {...register("passType")}
+                className="radio radio-sm"
+              />
+              <span className="text-sm">Day</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                id="passTypeSeasonalPassOption"
+                type="radio"
+                value="seasonal"
+                {...register("passType")}
+                className="radio radio-sm"
+              />
+              <span className="text-sm">Seasonal</span>
+            </label>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center">
-        <input
-          id="passTypeSeasonalPassOption"
-          type="radio"
-          value="seasonal"
-          {...register("passType")}
-          className="radio"
-        />
-        <label
-          htmlFor="passTypeSeasonalPassOption"
-          className="ms-2 text-sm font-medium text-base-content"
-        >
-          Seasonal Pass
-        </label>
-      </div>
+
       {showPatronLimit && (
-        <>
-          <label htmlFor="patronLimit" className="text-xs font-medium">
-            Patron Limit
+        <div className="form-control">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">
+              Patron Limit
+            </span>
           </label>
           <input
             id="patronLimit"
             type="number"
             placeholder="Ex: 4"
-            className="input input-bordered grow"
+            className="input input-bordered input-sm"
             {...register("patronLimit", {
               required: watchPassType === "seasonal",
               disabled: isSubmitting || isLoading,
@@ -141,27 +156,31 @@ const AdmissionItemForm = (props: {
               min: 1,
             })}
           />
-        </>
+        </div>
       )}
 
       {data && (
-        <>
-          <label className="text-xs font-medium">
-            Change Note (required for edits)
+        <div className="form-control">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">
+              Change Note <span className="text-error">*</span>
+            </span>
           </label>
           <textarea
-            className="textarea textarea-bordered"
+            className="textarea textarea-bordered textarea-sm"
             placeholder="Describe what you're changing and why..."
-            rows={3}
+            rows={2}
             {...register("changeNote", {
               required: !!data,
               disabled: isSubmitting || isLoading,
             })}
           />
-          <div className="text-xs text-base-content/70">
-            This note will be recorded for accountability purposes
-          </div>
-        </>
+          <label className="label py-0.5">
+            <span className="label-text-alt text-base-content/60">
+              Recorded for accountability
+            </span>
+          </label>
+        </div>
       )}
 
       {!isSubmitting && (
@@ -182,7 +201,7 @@ const AdmissionItemForm = (props: {
   );
 };
 
-type ConcessionFormData = {
+export type ConcessionFormData = {
   label: string;
   purchasePrice: number;
   sellingPrice: number;
@@ -191,7 +210,7 @@ type ConcessionFormData = {
   changeNote?: string;
 };
 
-const ConcessionItemForm = (props: {
+export const ConcessionItemForm = (props: {
   onSubmit: (data: ConcessionFormData) => void;
   isSubmitting: boolean;
   isLoading: boolean;
@@ -223,7 +242,7 @@ const ConcessionItemForm = (props: {
       id="init-stock"
       type="number"
       placeholder="Ex: 0"
-      className="input input-bordered w-full grow"
+      className="input input-bordered input-sm w-full"
       {...register("inStock", {
         required: true,
         disabled: isSubmitting || isLoading || !!data,
@@ -240,7 +259,7 @@ const ConcessionItemForm = (props: {
       <div className="tooltip w-full" data-tip="Cannot modify stock from here.">
         {quantityInput}
       </div>
-      <Link href="/items/restock" className="btn btn-ghost">
+      <Link href="/items/restock" className="btn btn-ghost btn-sm">
         Restock
       </Link>
     </div>
@@ -255,94 +274,133 @@ const ConcessionItemForm = (props: {
 
   return (
     <form
-      className="flex grow flex-col gap-2"
+      className="flex flex-col gap-4"
       onSubmit={handleSubmit(() => {
         onSubmit(watchForm);
         !data && reset();
       })}
     >
-      <label className="text-xs font-medium">Label</label>
-      <input
-        id="label"
-        placeholder="Ex: Candy Bar"
-        className="input input-bordered grow"
-        {...register("label", {
-          required: true,
-          disabled: isSubmitting || isLoading,
-        })}
-      />
-      <label className="text-xs font-medium">Category</label>
-      <Controller
-        control={control}
-        name="category"
-        render={({ field }) => (
-          <CategoryTypeahead
-            value={field.value ?? ""}
-            onChange={field.onChange}
-            placeholder="Select or create category..."
-            disabled={isSubmitting || isLoading}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="form-control sm:col-span-2">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">Label</span>
+          </label>
+          <input
+            id="label"
+            placeholder="Ex: Candy Bar"
+            className="input input-bordered input-sm"
+            {...register("label", {
+              required: true,
+              disabled: isSubmitting || isLoading,
+            })}
           />
-        )}
-      />
-      <label className="text-xs font-medium">Purchase Price</label>
-      <Controller
-        control={control}
-        name="purchasePrice"
-        render={({ field }) => (
-          <InputNumber
-            {...moneyMask}
-            placeholder="$0.00"
-            min={0}
-            disabled={isSubmitting || isLoading}
-            value={field.value}
-            onChange={(v) => field.onChange(v)}
+        </div>
+
+        <div className="form-control sm:col-span-2">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">Category</span>
+          </label>
+          <Controller
+            control={control}
+            name="category"
+            render={({ field }) => (
+              <CategoryTypeahead
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                placeholder="Select or create category..."
+                disabled={isSubmitting || isLoading}
+                className="input-sm"
+              />
+            )}
           />
-        )}
-      />
-      <label className="text-xs font-medium">Selling Price</label>
-      <Controller
-        control={control}
-        name="sellingPrice"
-        render={({ field }) => (
-          <InputNumber
-            {...moneyMask}
-            placeholder="$0.00"
-            disabled={isSubmitting || isLoading}
-            min={0}
-            value={field.value}
-            onChange={(v) => field.onChange(v)}
+        </div>
+
+        <div className="form-control">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">
+              Purchase Price
+            </span>
+          </label>
+          <Controller
+            control={control}
+            name="purchasePrice"
+            render={({ field }) => (
+              <InputNumber
+                {...moneyMask}
+                size="small"
+                placeholder="$0.00"
+                className="!w-full"
+                min={0}
+                disabled={isSubmitting || isLoading}
+                value={field.value}
+                onChange={(v) => field.onChange(v)}
+              />
+            )}
           />
-        )}
-      />
-      <label className="text-xs font-medium">
-        {!data && "Initial "}Quantity in Stock
-      </label>
-      {quantityRow}
+        </div>
+
+        <div className="form-control">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">
+              Selling Price
+            </span>
+          </label>
+          <Controller
+            control={control}
+            name="sellingPrice"
+            render={({ field }) => (
+              <InputNumber
+                {...moneyMask}
+                size="small"
+                placeholder="$0.00"
+                className="!w-full"
+                disabled={isSubmitting || isLoading}
+                min={0}
+                value={field.value}
+                onChange={(v) => field.onChange(v)}
+              />
+            )}
+          />
+        </div>
+
+        <div className="form-control sm:col-span-2">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">
+              {!data && "Initial "}Quantity in Stock
+            </span>
+          </label>
+          {quantityRow}
+        </div>
+      </div>
 
       {data && (
-        <>
-          <label className="text-xs font-medium">
-            Change Note (required for edits)
+        <div className="form-control">
+          <label className="label py-1">
+            <span className="label-text text-xs font-medium">
+              Change Note <span className="text-error">*</span>
+            </span>
           </label>
           <textarea
-            className="textarea textarea-bordered"
+            className="textarea textarea-bordered textarea-sm"
             placeholder="Describe what you're changing and why..."
-            rows={3}
+            rows={2}
             {...register("changeNote", {
               required: !!data,
               disabled: isSubmitting || isLoading,
             })}
           />
-          <div className="text-xs text-base-content/70">
-            This note will be recorded for accountability purposes
-          </div>
-        </>
+          <label className="label py-0.5">
+            <span className="label-text-alt text-base-content/60">
+              Recorded for accountability
+            </span>
+          </label>
+        </div>
       )}
 
       {!isSubmitting && (
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           <button
-            className="btn btn-primary w-4/5"
+            className="btn btn-primary btn-sm flex-1"
             disabled={isSubmitting || !formState.isValid}
             type="submit"
           >
@@ -352,7 +410,7 @@ const ConcessionItemForm = (props: {
             <button
               onClick={() => setAreYouSure(true)}
               type="button"
-              className="btn btn-outline btn-error w-1/5"
+              className="btn btn-outline btn-error btn-sm"
             >
               Delete
             </button>
@@ -415,7 +473,7 @@ const CreateItemWizard = () => {
 
   return (
     <div className="flex w-full flex-col gap-3">
-      <div role="tablist" className="tabs-boxed tabs">
+      <div role="tablist" className="tabs-boxed tabs tabs-sm">
         <a
           role="tab"
           className={`tab ${tab === "concession" && "tab-active"}`}
@@ -548,12 +606,12 @@ function SingleItemPage() {
         <title>Guard Shack - {id === "0" ? "New Item" : "Edit Item"}</title>
       </Head>
       <PageLayout>
-        <div className="flex h-full w-full flex-col gap-4 p-4">
+        <div className="mx-auto flex h-full w-full max-w-lg flex-col gap-4 p-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-xl font-bold">
               {id === "0" ? "Create New Item" : "Edit Item"}
             </h1>
-            <Link href="/items" className="btn btn-outline">
+            <Link href="/items" className="btn btn-ghost btn-sm">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -568,11 +626,11 @@ function SingleItemPage() {
                   d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
                 />
               </svg>
-              Back to Items
+              Back
             </Link>
           </div>
 
-          <div className="rounded-lg bg-base-100 p-6 shadow-lg">
+          <div className="rounded-lg bg-base-100 p-5 shadow-lg">
             {id === "0" ? (
               <CreateItemWizard />
             ) : (
