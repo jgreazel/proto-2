@@ -93,173 +93,132 @@ const TransactionHistory = () => {
   }
 
   return (
-    <div className="p-6">
-      {/* Time Window Controls */}
-      <div className="mb-6 rounded-lg border border-base-300 bg-base-100 p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="font-medium">Time Window: </span>
-            <div className="mt-2 flex gap-2">
-              {[1, 8, 24, 72, 168].map((hours) => (
-                <button
-                  key={hours}
-                  className={`btn btn-sm ${
-                    hoursBack === hours ? "btn-primary" : "btn-ghost"
-                  }`}
-                  onClick={() => handleHoursBackChange(hours)}
-                >
-                  {hours === 1
-                    ? "1 Hour"
-                    : hours === 8
-                    ? "8 Hours"
-                    : hours === 24
-                    ? "24 Hours"
-                    : hours === 72
-                    ? "3 Days"
-                    : "7 Days"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="text-sm text-base-content/60">
-              Showing transactions from last {hoursBack} hour
-              {hoursBack !== 1 ? "s" : ""}
-            </div>
-            <div className="form-control">
-              <label className="label cursor-pointer">
-                <span className="label-text mr-2 text-sm">Show voided</span>
-                <input
-                  type="checkbox"
-                  className="toggle toggle-sm"
-                  checked={showVoided}
-                  onChange={(e) => setShowVoided(e.target.checked)}
-                />
-              </label>
-            </div>
-          </div>
+    <div className="p-4">
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="join">
+          {[1, 8, 24, 72, 168].map((hours) => (
+            <button
+              key={hours}
+              className={`btn join-item btn-xs ${
+                hoursBack === hours ? "btn-primary" : "btn-ghost border-base-300"
+              }`}
+              onClick={() => handleHoursBackChange(hours)}
+            >
+              {hours === 1
+                ? "1h"
+                : hours === 8
+                ? "8h"
+                : hours === 24
+                ? "24h"
+                : hours === 72
+                ? "3d"
+                : "7d"}
+            </button>
+          ))}
         </div>
+        <label className="ml-auto flex cursor-pointer items-center gap-2">
+          <span className="text-xs text-base-content/60">Voided</span>
+          <input
+            type="checkbox"
+            className="toggle toggle-xs"
+            checked={showVoided}
+            onChange={(e) => setShowVoided(e.target.checked)}
+          />
+        </label>
       </div>
 
       {/* Transaction List */}
       {transactions && transactions.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {transactions.map((transaction) => (
             <div
               key={transaction.id}
-              className="rounded-lg border border-base-300 bg-base-100 p-3 shadow-sm transition-shadow hover:shadow-md"
+              className={`rounded-lg border p-3 transition-colors ${
+                transaction.isVoided
+                  ? "border-base-300/50 bg-base-200/40 opacity-60"
+                  : "border-base-300 bg-base-100"
+              }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="mb-2 flex items-center gap-3">
-                    <div className="rounded bg-base-200 px-2 py-1 font-mono text-xs text-base-content/60">
-                      #{transaction.id.slice(-8)}
-                    </div>
-                    <div className="text-sm text-base-content/70">
-                      {dayjs(transaction.createdAt).format("MMM DD, h:mm A")}
-                    </div>
-                    <div
-                      className={`badge badge-xs ${
-                        transaction.type === "purchase"
-                          ? "badge-success"
-                          : "badge-info"
-                      }`}
-                    >
-                      {transaction.type === "purchase"
-                        ? "Purchase"
-                        : "Admission"}
-                    </div>
-                    {transaction.isVoided && (
-                      <div className="badge badge-error badge-xs">Voided</div>
-                    )}
-                  </div>
+              {/* Top row: time + badges */}
+              <div className="mb-1.5 flex items-center gap-2 text-xs text-base-content/50">
+                <span>{dayjs(transaction.createdAt).format("h:mm A")}</span>
+                <span>·</span>
+                <span className="font-mono">#{transaction.id.slice(-6)}</span>
+                <div
+                  className={`badge badge-xs ${
+                    transaction.type === "purchase"
+                      ? "badge-success"
+                      : "badge-info"
+                  }`}
+                >
+                  {transaction.type === "purchase" ? "Sale" : "Admission"}
+                </div>
+                {transaction.isVoided && (
+                  <div className="badge badge-error badge-xs">Voided</div>
+                )}
+              </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      {transaction.type === "purchase" ? (
-                        <>
-                          <div className="text-lg font-semibold text-success">
-                            {dbUnitToDollars(transaction.total)}
-                          </div>
-                          <div className="text-sm text-base-content/60">
-                            {transaction.items.map((item, idx) => (
-                              <span key={idx}>
-                                {item.amountSold}x {item.label}
-                                {idx < transaction.items.length - 1 ? ", " : ""}
-                              </span>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-lg font-semibold text-info">
-                            Check-in
-                          </div>
-                          <div className="text-sm text-base-content/60">
-                            {transaction.patronName} ({transaction.passLabel})
-                          </div>
-                        </>
-                      )}
+              {/* Detail row */}
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  {transaction.type === "purchase" ? (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-semibold text-success">
+                        {dbUnitToDollars(transaction.total)}
+                      </span>
+                      <span className="truncate text-xs text-base-content/50">
+                        {transaction.items
+                          .map((item) => `${item.amountSold}× ${item.label}`)
+                          .join(", ")}
+                      </span>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-semibold text-info">
+                        {transaction.patronName}
+                      </span>
+                      <span className="text-xs text-base-content/50">
+                        {transaction.passLabel}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Void Button */}
                 {!transaction.isVoided && (
-                  <div className="ml-4">
-                    <button
-                      className="btn btn-error btn-sm gap-2"
-                      onClick={() =>
-                        handleVoidClick(transaction.id, transaction.type)
-                      }
-                      disabled={isVoiding}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="h-4 w-4"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
-                        />
-                      </svg>
-                      {isVoiding ? "Voiding..." : "Void"}
-                    </button>
-                  </div>
+                  <button
+                    className="btn btn-ghost btn-xs ml-2 text-error hover:bg-error/10"
+                    onClick={() =>
+                      handleVoidClick(transaction.id, transaction.type)
+                    }
+                    disabled={isVoiding}
+                  >
+                    Void
+                  </button>
                 )}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="py-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-base-200">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-8 w-8 text-base-content/40"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h4.125M8.25 8.25V6.108"
-              />
-            </svg>
-          </div>
-          <h3 className="mb-2 text-lg font-medium text-base-content">
-            No recent transactions found
-          </h3>
-          <p className="text-base-content/60">
-            Transactions from the last {hoursBack} hour
-            {hoursBack !== 1 ? "s" : ""} will appear here
+        <div className="py-10 text-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="mx-auto mb-3 h-10 w-10 text-base-content/20"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+            />
+          </svg>
+          <p className="text-sm text-base-content/40">
+            No transactions in the last {hoursBack}
+            {hoursBack >= 24 ? ` hour${hoursBack !== 24 ? "s" : ""}` : "h"}
           </p>
         </div>
       )}
