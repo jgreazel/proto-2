@@ -984,7 +984,7 @@ export function ReportsPage() {
       if (e.type === "admission") byDay[day]!.members++;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      else byDay[day]!.tickets += (e.amountSold as number) ?? 1;
+      else byDay[day]!.tickets += e.amountSold ?? 1;
     });
     return Object.entries(byDay).map(([day, v]) => ({ day, ...v }));
   }, [data?.admissionReport?.admissionEvents]);
@@ -1018,7 +1018,7 @@ export function ReportsPage() {
           dayjs(e.createdAt).format("h:mm A"),
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          (e.createdBy as string) ?? "",
+          e.createdBy ?? "",
         ]);
       });
       downloadCsv(`admissions-report-${dayjs().format("YYYY-MM-DD")}.csv`, rows);
