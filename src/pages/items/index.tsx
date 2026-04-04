@@ -78,17 +78,17 @@ const ItemView = (props: {
           <div
             className={`badge ${
               item.item.isConcessionItem ? "badge-primary" : "badge-secondary"
-            } badge-sm`}
+            } badge`}
           >
             {item.item.isConcessionItem ? "Concession" : "Admission"}
           </div>
           {item.item.isConcessionItem && item.item.category && (
-            <div className="badge badge-outline badge-xs">
+            <div className="badge badge-outline badge-sm">
               {item.item.category}
             </div>
           )}
           {item.item.isConcessionItem && !item.item.category && (
-            <div className="badge badge-ghost badge-xs text-base-content/60">
+            <div className="badge badge-ghost badge-sm text-base-content/60">
               No category
             </div>
           )}
@@ -126,16 +126,16 @@ const ItemView = (props: {
           <div className="flex items-center gap-2">
             {stockStatus && (
               <div
-                className={`rounded-full px-2 py-1 text-xs font-medium ${stockStatus.bg} ${stockStatus.color}`}
+                className={`rounded-full px-3 py-1 text-sm font-medium ${stockStatus.bg} ${stockStatus.color}`}
               >
                 {item.item.inStock ?? 0} units
               </div>
             )}
           </div>
         ) : item.item.isDay ? (
-          <div className="badge badge-secondary badge-sm">Day Pass</div>
+          <div className="badge badge-secondary">Day Pass</div>
         ) : (
-          <div className="badge badge-accent badge-sm">Season Pass</div>
+          <div className="badge badge-accent">Season Pass</div>
         )}
       </td>
       <td>
@@ -172,18 +172,45 @@ const ItemList = (props: {
   editingItemId: string | null;
   setEditingItemId: (id: string | null) => void;
 }) => {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { data, isLoading } = api.items.getAll.useQuery();
 
   if (isLoading) return <LoadingPage />;
 
   if (!data) return <div>Something went wrong</div>;
 
-  const filterItems = data.filter(
+  // Filter by item type and search text first
+  const typeFiltered = data.filter(
     (d) =>
       d.item.label.toUpperCase().includes(props.filter.toUpperCase()) &&
       ((d.item.isAdmissionItem && props.category === "admission") ||
         (d.item.isConcessionItem && props.category === "concession")),
   );
+
+  // Build category list with counts (concession only)
+  const categoryMap = new Map<string, number>();
+  let uncategorizedCount = 0;
+  if (props.category === "concession") {
+    for (const d of typeFiltered) {
+      const cat = d.item.category;
+      if (cat) {
+        categoryMap.set(cat, (categoryMap.get(cat) ?? 0) + 1);
+      } else {
+        uncategorizedCount++;
+      }
+    }
+  }
+  const categories = Array.from(categoryMap.entries()).sort(([a], [b]) =>
+    a.localeCompare(b),
+  );
+
+  // Apply category filter
+  const filterItems =
+    props.category === "concession" && selectedCategory !== null
+      ? selectedCategory === ""
+        ? typeFiltered.filter((d) => !d.item.category)
+        : typeFiltered.filter((d) => d.item.category === selectedCategory)
+      : typeFiltered;
 
   // Calculate summary statistics
   const totalItems = filterItems.length;
@@ -215,27 +242,73 @@ const ItemList = (props: {
       {props.category === "concession" && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="stat rounded-lg bg-base-100 shadow-lg">
-            <div className="stat-title text-xs">Total Items</div>
+            <div className="stat-title text-sm">Total Items</div>
             <div className="stat-value text-2xl">{totalItems}</div>
           </div>
           <div className="stat rounded-lg bg-base-100 shadow-lg">
-            <div className="stat-title text-xs">Inventory Value</div>
+            <div className="stat-title text-sm">Inventory Value</div>
             <div className="stat-value text-2xl">
               {dbUnitToDollars(totalValue)}
             </div>
           </div>
           <div className="stat rounded-lg bg-base-100 shadow-lg">
-            <div className="stat-title text-xs">Low Stock</div>
+            <div className="stat-title text-sm">Low Stock</div>
             <div className="stat-value text-2xl text-warning">
               {lowStockItems}
             </div>
           </div>
           <div className="stat rounded-lg bg-base-100 shadow-lg">
-            <div className="stat-title text-xs">Out of Stock</div>
+            <div className="stat-title text-sm">Out of Stock</div>
             <div className="stat-value text-2xl text-error">
               {outOfStockItems}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Category Filter Chips */}
+      {props.category === "concession" && categories.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-base-content/50">Filter:</span>
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`badge cursor-pointer transition-colors ${
+              selectedCategory === null
+                ? "badge-primary"
+                : "badge-outline hover:badge-primary"
+            }`}
+          >
+            All ({typeFiltered.length})
+          </button>
+          {categories.map(([cat, count]) => (
+            <button
+              key={cat}
+              onClick={() =>
+                setSelectedCategory(selectedCategory === cat ? null : cat)
+              }
+              className={`badge cursor-pointer transition-colors ${
+                selectedCategory === cat
+                  ? "badge-primary"
+                  : "badge-outline hover:badge-primary"
+              }`}
+            >
+              {cat} ({count})
+            </button>
+          ))}
+          {uncategorizedCount > 0 && (
+            <button
+              onClick={() =>
+                setSelectedCategory(selectedCategory === "" ? null : "")
+              }
+              className={`badge cursor-pointer transition-colors ${
+                selectedCategory === ""
+                  ? "badge-warning"
+                  : "badge-ghost hover:badge-warning"
+              }`}
+            >
+              Uncategorized ({uncategorizedCount})
+            </button>
+          )}
         </div>
       )}
 
@@ -423,7 +496,7 @@ const RestockDrawer = ({ onClose }: { onClose: () => void }) => {
             </svg>
             <h2 className="font-semibold">Bulk Restock</h2>
             {selectedCount > 0 && (
-              <div className="badge badge-primary badge-sm">
+              <div className="badge badge-primary">
                 {selectedCount} item{selectedCount !== 1 && "s"}
               </div>
             )}
@@ -687,15 +760,6 @@ function ItemsPage() {
 
         {/* Content */}
         <div className="flex flex-col gap-8 p-6">
-          {itemType === "concession" && (
-            <CategoryManager
-              onCategoryUpdate={() => {
-                // Refetch data when categories are updated
-                api.items.getAll.useQuery();
-              }}
-            />
-          )}
-
           <ItemList
             filter={filter}
             category={itemType}
