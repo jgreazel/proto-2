@@ -567,27 +567,27 @@ function PassesPage() {
       ) : (
         <div className="flex min-h-full flex-col gap-6 bg-primary/[0.03] p-4 sm:p-6">
           {/* Header */}
-          <div className="flex flex-col gap-4 rounded-xl bg-base-100 p-4 shadow-sm ring-1 ring-base-content/5 sm:p-5">
+          <div className="flex flex-col gap-4 rounded-xl bg-gradient-to-r from-primary to-secondary p-4 shadow-md sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-base-content sm:text-3xl">
-                  Season Passes
+                <h1 className="text-2xl font-bold text-primary-content sm:text-3xl">
+                  🏊 Season Passes
                 </h1>
-                <p className="mt-1 text-sm text-base-content/60">
+                <p className="mt-1 text-sm text-primary-content/70">
                   Create, manage, and update family season passes
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="stats stats-horizontal bg-base-100 shadow-sm">
+                <div className="stats stats-horizontal bg-white/20 shadow-none backdrop-blur-sm">
                   <div className="stat px-4 py-2">
-                    <div className="stat-title text-xs">Passes</div>
-                    <div className="stat-value text-lg text-primary">
+                    <div className="stat-title text-xs text-primary-content/70">Passes</div>
+                    <div className="stat-value text-lg text-primary-content">
                       {data?.length ?? 0}
                     </div>
                   </div>
                   <div className="stat px-4 py-2">
-                    <div className="stat-title text-xs">Members</div>
-                    <div className="stat-value text-lg text-secondary">
+                    <div className="stat-title text-xs text-primary-content/70">Members</div>
+                    <div className="stat-value text-lg text-primary-content">
                       {data?.reduce(
                         (acc, pass) => acc + pass.patrons.length,
                         0,
@@ -607,14 +607,14 @@ function PassesPage() {
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     type="text"
-                    className="input input-bordered w-full pl-10"
+                    className="input w-full border-white/20 bg-white/20 pl-10 text-primary-content placeholder:text-primary-content/50 focus:border-white/40 focus:bg-white/30 focus:outline-none"
                     placeholder="Search passes or members..."
                   />
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 16 16"
                     fill="currentColor"
-                    className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-70"
+                    className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-content/60"
                   >
                     <path
                       fillRule="evenodd"
@@ -630,7 +630,7 @@ function PassesPage() {
                   id="season-filter"
                   value={selectedSeason}
                   onChange={(e) => setSelectedSeason(e.target.value)}
-                  className="select select-bordered select-sm"
+                  className="select select-sm border-white/20 bg-white/20 text-primary-content"
                 >
                   <option value="">All Seasons</option>
                   {availableSeasons.map((s) => (
@@ -646,7 +646,7 @@ function PassesPage() {
                   setShowNewPassForm(!showNewPassForm);
                   if (!showNewPassForm) resetNewPass();
                 }}
-                className={`btn ${showNewPassForm ? "btn-ghost" : "btn-primary"}`}
+                className={`btn ${showNewPassForm ? "btn-ghost text-primary-content" : "bg-white text-primary shadow-sm hover:bg-white/90 border-none"}`}
               >
                 {showNewPassForm ? (
                   "Cancel"
