@@ -8,7 +8,6 @@ import dbUnitToDollars from "~/helpers/dbUnitToDollars";
 import NoData from "~/components/noData";
 import isAuth from "~/components/isAuth";
 import { InlineItemEdit } from "~/components/inlineItemEdit";
-import CategoryManager from "~/components/categoryManager";
 import handleApiError from "~/helpers/handleApiError";
 import {
   AdmissionItemForm,
@@ -331,21 +330,21 @@ const NewItemDrawer = ({ onClose }: { onClose: () => void }) => {
 
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex flex-col gap-4">
-            <div role="tablist" className="tabs-boxed tabs tabs-sm">
-              <a
-                role="tab"
-                className={`tab ${tab === "concession" ? "tab-active" : "text-base-content/70"}`}
+            <div className="flex gap-1 rounded-lg bg-base-200 p-1">
+              <button
+                type="button"
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${tab === "concession" ? "bg-primary text-white shadow-sm" : "text-base-content hover:bg-base-300"}`}
                 onClick={() => setTab("concession")}
               >
                 Concession
-              </a>
-              <a
-                role="tab"
-                className={`tab ${tab === "admission" ? "tab-active" : "text-base-content/70"}`}
+              </button>
+              <button
+                type="button"
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${tab === "admission" ? "bg-primary text-white shadow-sm" : "text-base-content hover:bg-base-300"}`}
                 onClick={() => setTab("admission")}
               >
                 Admission
-              </a>
+              </button>
             </div>
             {tab === "admission" ? (
               <AdmissionItemForm
