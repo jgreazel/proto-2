@@ -630,7 +630,7 @@ function PassesPage() {
                   id="season-filter"
                   value={selectedSeason}
                   onChange={(e) => setSelectedSeason(e.target.value)}
-                  className="select select-sm border-white/20 bg-white/20 text-primary-content"
+                  className="select border-white/20 bg-white/20 text-primary-content [&>option]:text-base-content [&>option]:bg-base-100"
                 >
                   <option value="">All Seasons</option>
                   {availableSeasons.map((s) => (
