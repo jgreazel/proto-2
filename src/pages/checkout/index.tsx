@@ -753,28 +753,23 @@ function CheckoutPage() {
 
   const shoppingList = (
     <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-lg">
-      <div className="border-b border-base-300 px-4 py-3">
-        <div role="tablist" className="tabs-boxed tabs">
-          <a
-            role="tab"
-            className={`tab gap-2 ${feed === "concession" && "tab-active"}`}
+      <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-base-content/50">
+          Menu
+        </h3>
+        <div className="join">
+          <button
+            className={`btn join-item btn-sm ${feed === "concession" ? "btn-active" : ""}`}
             onClick={() => setFeed("concession")}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-            </svg>
             Concessions
-          </a>
-          <a
-            role="tab"
-            className={`tab gap-2 ${feed === "admission" && "tab-active"}`}
+          </button>
+          <button
+            className={`btn join-item btn-sm ${feed === "admission" ? "btn-active" : ""}`}
             onClick={() => setFeed("admission")}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
-            </svg>
             Passes
-          </a>
+          </button>
         </div>
       </div>
       <ItemFeed
