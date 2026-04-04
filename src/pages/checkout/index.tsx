@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Button } from "~/components/button";
 import { PageLayout } from "~/components/layout";
 import { LoadingSpinner } from "~/components/loading";
 import { getStartOfDay, getEndOfDay } from "~/helpers/dateHelpers";
@@ -402,26 +401,29 @@ const ItemFeed = (props: {
     <>
       {/* Category Filter */}
       {availableCategories.length > 1 && (
-        <div className="space-y-3 p-4 pb-2">
-          {/* Quick filter buttons */}
+        <div className="border-b border-base-200 px-4 py-3">
           <div className="flex flex-wrap gap-2">
             <button
-              className={`btn btn-xs ${
+              className={`btn btn-xs gap-1 ${
                 selectedCategory === "all" ? "btn-primary" : "btn-ghost"
               }`}
               onClick={() => setSelectedCategory("all")}
             >
-              All ({data.length})
+              All
+              <span className="badge badge-xs">{data.length}</span>
             </button>
             {availableCategories.map((category) => (
               <button
                 key={category}
-                className={`btn btn-xs ${
+                className={`btn btn-xs gap-1 ${
                   selectedCategory === category ? "btn-primary" : "btn-ghost"
                 }`}
                 onClick={() => setSelectedCategory(category)}
               >
-                {category} ({itemsByCategory[category]?.length})
+                {category}
+                <span className="badge badge-xs">
+                  {itemsByCategory[category]?.length}
+                </span>
               </button>
             ))}
           </div>
@@ -429,28 +431,28 @@ const ItemFeed = (props: {
       )}
 
       {/* Items grouped by category */}
-      <div className="p-4 pt-2">
+      <div className="p-4">
         {filteredCategories.map((categoryName) => (
-          <div key={categoryName} className="mb-6">
-            <h3 className="mb-3 border-b border-base-300 pb-1 text-lg font-semibold text-base-content/80">
+          <div key={categoryName} className="mb-6 last:mb-0">
+            <div className="divider my-1 text-xs uppercase">
               {categoryName}
-              <span className="ml-2 text-sm font-normal text-base-content/60">
-                ({itemsByCategory[categoryName]?.length} items)
+              <span className="ml-1 normal-case text-base-content/50">
+                ({itemsByCategory[categoryName]?.length})
               </span>
-            </h3>
+            </div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
               {itemsByCategory[categoryName]?.map((item) => (
                 <button
                   onClick={() => props.onClick(item)}
                   key={item.id}
-                  className="btn btn-outline h-auto min-h-[3rem] whitespace-normal text-left capitalize"
+                  className="flex h-auto min-h-[4rem] flex-col items-start gap-1 rounded-xl border border-base-200 bg-base-100 p-3 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.98]"
                 >
-                  <div className="flex w-full flex-col items-start">
-                    <span className="font-medium">{item.label}</span>
-                    <span className="text-xs opacity-70">
-                      {dbUnitToDollars(item.sellingPrice)}
-                    </span>
-                  </div>
+                  <span className="font-medium capitalize text-base-content">
+                    {item.label}
+                  </span>
+                  <span className="text-sm font-semibold text-primary">
+                    {dbUnitToDollars(item.sellingPrice)}
+                  </span>
                 </button>
               ))}
             </div>
@@ -684,7 +686,22 @@ function CheckoutPage() {
   const [mode, setMode] = useState<"sales" | "checkin" | "recent">("sales");
   const [feed, setFeed] = useState<"concession" | "admission">("concession");
   const [cart, setCart] = useState<Item[]>([]);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const cartTotal = cart.reduce((acc, x) => (acc += x.sellingPrice), 0);
+
+  // Group cart items by ID for quantity display
+  const groupedCart = cart.reduce(
+    (acc, item) => {
+      const existing = acc.find((g) => g.item.id === item.id);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        acc.push({ item, qty: 1 });
+      }
+      return acc;
+    },
+    [] as { item: Item; qty: number }[],
+  );
   const { mutate, isLoading } = api.items.checkout.useMutation({
     onError: (d) => {
       toast.error(d.message);
@@ -735,22 +752,30 @@ function CheckoutPage() {
   });
 
   const shoppingList = (
-    <>
-      <div role="tablist" className="tabs-boxed tabs">
-        <a
-          role="tab"
-          className={`tab ${feed === "concession" && "tab-active"}`}
-          onClick={() => setFeed("concession")}
-        >
-          Concessions
-        </a>
-        <a
-          role="tab"
-          className={`tab ${feed === "admission" && "tab-active"}`}
-          onClick={() => setFeed("admission")}
-        >
-          Passes
-        </a>
+    <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-lg">
+      <div className="border-b border-base-300 px-4 py-3">
+        <div role="tablist" className="tabs-boxed tabs">
+          <a
+            role="tab"
+            className={`tab gap-2 ${feed === "concession" && "tab-active"}`}
+            onClick={() => setFeed("concession")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+            </svg>
+            Concessions
+          </a>
+          <a
+            role="tab"
+            className={`tab gap-2 ${feed === "admission" && "tab-active"}`}
+            onClick={() => setFeed("admission")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+            </svg>
+            Passes
+          </a>
+        </div>
       </div>
       <ItemFeed
         onClick={(data) => {
@@ -758,35 +783,65 @@ function CheckoutPage() {
         }}
         category={feed}
       />
-    </>
+    </div>
   );
 
   return (
     <PageLayout>
       {/* Mode Selection Header */}
-      <div className="mb-6 border-b border-base-300 p-4">
-        <div className="flex flex-row items-center justify-between">
-          <h1 className="text-2xl font-bold">Point of Sale</h1>
+      <div className="border-b border-base-300 bg-base-100 px-6 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-6 w-6 text-primary"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z"
+                />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold">Point of Sale</h1>
+          </div>
           <div role="tablist" className="tabs-boxed tabs">
             <a
               role="tab"
-              className={`tab ${mode === "sales" && "tab-active"}`}
-              onClick={() => setMode("sales")}
+              className={`tab gap-2 ${mode === "sales" && "tab-active"}`}
+              onClick={() => {
+                setMode("sales");
+                setShowClearConfirm(false);
+              }}
             >
-              Sales & Checkout
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+              </svg>
+              Checkout
             </a>
             <a
               role="tab"
-              className={`tab ${mode === "checkin" && "tab-active"}`}
+              className={`tab gap-2 ${mode === "checkin" && "tab-active"}`}
               onClick={() => setMode("checkin")}
             >
-              Guest Check-In
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+              </svg>
+              Check-In
             </a>
             <a
               role="tab"
-              className={`tab ${mode === "recent" && "tab-active"}`}
+              className={`tab gap-2 ${mode === "recent" && "tab-active"}`}
               onClick={() => setMode("recent")}
             >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
               History
             </a>
           </div>
@@ -794,11 +849,15 @@ function CheckoutPage() {
       </div>
       {/* Sales Mode */}
       {mode === "sales" && (
-        <div className="flex flex-col gap-2 md:flex-row">
-          <div className="hidden p-2 md:block md:w-2/3">{shoppingList}</div>
-          <div className="p-2 md:w-1/3">
-            <div className="rounded-lg border border-base-300 bg-base-100 p-6 shadow-lg">
-              <div className="flex flex-row items-center gap-3 border-b border-base-300 pb-4">
+        <div className="flex flex-col gap-4 p-4 md:flex-row md:gap-6 md:p-6">
+          {/* Item Browser (desktop) */}
+          <div className="hidden md:block md:flex-1">{shoppingList}</div>
+
+          {/* Shopping Cart */}
+          <div className="w-full md:w-[380px] md:shrink-0">
+            <div className="sticky top-4 overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-lg">
+              {/* Cart Header */}
+              <div className="flex items-center gap-3 border-b border-base-300 p-4">
                 <div className="rounded-lg bg-primary/10 p-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -815,60 +874,104 @@ function CheckoutPage() {
                     />
                   </svg>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-base-content">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base-content">
                     Shopping Cart
                   </h3>
-                  <p className="text-sm text-base-content/60">
+                  <p className="text-xs text-base-content/60">
                     {cart.length} {cart.length === 1 ? "item" : "items"}
+                    {groupedCart.length !== cart.length &&
+                      ` · ${groupedCart.length} ${groupedCart.length === 1 ? "product" : "products"}`}
                   </p>
                 </div>
+                {cart.length > 0 && (
+                  <div className="badge badge-primary font-semibold">
+                    {dbUnitToDollars(cartTotal)}
+                  </div>
+                )}
               </div>
-              <div className="min-h-[200px] space-y-3 py-4">
-                {cart.length > 0 ? (
-                  cart.map((i, idx) => (
-                    <div
-                      className="bg-base-50 flex flex-row items-center justify-between rounded-lg border border-base-200 p-3 transition-colors hover:border-base-300"
-                      key={`${i.id}-${idx}`}
-                    >
-                      <div className="flex flex-1 flex-col">
-                        <div className="font-medium text-base-content">
-                          {i.label}
-                        </div>
-                        <div className="text-sm font-semibold text-primary">
-                          {dbUnitToDollars(i.sellingPrice)}
-                        </div>
-                      </div>
+
+              {/* Cart Items */}
+              <div className="min-h-[200px] p-4">
+                {groupedCart.length > 0 ? (
+                  <div className="space-y-2">
+                    {groupedCart.map(({ item: i, qty }) => (
                       <div
-                        className="tooltip tooltip-left"
-                        data-tip="Remove item"
+                        className="flex items-center gap-3 rounded-lg border border-base-200 p-3 transition-colors hover:border-base-300"
+                        key={i.id}
                       >
-                        <button
-                          className="btn btn-circle btn-ghost btn-sm transition-colors hover:btn-error"
-                          onClick={() => {
-                            const copy = [...cart];
-                            copy.splice(idx, 1);
-                            setCart(copy);
-                          }}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="h-4 w-4"
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium text-base-content">
+                            {i.label}
+                          </div>
+                          <div className="text-sm font-semibold text-primary">
+                            {dbUnitToDollars(i.sellingPrice * qty)}
+                            {qty > 1 && (
+                              <span className="ml-1 font-normal text-base-content/50">
+                                ({dbUnitToDollars(i.sellingPrice)} ea.)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-0.5 rounded-lg border border-base-200 bg-base-200/50 px-0.5 py-0.5">
+                          <button
+                            className="btn btn-circle btn-ghost btn-xs"
+                            onClick={() => {
+                              const idx = cart.findIndex(
+                                (c) => c.id === i.id,
+                              );
+                              if (idx !== -1) {
+                                const copy = [...cart];
+                                copy.splice(idx, 1);
+                                setCart(copy);
+                                setShowClearConfirm(false);
+                              }
+                            }}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                            />
-                          </svg>
-                        </button>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={2}
+                              stroke="currentColor"
+                              className="h-3 w-3"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 12h14"
+                              />
+                            </svg>
+                          </button>
+                          <span className="min-w-[1.5rem] text-center text-sm font-bold">
+                            {qty}
+                          </span>
+                          <button
+                            className="btn btn-circle btn-ghost btn-xs"
+                            onClick={() =>
+                              setCart((prev) => [...prev, i])
+                            }
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={2}
+                              stroke="currentColor"
+                              className="h-3 w-3"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 4.5v15m7.5-7.5h-15"
+                              />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <div className="mb-3 rounded-lg bg-base-200 p-3">
@@ -891,79 +994,130 @@ function CheckoutPage() {
                       Your cart is empty
                     </p>
                     <p className="text-sm text-base-content/40">
-                      Add items to get started
+                      Select items from the menu to get started
                     </p>
                   </div>
                 )}
               </div>
+
+              {/* Cart Footer */}
               {cart.length > 0 && (
-                <div className="mb-4 border-t border-base-300 pt-4">
-                  <div className="flex items-center justify-between text-lg font-semibold">
-                    <span>Total:</span>
+                <div className="border-t border-base-300 p-4">
+                  {/* Subtotal breakdown */}
+                  <div className="mb-3 space-y-1">
+                    {groupedCart.map(({ item: i, qty }) => (
+                      <div
+                        key={i.id}
+                        className="flex justify-between text-xs text-base-content/60"
+                      >
+                        <span>
+                          {i.label} × {qty}
+                        </span>
+                        <span>{dbUnitToDollars(i.sellingPrice * qty)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="divider my-1" />
+                  <div className="mb-4 flex items-center justify-between text-lg font-bold">
+                    <span>Total</span>
                     <span className="text-primary">
                       {dbUnitToDollars(cartTotal)}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between gap-3">
+                    {!showClearConfirm ? (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setShowClearConfirm(true)}
+                      >
+                        Clear
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-base-content/60">
+                          Clear all?
+                        </span>
+                        <button
+                          className="btn btn-warning btn-xs"
+                          onClick={() => {
+                            setCart([]);
+                            setShowClearConfirm(false);
+                          }}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => setShowClearConfirm(false)}
+                        >
+                          No
+                        </button>
+                      </div>
+                    )}
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <LoadingSpinner size="sm" />
+                        <span className="text-sm text-base-content/60">
+                          Processing…
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        className="btn btn-primary btn-sm gap-2"
+                        disabled={!cart.length}
+                        onClick={() => {
+                          const uniq = new Set(cart.map((c) => c.id));
+                          let input: RouterInputs["items"]["checkout"];
+                          uniq.forEach((x) => {
+                            const toAdd = {
+                              id: x,
+                              amountSold: cart.filter((c) => c.id === x)
+                                .length,
+                            };
+
+                            if (!input) {
+                              input = [toAdd];
+                            } else {
+                              input.push(toAdd);
+                            }
+                          });
+                          mutate(input!);
+                        }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                          stroke="currentColor"
+                          className="h-4 w-4"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"
+                          />
+                        </svg>
+                        Complete Purchase
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
-              <div className="flex flex-row justify-end gap-3">
-                <button
-                  className="btn btn-ghost btn-sm"
-                  disabled={!cart.length}
-                  onClick={() => {
-                    setCart([]);
-                  }}
-                >
-                  Clear Cart
-                </button>
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <LoadingSpinner />
-                    <span className="text-sm">Processing...</span>
-                  </div>
-                ) : (
-                  <Button
-                    primary
-                    disabled={!cart.length}
-                    onClick={() => {
-                      const uniq = new Set(cart.map((c) => c.id));
-                      let input: RouterInputs["items"]["checkout"];
-                      uniq.forEach((x) => {
-                        const toAdd = {
-                          id: x,
-                          amountSold: cart.filter((c) => c.id === x).length,
-                        };
 
-                        if (!input) {
-                          input = [toAdd];
-                        } else {
-                          input.push(toAdd);
-                        }
-                      });
-                      mutate(input!);
-                    }}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="mr-2 h-4 w-4"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H3.75M3.75 6v.75c0 .414.336.75.75.75h.75m0-1.5h.75v.75c0 .414.336.75.75.75H6v-.75c0-.414-.336-.75-.75-.75H4.5V6h-.75m0 0H3v-.375M21 18.75v.375c0 .621-.504 1.125-1.125 1.125H3.375c-.621 0-1.125-.504-1.125-1.125V6.75a1.125 1.125 0 0 1 1.125-1.125h17.25c.621 0 1.125.504 1.125 1.125v12Z"
-                      />
-                    </svg>
-                    Complete Purchase
-                  </Button>
-                )}
-              </div>
+              {/* Empty footer */}
+              {!cart.length && (
+                <div className="border-t border-base-300 p-4">
+                  <p className="text-center text-xs text-base-content/40">
+                    Select items to begin a transaction
+                  </p>
+                </div>
+              )}
             </div>
           </div>
-          <div className="block p-2 md:hidden">{shoppingList}</div>
+
+          {/* Item Browser (mobile) */}
+          <div className="block md:hidden">{shoppingList}</div>
         </div>
       )}{" "}
       {/* Check-In Mode */}
