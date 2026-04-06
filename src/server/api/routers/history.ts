@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, orgProcedure } from "~/server/api/trpc";
 import type { PrismaClient } from "@prisma/client";
 
 // Types for unified transaction history
@@ -47,9 +47,11 @@ type HistoryItem = PurchaseHistoryItem | AdmissionHistoryItem;
 async function getPurchaseHistory(
   db: PrismaClient,
   cutoffTime: Date,
+  organizationId: string,
 ): Promise<PurchaseHistoryItem[]> {
   const transactions = await db.transaction.findMany({
     where: {
+      organizationId,
       createdAt: {
         gte: cutoffTime,
       },
@@ -121,9 +123,11 @@ async function getPurchaseHistory(
 async function getAdmissionHistory(
   db: PrismaClient,
   cutoffTime: Date,
+  organizationId: string,
 ): Promise<AdmissionHistoryItem[]> {
   const admissions = await db.admissionEvent.findMany({
     where: {
+      organizationId,
       createdAt: {
         gte: cutoffTime,
       },
@@ -162,10 +166,11 @@ async function voidPurchaseTransaction(
   transactionId: string,
   voidReason: string,
   userId: string,
+  organizationId: string,
 ): Promise<{ refundAmount: number }> {
   // First, get the transaction with its items
-  const transaction = await db.transaction.findUnique({
-    where: { id: transactionId },
+  const transaction = await db.transaction.findFirst({
+    where: { id: transactionId, organizationId },
     include: {
       items: {
         include: {
@@ -251,9 +256,10 @@ async function voidAdmissionEvent(
   admissionId: string,
   voidReason: string,
   userId: string,
+  organizationId: string,
 ): Promise<void> {
-  const admission = await db.admissionEvent.findUnique({
-    where: { id: admissionId },
+  const admission = await db.admissionEvent.findFirst({
+    where: { id: admissionId, organizationId },
   });
 
   if (!admission) {
@@ -286,7 +292,7 @@ export const historyRouter = createTRPCRouter({
   /**
    * Get unified transaction history including both purchases and admissions
    */
-  getAll: privateProcedure
+  getAll: orgProcedure
     .input(
       z
         .object({
@@ -309,13 +315,13 @@ export const historyRouter = createTRPCRouter({
 
       // Fetch purchases if requested
       if (type === "all" || type === "purchases") {
-        const purchases = await getPurchaseHistory(ctx.db, cutoffTime);
+        const purchases = await getPurchaseHistory(ctx.db, cutoffTime, ctx.organizationId);
         historyItems.push(...purchases);
       }
 
       // Fetch admissions if requested
       if (type === "all" || type === "admissions") {
-        const admissions = await getAdmissionHistory(ctx.db, cutoffTime);
+        const admissions = await getAdmissionHistory(ctx.db, cutoffTime, ctx.organizationId);
         historyItems.push(...admissions);
       }
 
@@ -335,7 +341,7 @@ export const historyRouter = createTRPCRouter({
   /**
    * Void a transaction (purchase or admission)
    */
-  voidTransaction: privateProcedure
+  voidTransaction: orgProcedure
     .input(
       z.object({
         id: z.string(),
@@ -353,6 +359,7 @@ export const historyRouter = createTRPCRouter({
           input.id,
           input.voidReason,
           ctx.userId,
+          ctx.organizationId,
         );
       } else {
         await voidAdmissionEvent(
@@ -360,6 +367,7 @@ export const historyRouter = createTRPCRouter({
           input.id,
           input.voidReason,
           ctx.userId,
+          ctx.organizationId,
         );
         return { refundAmount: 0 }; // No refund for admissions
       }

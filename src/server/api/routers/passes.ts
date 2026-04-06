@@ -1,7 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  orgProcedure,
+  orgAdminProcedure,
+} from "~/server/api/trpc";
 // import inRateWindow from "../helpers/inRateWindow";
 
 const addOneYear = (date: Date) => {
@@ -11,7 +15,7 @@ const addOneYear = (date: Date) => {
 };
 
 export const passesRouter = createTRPCRouter({
-  getAll: privateProcedure
+  getAll: orgProcedure
     .input(
       z
         .object({
@@ -22,15 +26,19 @@ export const passesRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
       return await ctx.db.seasonPass.findMany({
-        where: input?.season ? { season: input.season } : undefined,
+        where: {
+          organizationId: ctx.organizationId,
+          ...(input?.season ? { season: input.season } : {}),
+        },
         orderBy: [{ label: "asc" }],
         include: { patrons: true },
       });
     }),
 
-  getAllSeasons: privateProcedure.query(async ({ ctx }) => {
+  getAllSeasons: orgProcedure.query(async ({ ctx }) => {
     // await inRateWindow(ctx.userId);
     const seasons = await ctx.db.seasonPass.findMany({
+      where: { organizationId: ctx.organizationId },
       select: { season: true },
       distinct: ["season"],
       orderBy: { season: "desc" },
@@ -38,7 +46,7 @@ export const passesRouter = createTRPCRouter({
     return seasons.map((s) => s.season);
   }),
 
-  getById: privateProcedure
+  getById: orgProcedure
     .input(
       z.object({
         id: z.string(),
@@ -46,8 +54,8 @@ export const passesRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
-      const pass = await ctx.db.seasonPass.findUnique({
-        where: { id: input.id },
+      const pass = await ctx.db.seasonPass.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
         include: { patrons: true },
       });
 
@@ -61,7 +69,7 @@ export const passesRouter = createTRPCRouter({
       return pass;
     }),
 
-  createSeasonPass: privateProcedure
+  createSeasonPass: orgAdminProcedure
     .input(
       z.object({
         seasonPass: z.object({
@@ -89,6 +97,7 @@ export const passesRouter = createTRPCRouter({
       const pass = await ctx.db.seasonPass.create({
         data: {
           ...input.seasonPass,
+          organizationId: ctx.organizationId,
           createdBy: createdById,
           effectiveEndDate: addOneYear(
             input.seasonPass.effectiveStartDate ?? new Date(),
@@ -100,6 +109,7 @@ export const passesRouter = createTRPCRouter({
                   firstName: p.firstName,
                   lastName: p.lastName,
                   birthDate: p.birthDate,
+                  organizationId: ctx.organizationId,
                   createdBy: createdById,
                 })),
               },
@@ -117,7 +127,7 @@ export const passesRouter = createTRPCRouter({
       return pass;
     }),
 
-  updateSeasonPass: privateProcedure
+  updateSeasonPass: orgAdminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -136,7 +146,7 @@ export const passesRouter = createTRPCRouter({
       return pass;
     }),
 
-  getPatronById: privateProcedure
+  getPatronById: orgProcedure
     .input(
       z.object({
         id: z.string(),
@@ -144,8 +154,8 @@ export const passesRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
-      const patron = await ctx.db.patron.findUnique({
-        where: { id: input.id },
+      const patron = await ctx.db.patron.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
       });
 
       if (patron === null) {
@@ -158,7 +168,7 @@ export const passesRouter = createTRPCRouter({
       return patron;
     }),
 
-  createPatron: privateProcedure
+  createPatron: orgAdminProcedure
     .input(
       z.object({
         passId: z.string(),
@@ -173,12 +183,12 @@ export const passesRouter = createTRPCRouter({
       // await inRateWindow(createdBy);
 
       const patron = await ctx.db.patron.create({
-        data: { ...input, createdBy },
+        data: { ...input, organizationId: ctx.organizationId, createdBy },
       });
       return patron;
     }),
 
-  updatePatron: privateProcedure
+  updatePatron: orgAdminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -198,7 +208,7 @@ export const passesRouter = createTRPCRouter({
       return patron;
     }),
 
-  admitPatron: privateProcedure
+  admitPatron: orgProcedure
     .input(
       z.object({
         patronId: z.string(),
@@ -207,9 +217,22 @@ export const passesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
 
+      // Verify patron belongs to this organization
+      const patron = await ctx.db.patron.findFirst({
+        where: { id: input.patronId, organizationId: ctx.organizationId },
+      });
+
+      if (!patron) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Patron doesn't exist",
+        });
+      }
+
       const admission = await ctx.db.admissionEvent.create({
         data: {
-          patronId: input.patronId, // ? make sure patron is populated
+          patronId: input.patronId,
+          organizationId: ctx.organizationId,
           createdBy: ctx.userId,
         },
         include: {
@@ -219,7 +242,7 @@ export const passesRouter = createTRPCRouter({
       return admission;
     }),
 
-  copySeasonPassToCurrentYear: privateProcedure
+  copySeasonPassToCurrentYear: orgAdminProcedure
     .input(
       z.object({
         passId: z.string(),
@@ -232,8 +255,8 @@ export const passesRouter = createTRPCRouter({
       // await inRateWindow(createdById);
 
       // Get the original pass with patrons
-      const originalPass = await ctx.db.seasonPass.findUnique({
-        where: { id: input.passId },
+      const originalPass = await ctx.db.seasonPass.findFirst({
+        where: { id: input.passId, organizationId: ctx.organizationId },
         include: { patrons: true },
       });
 
@@ -249,6 +272,7 @@ export const passesRouter = createTRPCRouter({
         where: {
           label: originalPass.label,
           season: currentYear,
+          organizationId: ctx.organizationId,
         },
       });
 
@@ -264,6 +288,7 @@ export const passesRouter = createTRPCRouter({
         data: {
           label: originalPass.label,
           season: currentYear,
+          organizationId: ctx.organizationId,
           createdBy: createdById,
           effectiveStartDate: new Date(),
           effectiveEndDate: addOneYear(new Date()),
@@ -273,6 +298,7 @@ export const passesRouter = createTRPCRouter({
                 firstName: patron.firstName,
                 lastName: patron.lastName,
                 birthDate: patron.birthDate,
+                organizationId: ctx.organizationId,
                 createdBy: createdById,
               })),
             },
@@ -284,7 +310,7 @@ export const passesRouter = createTRPCRouter({
       return newPass;
     }),
 
-  getAdmissions: privateProcedure
+  getAdmissions: orgProcedure
     .input(
       z.object({
         range: z.array(z.date()).refine((data) => data.length === 2),
@@ -296,6 +322,7 @@ export const passesRouter = createTRPCRouter({
 
       return await ctx.db.admissionEvent.findMany({
         where: {
+          organizationId: ctx.organizationId,
           createdAt: {
             lte: input.range[1],
             gte: input.range[0],

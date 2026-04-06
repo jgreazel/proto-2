@@ -1,14 +1,18 @@
 import { clerkClient } from "@clerk/nextjs";
 import { z } from "zod";
 
-import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  orgProcedure,
+  orgAdminProcedure,
+} from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
 // import inRateWindow from "../helpers/inRateWindow";
 
 export const reportsRouter = createTRPCRouter({
   // todo: only query db if input params dictate so
-  getNew: privateProcedure
+  getNew: orgAdminProcedure
     .input(
       z.object({
         purchaseReport: z
@@ -49,6 +53,7 @@ export const reportsRouter = createTRPCRouter({
       // Purchase Report
       const transactions = await ctx.db.transaction.findMany({
         where: {
+          organizationId: ctx.organizationId,
           createdAt: {
             gte: input.purchaseReport?.startDate,
             lte: input.purchaseReport?.endDate,
@@ -178,6 +183,7 @@ export const reportsRouter = createTRPCRouter({
       // Admission Report
       const adEvents = await ctx.db.admissionEvent.findMany({
         where: {
+          organizationId: ctx.organizationId,
           createdAt: {
             gte: input.admissionReport?.startDate,
             lte: input.admissionReport?.endDate,
@@ -199,6 +205,7 @@ export const reportsRouter = createTRPCRouter({
               gte: input.admissionReport?.startDate,
               lte: input.admissionReport?.endDate,
             },
+            transaction: { organizationId: ctx.organizationId },
           },
           include: {
             item: true,
@@ -229,6 +236,7 @@ export const reportsRouter = createTRPCRouter({
       // ItemChangeLog Report
       const itemChangeLogs = await ctx.db.itemChangeLog.findMany({
         where: {
+          organizationId: ctx.organizationId,
           createdAt: {
             gte: input.itemChangeLogReport?.startDate,
             lte: input.itemChangeLogReport?.endDate,
@@ -328,14 +336,14 @@ export const reportsRouter = createTRPCRouter({
     }),
 
   // ── Saved Reports ──────────────────────────────────────
-  getSavedReports: privateProcedure.query(async ({ ctx }) => {
+  getSavedReports: orgProcedure.query(async ({ ctx }) => {
     return ctx.db.savedReport.findMany({
-      where: { userId: ctx.userId },
+      where: { userId: ctx.userId, organizationId: ctx.organizationId },
       orderBy: { createdAt: "desc" },
     });
   }),
 
-  createSavedReport: privateProcedure
+  createSavedReport: orgProcedure
     .input(
       z.object({
         name: z.string().min(1).max(100),
@@ -350,15 +358,16 @@ export const reportsRouter = createTRPCRouter({
         data: {
           ...input,
           userId: ctx.userId,
+          organizationId: ctx.organizationId,
         },
       });
     }),
 
-  deleteSavedReport: privateProcedure
+  deleteSavedReport: orgProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.savedReport.delete({
-        where: { id: input.id, userId: ctx.userId },
+        where: { id: input.id, userId: ctx.userId, organizationId: ctx.organizationId },
       });
     }),
 });

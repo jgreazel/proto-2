@@ -86,6 +86,8 @@ export const createTRPCRouter = t.router;
  */
 export const publicProcedure = t.procedure;
 
+// ─── Legacy Procedures (kept for backwards compatibility during migration) ───
+
 const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
   if (!ctx.userId) {
     throw new TRPCError({
@@ -122,3 +124,115 @@ const enforceUserIsAdmin = t.middleware(async ({ ctx, next }) => {
 });
 
 export const adminProcedure = t.procedure.use(enforceUserIsAdmin);
+
+// ─── Organization-Aware Procedures ──────────────────────────────
+// These resolve the user's org membership and inject organizationId into context.
+// Use these instead of privateProcedure/adminProcedure for tenant-isolated routes.
+
+/**
+ * Resolves the calling user's OrganizationMembership from their Clerk userId.
+ * Injects organizationId and membershipId into context.
+ */
+const enforceOrgMembership = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.userId) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const membership = await ctx.db.organizationMembership.findFirst({
+    where: { userId: ctx.userId },
+    include: { organization: true },
+  });
+
+  if (!membership) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You are not a member of any organization",
+    });
+  }
+
+  return next({
+    ctx: {
+      userId: ctx.userId,
+      organizationId: membership.organizationId,
+      membershipId: membership.id,
+      membership,
+    },
+  });
+});
+
+/** Requires Clerk auth + org membership. Use for any org-scoped route. */
+export const orgProcedure = t.procedure.use(enforceOrgMembership);
+
+/** Requires org membership + admin or owner role. */
+const enforceOrgAdmin = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.userId) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const membership = await ctx.db.organizationMembership.findFirst({
+    where: { userId: ctx.userId },
+    include: { organization: true },
+  });
+
+  if (!membership) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You are not a member of any organization",
+    });
+  }
+
+  if (membership.role !== "owner" && membership.role !== "admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Admin access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      userId: ctx.userId,
+      organizationId: membership.organizationId,
+      membershipId: membership.id,
+      membership,
+    },
+  });
+});
+
+export const orgAdminProcedure = t.procedure.use(enforceOrgAdmin);
+
+/** Requires org membership + owner role. For billing and org-level settings. */
+const enforceOrgOwner = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.userId) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const membership = await ctx.db.organizationMembership.findFirst({
+    where: { userId: ctx.userId },
+    include: { organization: true },
+  });
+
+  if (!membership) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You are not a member of any organization",
+    });
+  }
+
+  if (membership.role !== "owner") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Owner access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      userId: ctx.userId,
+      organizationId: membership.organizationId,
+      membershipId: membership.id,
+      membership,
+    },
+  });
+});
+
+export const orgOwnerProcedure = t.procedure.use(enforceOrgOwner);

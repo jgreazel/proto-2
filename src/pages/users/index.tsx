@@ -14,6 +14,17 @@ type UserWithSettings = {
   username: string | null;
   firstName: string | null;
   lastName: string | null;
+  imageUrl?: string | null;
+  membership?: {
+    id: string;
+    organizationId: string;
+    role: string;
+    isAdmin: boolean;
+    isPinOnly: boolean;
+    isSystemAccount: boolean;
+    displayName: string;
+    pin: string | null;
+  };
   settings?: {
     isAdmin: boolean;
   } | null;

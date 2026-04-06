@@ -20,61 +20,125 @@ generator client {
     provider = "prisma-client-js"
 }
 
+// ─── Multi-Tenancy ──────────────────────────────────────────────
+
+model Organization {
+    id        String   @id @default(cuid())
+    name      String   @db.VarChar(255)
+    slug      String   @unique @db.VarChar(100)
+    createdAt DateTime @default(now())
+
+    // Stripe billing (wired in Phase 5)
+    stripeCustomerId   String? @unique
+    subscriptionStatus String  @default("trialing") @db.VarChar(30)
+
+    memberships     OrganizationMembership[]
+    inventoryItems  InventoryItem[]
+    categories      Category[]
+    seasonPasses    SeasonPass[]
+    patrons         Patron[]
+    transactions    Transaction[]
+    admissionEvents AdmissionEvent[]
+    shifts          Shift[]
+    feedbacks       Feedback[]
+    hourCodes       HourCode[]
+    timeclockEvents TimeClockEvent[]
+    itemChangeLogs  ItemChangeLog[]
+    savedReports    SavedReport[]
+}
+
+model OrganizationMembership {
+    id             String       @id @default(cuid())
+    organization   Organization @relation(fields: [organizationId], references: [id])
+    organizationId String
+
+    // Account identity
+    userId      String? // Clerk userId — NULL for PIN-only accounts
+    displayName String  @db.VarChar(255)
+    pin         String? @db.VarChar(10)
+
+    // Account type toggles (set on /users page)
+    isPinOnly       Boolean @default(false) // true = no Clerk account, PIN identification only
+    isSystemAccount Boolean @default(false) // true = shared kiosk login, requires PIN for auth features
+
+    // Permission flags (extensible — add more toggles here over time)
+    isAdmin Boolean @default(false)
+
+    // Org-level role
+    role String @default("staff") @db.VarChar(20) // owner / admin / staff
+
+    createdAt DateTime @default(now())
+
+    @@unique([organizationId, pin])
+    @@unique([organizationId, userId])
+    @@index([organizationId])
+    @@index([userId])
+}
+
+// ─── Core Business Models ───────────────────────────────────────
+
 model InventoryItem {
-    id           String             @id @default(cuid())
-    createdAt    DateTime           @default(now())
-    createdBy    String
-    label        String             @default("Unlabeled Inventory Item") @db.VarChar(255)
-    sellingPrice Int                @default(0)
-    transactions TransactionItems[]
-    changeLogs   ItemChangeLog[]
+    id             String             @id @default(cuid())
+    createdAt      DateTime           @default(now())
+    createdBy      String
+    organization   Organization?      @relation(fields: [organizationId], references: [id])
+    organizationId String?
+    label          String             @default("Unlabeled Inventory Item") @db.VarChar(255)
+    sellingPrice   Int                @default(0)
+    transactions   TransactionItems[]
+    changeLogs     ItemChangeLog[]
 
     // concession items
     isConcessionItem Boolean @default(false)
     purchasePrice    Int?
     inStock          Int?    @default(0)
-    category         String? @db.VarChar(100) // New field for concession categories
+    category         String? @db.VarChar(100)
 
-    // admisison items
+    // admission items
     isAdmissionItem Boolean  @default(false)
     isSeasonal      Boolean?
     isDay           Boolean?
     patronLimit     Int?
-    // todo uncomment if need to connect
-    // seasonPasses    SeasonPass[]
+
+    @@index([organizationId])
 }
 
 model Category {
-    id        String   @id @default(cuid())
-    name      String   @unique @db.VarChar(100)
-    createdAt DateTime @default(now())
-    createdBy String
+    id             String        @id @default(cuid())
+    name           String        @unique @db.VarChar(100)
+    createdAt      DateTime      @default(now())
+    createdBy      String
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
+
+    @@index([organizationId])
 }
 
 model SeasonPass {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-    createdBy String
-    patrons   Patron[]
-    // todo uncomment if need to connect
-    // invItem   InventoryItem @relation(fields: [invItemId], references: [id])
-    // invItemId String
+    id             String        @id @default(cuid())
+    createdAt      DateTime      @default(now())
+    createdBy      String
+    patrons        Patron[]
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
 
     label              String    @default("Unlabeled Season Pass") @db.VarChar(255)
     season             String    @default("2025") @db.VarChar(10)
     effectiveStartDate DateTime  @default(now())
     effectiveEndDate   DateTime?
 
-    // @@index([invItemId])
+    @@index([organizationId])
 }
 
 model Patron {
-    id         String           @id @default(cuid())
-    createdAt  DateTime         @default(now())
-    createdBy  String
-    pass       SeasonPass       @relation(fields: [passId], references: [id])
-    passId     String
-    admissions AdmissionEvent[]
+    id             String           @id @default(cuid())
+    createdAt      DateTime         @default(now())
+    createdBy      String
+    pass           SeasonPass       @relation(fields: [passId], references: [id])
+    passId         String
+    admissions     AdmissionEvent[]
+    organization   Organization?    @relation(fields: [organizationId], references: [id])
+    organizationId String?
 
     firstName      String
     lastName       String
@@ -82,19 +146,24 @@ model Patron {
     banReEntryDate DateTime?
 
     @@index([passId])
+    @@index([organizationId])
 }
 
 model Transaction {
-    id        String             @id @default(cuid())
-    createdAt DateTime           @default(now())
-    createdBy String
-    items     TransactionItems[]
+    id             String             @id @default(cuid())
+    createdAt      DateTime           @default(now())
+    createdBy      String
+    items          TransactionItems[]
+    organization   Organization?      @relation(fields: [organizationId], references: [id])
+    organizationId String?
 
     // Void tracking
     isVoided   Boolean   @default(false)
     voidedAt   DateTime?
     voidedBy   String?
     voidReason String?   @db.Text
+
+    @@index([organizationId])
 }
 
 model TransactionItems {
@@ -112,11 +181,13 @@ model TransactionItems {
 }
 
 model AdmissionEvent {
-    id        String   @id @default(cuid())
-    patronId  String
-    patron    Patron   @relation(fields: [patronId], references: [id])
-    createdAt DateTime @default(now())
-    createdBy String
+    id             String        @id @default(cuid())
+    patronId       String
+    patron         Patron        @relation(fields: [patronId], references: [id])
+    createdAt      DateTime      @default(now())
+    createdBy      String
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
 
     // Void tracking
     isVoided   Boolean   @default(false)
@@ -125,23 +196,34 @@ model AdmissionEvent {
     voidReason String?   @db.Text
 
     @@index([patronId])
+    @@index([organizationId])
 }
 
+// ─── Staff & Scheduling (deprecated features, kept for future) ──
+
 model Shift {
-    id     String   @id @default(cuid())
-    userId String
-    start  DateTime
-    end    DateTime
+    id             String        @id @default(cuid())
+    userId         String
+    start          DateTime
+    end            DateTime
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
 
     createdBy String
     createdAt DateTime @default(now())
+
+    @@index([organizationId])
 }
 
 model Feedback {
-    id        String   @id @default(cuid())
-    message   String
-    createdBy String
-    createdAt DateTime @default(now())
+    id             String        @id @default(cuid())
+    message        String
+    createdBy      String
+    createdAt      DateTime      @default(now())
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
+
+    @@index([organizationId])
 }
 
 model HourCode {
@@ -150,31 +232,40 @@ model HourCode {
     hourlyRate      Int
     timeclockEvents TimeClockEvent[]
     userSettings    UserSettings[]
+    organization    Organization?    @relation(fields: [organizationId], references: [id])
+    organizationId  String?
 
     createdBy String
     createdAt DateTime @default(now())
+
+    @@index([organizationId])
 }
 
 model TimeClockEvent {
-    id         String   @id @default(cuid())
-    userId     String
-    hourCodeId String
-    hourCode   HourCode @relation(fields: [hourCodeId], references: [id])
-    createdBy  String
-    createdAt  DateTime @default(now())
+    id             String        @id @default(cuid())
+    userId         String
+    hourCodeId     String
+    hourCode       HourCode      @relation(fields: [hourCodeId], references: [id])
+    createdBy      String
+    createdAt      DateTime      @default(now())
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
 
     @@index([hourCodeId])
+    @@index([organizationId])
 }
 
+// ─── User Settings (will be superseded by OrganizationMembership) ──
+
 model UserSettings {
-    id                  String    @id @default(cuid())
-    userId              String    @unique
-    defaultHourCodeId   String?
-    defaultHourCode     HourCode? @relation(fields: [defaultHourCodeId], references: [id])
-    canModifyHourCode   Boolean   @default(false)
-    clockPIN            String?   @unique
-    isAdmin             Boolean   @default(false)
-    canSchedule         Boolean   @default(false)
+    id                String    @id @default(cuid())
+    userId            String    @unique
+    defaultHourCodeId String?
+    defaultHourCode   HourCode? @relation(fields: [defaultHourCodeId], references: [id])
+    canModifyHourCode Boolean   @default(false)
+    clockPIN          String?   @unique
+    isAdmin           Boolean   @default(false)
+    canSchedule       Boolean   @default(false)
 
     createdBy String
     createdAt DateTime @default(now())
@@ -182,14 +273,17 @@ model UserSettings {
     @@index([defaultHourCodeId])
 }
 
-model ItemChangeLog {
-    id         String        @id @default(cuid())
-    itemId     String
-    item       InventoryItem @relation(fields: [itemId], references: [id])
-    userId     String
-    changeNote String?       @db.Text
+// ─── Audit & Reporting ──────────────────────────────────────────
 
-    // Store the changes as JSON or specific fields
+model ItemChangeLog {
+    id             String        @id @default(cuid())
+    itemId         String
+    item           InventoryItem @relation(fields: [itemId], references: [id])
+    userId         String
+    changeNote     String?       @db.Text
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
+
     oldValues Json?
     newValues Json?
 
@@ -197,17 +291,21 @@ model ItemChangeLog {
 
     @@index([itemId])
     @@index([userId])
+    @@index([organizationId])
 }
 
 model SavedReport {
-    id         String   @id @default(cuid())
-    name       String   @db.VarChar(100)
-    reportType String   @db.VarChar(30) // "purchase" | "admission" | "itemchangelog" | "overview"
-    datePreset String?  @db.VarChar(30) // "Today" | "Yesterday" | "Last 7 Days" etc.
-    customStart DateTime?
-    customEnd   DateTime?
-    userId     String
-    createdAt  DateTime @default(now())
+    id             String        @id @default(cuid())
+    name           String        @db.VarChar(100)
+    reportType     String        @db.VarChar(30)
+    datePreset     String?       @db.VarChar(30)
+    customStart    DateTime?
+    customEnd      DateTime?
+    userId         String
+    createdAt      DateTime      @default(now())
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    organizationId String?
 
     @@index([userId])
+    @@index([organizationId])
 }

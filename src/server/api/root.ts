@@ -7,6 +7,7 @@ import { schedulesRouter } from "./routers/schedules";
 import { documentsRouter } from "./routers/documents";
 import { timeclockAdminRouter } from "./routers/timeclockAdmin";
 import { historyRouter } from "./routers/history";
+import { organizationRouter } from "./routers/organization";
 
 /**
  * This is the primary router for your server.
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   documents: documentsRouter,
   timeclockAdmin: timeclockAdminRouter,
   history: historyRouter,
+  organization: organizationRouter,
 });
 
 // export type definition of API
