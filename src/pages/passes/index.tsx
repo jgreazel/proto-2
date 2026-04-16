@@ -735,7 +735,7 @@ const PassCard = ({
 }) => (
   <button
     onClick={onClick}
-    className={`card border-l-4 ${cardBorder(pass.label)} text-left transition-all duration-150 ${
+    className={`card border-l-4 bg-base-100 ${cardBorder(pass.label)} text-left transition-all duration-150 ${
       isSelected
         ? "ring-2 ring-primary/30 shadow-lg"
         : "shadow-sm hover:shadow-md"

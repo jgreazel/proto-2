@@ -430,7 +430,6 @@ export const itemsRouter = createTRPCRouter({
                 itemId: i.id,
                 createdBy: ctx.userId,
                 amountSold: i.amountSold,
-                organizationId: ctx.organizationId,
               })),
             },
           },

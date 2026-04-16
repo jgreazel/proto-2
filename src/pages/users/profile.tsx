@@ -43,7 +43,7 @@ export default function ProfilePage() {
               rootBox: "w-full",
               card: "shadow-none border border-base-200 rounded-xl",
               navbar: "hidden",
-              pageScrollBox: "p-0",
+              pageScrollBox: "p-6",
             },
           }}
         />

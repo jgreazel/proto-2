@@ -115,7 +115,7 @@ export const LinkListItems = ({
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="h-6 w-6"
+            className="h-5 w-5"
           >
             <path
               strokeLinecap="round"
@@ -124,6 +124,7 @@ export const LinkListItems = ({
             />
           </svg>
           Register
+          <kbd className="kbd kbd-xs ml-auto opacity-30">G R</kbd>
         </Link>
       </li>
       <li>
@@ -134,7 +135,7 @@ export const LinkListItems = ({
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="h-6 w-6"
+            className="h-5 w-5"
           >
             <path
               strokeLinecap="round"
@@ -143,11 +144,20 @@ export const LinkListItems = ({
             />
           </svg>
           Passes
+          <kbd className="kbd kbd-xs ml-auto opacity-30">G P</kbd>
         </Link>
       </li>
       {isAdmin && (
         <>
-          <div className="divider mb-1 text-xs uppercase">Admin Tools</div>
+          <div className="divider mb-1 mt-1"></div>
+          <div className="flex items-center gap-1.5 px-3 py-1">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3 text-primary">
+              <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1.5V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clipRule="evenodd" />
+            </svg>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+              Admin Tools
+            </span>
+          </div>
           <li>
             <Link href="/items">
               <svg
@@ -156,7 +166,7 @@ export const LinkListItems = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="h-6 w-6"
+                className="h-5 w-5"
               >
                 <path
                   strokeLinecap="round"
@@ -165,6 +175,7 @@ export const LinkListItems = ({
                 />
               </svg>
               Items
+              <kbd className="kbd kbd-xs ml-auto opacity-30">G I</kbd>
             </Link>
           </li>
           <li>
@@ -175,7 +186,7 @@ export const LinkListItems = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="h-6 w-6"
+                className="h-5 w-5"
               >
                 <path
                   strokeLinecap="round"
@@ -184,6 +195,7 @@ export const LinkListItems = ({
                 />
               </svg>
               Files
+              <kbd className="kbd kbd-xs ml-auto opacity-30">G F</kbd>
             </Link>
           </li>
           <li>
@@ -194,7 +206,7 @@ export const LinkListItems = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="h-6 w-6"
+                className="h-5 w-5"
               >
                 <path
                   strokeLinecap="round"
@@ -203,6 +215,7 @@ export const LinkListItems = ({
                 />
               </svg>
               Reports
+              <kbd className="kbd kbd-xs ml-auto opacity-30">G E</kbd>
             </Link>
           </li>
           <li>
@@ -213,7 +226,7 @@ export const LinkListItems = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="h-6 w-6"
+                className="h-5 w-5"
               >
                 <path
                   strokeLinecap="round"
@@ -222,6 +235,7 @@ export const LinkListItems = ({
                 />
               </svg>
               Manage Users
+              <kbd className="kbd kbd-xs ml-auto opacity-30">G U</kbd>
             </Link>
           </li>
         </>
@@ -498,7 +512,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
 
   return (
     <>
-      <div className="navbar bg-primary/10 shadow-sm">
+      <div className="navbar bg-base-100 shadow-sm">
         <div className="navbar-start">
           {/* Mobile hamburger — hidden on md+ */}
           {!disabled && (
@@ -521,12 +535,21 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
               </div>
               <ul
                 tabIndex={0}
-                className="menu dropdown-content menu-md z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow-xl"
+                className="menu dropdown-content menu-md z-[1] mt-2 w-60 rounded-xl bg-base-100 p-2 shadow-xl ring-1 ring-base-content/5"
               >
                 {isLoading ? (
                   <li className="p-2">Loading...</li>
                 ) : (
-                  <LinkListItems isAdmin={isAdmin} />
+                  <>
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-primary">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                      </svg>
+                      <span className="text-sm font-semibold">Navigation</span>
+                    </div>
+                    <div className="divider m-0"></div>
+                    <LinkListItems isAdmin={isAdmin} />
+                  </>
                 )}
               </ul>
             </div>
@@ -590,7 +613,7 @@ export const PageLayout = (props: PropsWithChildren & LayoutProps) => {
     <main className="flex h-screen w-full flex-col justify-start">
       {!props.hideHeader && <FullNav disabled={props.disabled ?? false} />}
       {props.actionRow && <div className="p-2">{props.actionRow}</div>}
-      <div className="grow overflow-auto">{props.children}</div>
+      <div className="grow overflow-auto bg-base-200">{props.children}</div>
     </main>
   );
 };
