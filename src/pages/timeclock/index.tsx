@@ -226,20 +226,11 @@ const StaffRoster = () => {
 
   if (isLoading) return <LoadingPage />;
 
-  if (!data?.length) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 py-16 text-base-content/40">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="h-12 w-12">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-        </svg>
-        <p className="text-sm">No staff with clock PINs found.</p>
-        <p className="text-xs">Admins can set PINs in User Management.</p>
-      </div>
-    );
-  }
+  const withPin = data?.filter((s) => s.hasPin) ?? [];
+  const noPin = data?.filter((s) => !s.hasPin) ?? [];
 
-  const clocked = data.filter((s) => s.timeClockEvents.length % 2 === 1);
-  const out = data.filter((s) => s.timeClockEvents.length % 2 === 0);
+  const clocked = withPin.filter((s) => s.timeClockEvents.length % 2 === 1);
+  const out = withPin.filter((s) => s.timeClockEvents.length % 2 === 0);
 
   return (
     <>
@@ -249,6 +240,15 @@ const StaffRoster = () => {
           onClose={() => setActiveStaff(undefined)}
           onSuccess={() => setActiveStaff(undefined)}
         />
+      )}
+
+      {withPin.length === 0 && noPin.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-base-content/40">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="h-12 w-12">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+          <p className="text-sm">No staff found.</p>
+        </div>
       )}
 
       {clocked.length > 0 && (
@@ -265,7 +265,7 @@ const StaffRoster = () => {
       )}
 
       {out.length > 0 && (
-        <div>
+        <div className="mb-4">
           <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-base-content/40">
             Not Clocked In ({out.length})
           </h2>
@@ -273,6 +273,27 @@ const StaffRoster = () => {
             {out.map((s) => (
               <StaffCard key={s.userId} staff={s} onClick={() => setActiveStaff(s)} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {noPin.length > 0 && (
+        <div className="mt-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-warning-content">
+                {noPin.length} team member{noPin.length > 1 ? "s" : ""} need{noPin.length === 1 ? "s" : ""} a PIN
+              </p>
+              <p className="mt-0.5 text-xs text-base-content/50">
+                {noPin.map((s) => s.displayName).join(", ")}
+              </p>
+            </div>
+            <Link
+              href="/users"
+              className="btn btn-warning btn-xs shrink-0"
+            >
+              Set up in Users →
+            </Link>
           </div>
         </div>
       )}

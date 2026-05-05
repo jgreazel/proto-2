@@ -342,7 +342,7 @@ export const schedulesRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const memberships = await ctx.db.organizationMembership.findMany({
-        where: { organizationId: ctx.organizationId, pin: { not: null } },
+        where: { organizationId: ctx.organizationId },
       });
 
       const clerkUserIds = memberships
@@ -366,17 +366,17 @@ export const schedulesRouter = createTRPCRouter({
               },
             },
             orderBy: { createdAt: "asc" },
-            include: { hourCode: true },
           })
         : [];
 
       return memberships.map((m) => {
         const clerkUser = clerkUsers.find((u) => u.id === m.userId);
-        const displayName = clerkUser
-          ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
-            clerkUser.username ||
-            m.displayName
-          : m.displayName;
+        const displayName =
+          (clerkUser
+            ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
+              clerkUser.username ||
+              m.id
+            : m.displayName.trim() || m.id);
         const userTces = tces.filter((t) => t.userId === (m.userId ?? m.id));
         return {
           userId: m.userId ?? m.id,

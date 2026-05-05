@@ -6,6 +6,7 @@ import { PageLayout } from "~/components/layout";
 import { LoadingPage } from "~/components/loading";
 import handleApiError from "~/helpers/handleApiError";
 import { api } from "~/utils/api";
+import { useUser } from "@clerk/nextjs";
 
 // ── Types ──────────────────────────────────────────────
 
@@ -342,12 +343,111 @@ const PinSection = ({
   );
 };
 
+const NameSection = ({
+  userId,
+  firstName,
+  lastName,
+}: {
+  userId: string;
+  firstName: string;
+  lastName: string;
+}) => {
+  const utils = api.useUtils();
+  const [editing, setEditing] = useState(false);
+  const [first, setFirst] = useState(firstName);
+  const [last, setLast] = useState(lastName);
+
+  const { mutate, isLoading } = api.profile.updateUserName.useMutation({
+    onSuccess: async () => {
+      toast.success("Name updated!");
+      await utils.profile.getUsers.invalidate();
+      setEditing(false);
+    },
+    onError: handleApiError,
+  });
+
+  const save = () => {
+    if (first.trim() && last.trim())
+      mutate({ userId, firstName: first.trim(), lastName: last.trim() });
+  };
+
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-between rounded-lg border border-base-300 px-3 py-2">
+        <div>
+          <span className="label-text font-medium">Name</span>
+          <p className="text-xs text-base-content/50">
+            {firstName} {lastName}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs"
+          onClick={() => {
+            setFirst(firstName);
+            setLast(lastName);
+            setEditing(true);
+          }}
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+      <span className="label-text font-medium">Name</span>
+      <div className="flex gap-2">
+        <input
+          autoFocus
+          type="text"
+          placeholder="First"
+          className="input input-bordered input-sm flex-1"
+          value={first}
+          onChange={(e) => setFirst(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") setEditing(false);
+          }}
+        />
+        <input
+          type="text"
+          placeholder="Last"
+          className="input input-bordered input-sm flex-1"
+          value={last}
+          onChange={(e) => setLast(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") setEditing(false);
+          }}
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          disabled={!first.trim() || !last.trim() || isLoading}
+          onClick={save}
+        >
+          {isLoading ? <span className="loading loading-spinner loading-xs" /> : "Save"}
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const EditPanel = ({
   user,
   onDone,
+  isCurrentUser,
 }: {
   user: UserWithSettings;
   onDone: () => void;
+  isCurrentUser: boolean;
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const utils = api.useUtils();
@@ -391,9 +491,14 @@ const EditPanel = ({
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-lg font-bold capitalize">
-            {user.firstName} {user.lastName}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold capitalize">
+              {user.firstName} {user.lastName}
+            </h2>
+            {isCurrentUser && (
+              <span className="badge badge-accent badge-sm">You</span>
+            )}
+          </div>
           <p className="text-sm text-base-content/60">@{user.username}</p>
         </div>
         {user.settings?.isAdmin && (
@@ -441,6 +546,12 @@ const EditPanel = ({
       <PinSection
         userId={user.id}
         hasPin={!!user.membership?.pin}
+      />
+
+      <NameSection
+        userId={user.id}
+        firstName={user.firstName ?? ""}
+        lastName={user.lastName ?? ""}
       />
 
       <div className="divider my-0 text-xs text-error/60">Danger Zone</div>
@@ -493,10 +604,12 @@ const EditPanel = ({
 const UserListItem = ({
   user,
   isSelected,
+  isCurrentUser,
   onClick,
 }: {
   user: UserWithSettings;
   isSelected: boolean;
+  isCurrentUser: boolean;
   onClick: () => void;
 }) => (
   <button
@@ -519,9 +632,11 @@ const UserListItem = ({
         @{user.username}
       </p>
     </div>
-    {user.settings?.isAdmin && (
-      <div className="badge badge-primary badge-xs">Admin</div>
-    )}
+    <div className="flex shrink-0 items-center gap-1">
+      {isCurrentUser && <div className="badge badge-accent badge-xs">You</div>}
+      {user.settings?.isAdmin && <div className="badge badge-primary badge-xs">Admin</div>}
+      {!user.membership?.pin && <div className="badge badge-warning badge-xs">No PIN</div>}
+    </div>
   </button>
 );
 
@@ -557,6 +672,7 @@ function UsersPage() {
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [mode, setMode] = useState<"idle" | "create" | "edit">("idle");
 
+  const { user: currentUser } = useUser();
   const { data: users, isLoading } = api.profile.getUsers.useQuery();
 
   const selectedUser = users?.find((u) => u.id === selectedId);
@@ -592,7 +708,7 @@ function UsersPage() {
         <div
           className={`flex flex-col gap-3 ${
             panelActive ? "hidden lg:flex" : "flex"
-          } lg:w-64 lg:shrink-0`}
+          } lg:w-80 lg:shrink-0`}
         >
           <button
             onClick={handleNewUser}
@@ -652,6 +768,7 @@ function UsersPage() {
                   key={u.id}
                   user={u}
                   isSelected={selectedId === u.id && mode === "edit"}
+                  isCurrentUser={u.id === currentUser?.id}
                   onClick={() => handleSelectUser(u.id)}
                 />
               ))
@@ -673,6 +790,7 @@ function UsersPage() {
               key={selectedUser.id}
               user={selectedUser}
               onDone={handleDone}
+              isCurrentUser={selectedUser.id === currentUser?.id}
             />
           )}
         </div>

@@ -235,6 +235,29 @@ export const profileRouter = createTRPCRouter({
       }
     }),
 
+  updateUserName: orgAdminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        firstName: z.string().min(1).max(80),
+        lastName: z.string().min(1).max(80),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify the user is a member of this org
+      const membership = await ctx.db.organizationMembership.findFirst({
+        where: { organizationId: ctx.organizationId, userId: input.userId },
+      });
+      if (!membership) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found in this organization" });
+      }
+      await clerkClient.users.updateUser(input.userId, {
+        firstName: input.firstName,
+        lastName: input.lastName,
+      });
+      return { success: true };
+    }),
+
   updateMemberPin: orgAdminProcedure
     .input(
       z.object({

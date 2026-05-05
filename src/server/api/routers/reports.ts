@@ -386,7 +386,7 @@ export const reportsRouter = createTRPCRouter({
         const clerk = clerkUsers.find((u) => u.id === userId);
         if (clerk) return clerk.displayName;
         const membership = memberships.find((m) => m.userId === userId || m.id === userId);
-        return membership?.displayName ?? userId;
+        return membership?.displayName?.trim() ?? userId;
       };
 
       // Group events by userId
