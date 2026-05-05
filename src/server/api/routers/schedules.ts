@@ -371,12 +371,12 @@ export const schedulesRouter = createTRPCRouter({
 
       return memberships.map((m) => {
         const clerkUser = clerkUsers.find((u) => u.id === m.userId);
-        const displayName =
-          (clerkUser
-            ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
-              clerkUser.username ||
-              m.id
-            : m.displayName.trim() || m.id);
+        const fullName = clerkUser
+          ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim()
+          : "";
+        const displayName = clerkUser
+          ? (fullName !== "" ? fullName : (clerkUser.username ?? m.id))
+          : (m.displayName.trim() !== "" ? m.displayName.trim() : m.id);
         const userTces = tces.filter((t) => t.userId === (m.userId ?? m.id));
         return {
           userId: m.userId ?? m.id,

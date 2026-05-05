@@ -65,7 +65,7 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
   });
 
   const onSave = (eventId?: string) => {
-    handleSubmit((d) => {
+    void handleSubmit((d) => {
       upsert({
         eventId: eventId ?? undefined,
         time: d.time.toDate(),
