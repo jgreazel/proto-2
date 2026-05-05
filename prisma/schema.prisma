@@ -244,8 +244,8 @@ model HourCode {
 model TimeClockEvent {
     id             String        @id @default(cuid())
     userId         String
-    hourCodeId     String
-    hourCode       HourCode      @relation(fields: [hourCodeId], references: [id])
+    hourCodeId     String?
+    hourCode       HourCode?     @relation(fields: [hourCodeId], references: [id])
     createdBy      String
     createdAt      DateTime      @default(now())
     organization   Organization? @relation(fields: [organizationId], references: [id])

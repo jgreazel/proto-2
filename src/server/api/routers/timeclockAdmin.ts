@@ -18,7 +18,6 @@ export const timeclockAdminRouter = createTRPCRouter({
           },
           userId: input.userId,
         },
-        include: { hourCode: true },
       });
       if (!tces) {
         throw new TRPCError({
@@ -33,7 +32,6 @@ export const timeclockAdminRouter = createTRPCRouter({
     .input(
       z.object({
         eventId: z.string().optional(),
-        hourCodeId: z.string(),
         time: z.date(),
         userId: z.string().optional(),
       }),
@@ -53,11 +51,9 @@ export const timeclockAdminRouter = createTRPCRouter({
         const upsertedEvent = await ctx.db.timeClockEvent.upsert({
           where: { id: input.eventId ?? "" },
           update: {
-            hourCodeId: input.hourCodeId,
             createdAt: input.time,
           },
           create: {
-            hourCodeId: input.hourCodeId,
             createdAt: input.time,
             createdBy: ctx.userId,
             userId: input.userId ?? "undefined",

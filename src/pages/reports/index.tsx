@@ -860,7 +860,7 @@ const PRESETS: { label: string; range: () => [Dayjs, Dayjs] }[] = [
   { label: "This Month", range: () => [dayjs().startOf("month"), dayjs()] },
 ];
 
-type TabKey = "overview" | "purchase" | "admission" | "itemchangelog";
+type TabKey = "overview" | "purchase" | "admission" | "itemchangelog" | "hours";
 
 export function ReportsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
@@ -1033,6 +1033,21 @@ export function ReportsPage() {
         ]);
       });
       downloadCsv(`changes-report-${dayjs().format("YYYY-MM-DD")}.csv`, rows);
+    } else if (activeTab === "hours" && hoursData) {
+      const rows = [["Employee", "Clock In", "Clock Out", "Hours"]];
+      hoursData.users.forEach((u) => {
+        u.shifts.forEach((s) => {
+          const h = s.minutesWorked !== null ? Math.floor(s.minutesWorked / 60) : "";
+          const m = s.minutesWorked !== null ? Math.round(s.minutesWorked % 60) : "";
+          rows.push([
+            u.displayName,
+            dayjs(s.clockIn).format("MM/DD/YYYY h:mm A"),
+            s.clockOut ? dayjs(s.clockOut).format("MM/DD/YYYY h:mm A") : "Open",
+            s.minutesWorked !== null ? `${h}h ${m}m` : "In Progress",
+          ]);
+        });
+      });
+      downloadCsv(`hours-report-${dayjs().format("YYYY-MM-DD")}.csv`, rows);
     } else if (activeTab === "overview") {
       // Export summary as CSV
       const rows = [["Metric", "Value"]];
@@ -1074,6 +1089,14 @@ export function ReportsPage() {
             end: dateRange?.[1]?.endOf("day").toISOString(),
           },
         }
+      : activeTab === "hours"
+      ? {
+          pathname: "/reports/print/hours" as const,
+          query: {
+            start: dateRange?.[0]?.toISOString(),
+            end: dateRange?.[1]?.endOf("day").toISOString(),
+          },
+        }
       : {
           pathname: "/reports/print/itemChangeLog" as const,
           query: {
@@ -1087,6 +1110,7 @@ export function ReportsPage() {
     { key: "purchase", label: "Sales", desc: "Concession sales, revenue, and voided transactions" },
     { key: "admission", label: "Admissions", desc: "Member check-ins and non-member ticket sales" },
     { key: "itemchangelog", label: "Changes", desc: "Inventory item price and stock modifications" },
+    { key: "hours", label: "Hours", desc: "Staff hours worked recorded via the time clock" },
   ];
 
   // Summary helpers
@@ -1098,6 +1122,11 @@ export function ReportsPage() {
     // @ts-ignore
     ?.filter((x) => x.type === "transaction").reduce((s, x) => s + (x.amountSold as number), 0) ?? 0;
   const changeCount = data?.itemChangeLogReport?.changeLogs.length ?? 0;
+
+  const { data: hoursData, isFetching: hoursFetching } = api.reports.getHoursReport.useQuery(
+    { startDate, endDate },
+    { enabled: !!dateRange && activeTab === "hours", onError: handleApiError },
+  );
 
   // Previous period helpers (for comparison)
   const prevPs = prevData?.purchaseReport?.summary;
@@ -1123,7 +1152,7 @@ export function ReportsPage() {
                 <h1 className="text-xl font-bold text-primary-content">Reports</h1>
               </div>
               <div className="flex items-center gap-2">
-                {dateRange && data && activeTab !== "overview" && (
+                {dateRange && (activeTab === "hours" ? !!hoursData : !!data) && activeTab !== "overview" && (
                   <button
                     className="btn btn-sm gap-1 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
                     onClick={handleExport}
@@ -1135,7 +1164,7 @@ export function ReportsPage() {
                     CSV
                   </button>
                 )}
-                {dateRange && data && activeTab !== "overview" && (
+                {dateRange && (activeTab === "hours" ? !!hoursData : !!data) && activeTab !== "overview" && (
                   <Link
                     href={printHref}
                     className="btn btn-sm gap-1 border-white/20 bg-white/20 text-primary-content hover:bg-white/30"
@@ -1430,6 +1459,108 @@ export function ReportsPage() {
           )}
           {data?.itemChangeLogReport && activeTab === "itemchangelog" && (
             <ItemChangeLogTable data={data.itemChangeLogReport} />
+          )}
+
+          {/* ── HOURS TAB ──────────────────────────────── */}
+          {activeTab === "hours" && (
+            <div className="space-y-6">
+              {hoursFetching && !hoursData && (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-base-300 bg-base-100 py-20">
+                  <LoadingSpinner />
+                  <p className="mt-4 text-sm text-base-content/60">Loading hours…</p>
+                </div>
+              )}
+              {hoursData && (
+                <>
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    <SummaryCard
+                      label="Total Staff Hours"
+                      value={`${Math.floor(hoursData.totalMinutesAllStaff / 60)}h ${Math.round(hoursData.totalMinutesAllStaff % 60)}m`}
+                      color="text-primary"
+                    />
+                    <SummaryCard
+                      label="Employees Clocked"
+                      value={String(hoursData.users.length)}
+                    />
+                    <SummaryCard
+                      label="Open Shifts"
+                      value={String(hoursData.users.filter((u) => u.openShift).length)}
+                      color={hoursData.users.some((u) => u.openShift) ? "text-warning" : undefined}
+                    />
+                  </div>
+
+                  {/* Per-employee breakdown */}
+                  {hoursData.users.map((user) => {
+                    const h = Math.floor(user.totalMinutes / 60);
+                    const m = Math.round(user.totalMinutes % 60);
+                    return (
+                      <div key={user.userId} className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-base-300 px-6 py-4">
+                          <div>
+                            <h3 className="font-medium capitalize">{user.displayName}</h3>
+                            <p className="text-xs text-base-content/60">
+                              {user.totalMinutes > 0 ? `${h}h ${m}m total` : "No completed shifts"}
+                              {user.openShift && (
+                                <span className="ml-2 text-warning">● Currently clocked in</span>
+                              )}
+                            </p>
+                          </div>
+                          {user.totalMinutes > 0 && (
+                            <span className="rounded-lg bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+                              {h}h {m}m
+                            </span>
+                          )}
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-base-200">
+                            <thead className="bg-base-200/50">
+                              <tr>
+                                <th className="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-base-content/60">#</th>
+                                <th className="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-base-content/60">Clock In</th>
+                                <th className="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-base-content/60">Clock Out</th>
+                                <th className="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-base-content/60">Duration</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-base-200 bg-base-100">
+                              {user.shifts.map((shift, idx) => {
+                                const sh = shift.minutesWorked !== null ? Math.floor(shift.minutesWorked / 60) : null;
+                                const sm = shift.minutesWorked !== null ? Math.round(shift.minutesWorked % 60) : null;
+                                return (
+                                  <tr key={idx} className={idx % 2 === 0 ? "bg-base-100" : "bg-base-200/30"}>
+                                    <td className="px-6 py-3 text-sm text-base-content/40">{idx + 1}</td>
+                                    <td className="px-6 py-3 text-sm">{dayjs(shift.clockIn).format("h:mm A")}</td>
+                                    <td className="px-6 py-3 text-sm">
+                                      {shift.clockOut ? (
+                                        dayjs(shift.clockOut).format("h:mm A")
+                                      ) : (
+                                        <span className="badge badge-warning badge-sm">Open</span>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-3 text-sm font-medium">
+                                      {sh !== null && sm !== null ? `${sh}h ${sm}m` : "—"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {!hoursData.users.length && (
+                    <div className="flex flex-col items-center justify-center rounded-xl border border-base-300 bg-base-100 py-16 text-base-content/40">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="h-12 w-12">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                      <p className="mt-2 text-sm">No time clock records for this period.</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

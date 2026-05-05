@@ -332,6 +332,7 @@ export const reportsRouter = createTRPCRouter({
               },
             }
           : null,
+        timecardReport: null,
       };
     }),
 
@@ -342,6 +343,111 @@ export const reportsRouter = createTRPCRouter({
       orderBy: { createdAt: "desc" },
     });
   }),
+
+  // ── Hours Worked Report ─────────────────────────────────
+  getHoursReport: orgAdminProcedure
+    .input(z.object({ startDate: z.date(), endDate: z.date() }))
+    .query(async ({ ctx, input }) => {
+      const events = await ctx.db.timeClockEvent.findMany({
+        where: {
+          organizationId: ctx.organizationId,
+          createdAt: { gte: input.startDate, lte: input.endDate },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      // Get org memberships to resolve display names
+      const memberships = await ctx.db.organizationMembership.findMany({
+        where: { organizationId: ctx.organizationId },
+      });
+
+      // Resolve Clerk display names for non-PIN-only accounts
+      const clerkUserIds = [...new Set(events.map((e) => e.userId))].filter(
+        (id) => memberships.find((m) => m.userId === id),
+      );
+      const clerkUsers =
+        clerkUserIds.length > 0
+          ? await clerkClient.users
+              .getUserList({ userId: clerkUserIds, limit: 500 })
+              .then((res) =>
+                res.map((u) => ({
+                  id: u.id,
+                  displayName:
+                    (u.firstName && u.lastName
+                      ? `${u.firstName} ${u.lastName}`
+                      : null) ??
+                    u.username ??
+                    u.id,
+                })),
+              )
+          : [];
+
+      const getDisplayName = (userId: string) => {
+        const clerk = clerkUsers.find((u) => u.id === userId);
+        if (clerk) return clerk.displayName;
+        const membership = memberships.find((m) => m.userId === userId || m.id === userId);
+        return membership?.displayName ?? userId;
+      };
+
+      // Group events by userId
+      const byUser = new Map<string, typeof events>();
+      events.forEach((e) => {
+        if (!byUser.has(e.userId)) byUser.set(e.userId, []);
+        byUser.get(e.userId)!.push(e);
+      });
+
+      type Shift = { clockIn: Date; clockOut: Date | null; minutesWorked: number | null };
+      type UserSummary = {
+        userId: string;
+        displayName: string;
+        totalMinutes: number;
+        openShift: boolean;
+        shifts: Shift[];
+      };
+
+      const userSummaries: UserSummary[] = [];
+
+      byUser.forEach((userEvents, userId) => {
+        const sorted = [...userEvents].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        );
+        const shifts: Shift[] = [];
+        let totalMinutes = 0;
+        let openShift = false;
+
+        for (let i = 0; i < sorted.length; i += 2) {
+          const clockIn = sorted[i]!;
+          const clockOut = sorted[i + 1] ?? null;
+          const minutes = clockOut
+            ? (new Date(clockOut.createdAt).getTime() - new Date(clockIn.createdAt).getTime()) / 60000
+            : null;
+          if (minutes !== null) totalMinutes += minutes;
+          if (i + 1 >= sorted.length) openShift = true;
+          shifts.push({
+            clockIn: clockIn.createdAt,
+            clockOut: clockOut?.createdAt ?? null,
+            minutesWorked: minutes,
+          });
+        }
+
+        userSummaries.push({
+          userId,
+          displayName: getDisplayName(userId),
+          totalMinutes,
+          openShift,
+          shifts,
+        });
+      });
+
+      userSummaries.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+      return {
+        startDate: input.startDate,
+        endDate: input.endDate,
+        users: userSummaries,
+        totalMinutesAllStaff: userSummaries.reduce((s, u) => s + u.totalMinutes, 0),
+      };
+    }),
 
   createSavedReport: orgProcedure
     .input(

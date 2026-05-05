@@ -1,344 +1,322 @@
-/**
- * @deprecated Time Clock feature is no longer in active use.
- * Kept for potential future use as an optional module.
- * Not linked from any navigation — only accessible via direct URL.
- */
-import dayjs, { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { PageLayout } from "~/components/layout";
 import { type RouterOutputs, api } from "~/utils/api";
 import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import handleApiError from "~/helpers/handleApiError";
 import { LoadingPage } from "~/components/loading";
 import isAuth from "~/components/isAuth";
-import { DatePicker, Select, TimePicker } from "antd";
 import Link from "next/link";
 
-type TimeClockEvent = {
-  hourCodeId: string;
-  clockPIN: string;
-  userId: string;
-};
+type EligibleStaff = RouterOutputs["schedules"]["getEligibleStaff"][number];
 
-type ClockUser = {
-  username: string;
-  settings: RouterOutputs["schedules"]["getShiftsByUser"][number]["settings"];
-  timePunches: RouterOutputs["schedules"]["getShiftsByUser"][number]["timeClockEvents"];
-};
+// ── PIN Entry Modal ────────────────────────────────────
 
-const ClockInModal = ({
+const PinModal = ({
+  staff,
   onClose,
-  user,
+  onSuccess,
 }: {
+  staff: EligibleStaff;
   onClose: () => void;
-  user: ClockUser;
+  onSuccess: () => void;
 }) => {
-  const { register, handleSubmit, reset, formState, control } =
-    useForm<TimeClockEvent>({
-      defaultValues: {
-        hourCodeId: user.settings?.defaultHourCodeId ?? undefined,
-        userId: user.settings?.userId,
-        clockPIN: "",
-      },
-    });
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
   const ctx = api.useUtils();
-  const { mutate, isLoading: isMutating } =
-    api.schedules.createTimeClockEvent.useMutation({
-      onSuccess: async () => {
-        await ctx.schedules.getShiftsByUser.invalidate();
-        toast.success("Time Card Punched!");
-        reset();
+
+  const { mutate, isLoading } = api.schedules.createTimeClockEvent.useMutation({
+    onSuccess: async () => {
+      await ctx.schedules.getEligibleStaff.invalidate();
+      const isCurrentlyIn = staff.timeClockEvents.length % 2 === 1;
+      toast.success(isCurrentlyIn ? `${staff.displayName} clocked out!` : `${staff.displayName} clocked in!`);
+      onSuccess();
+    },
+    onError: (err) => {
+      if (err.data?.code === "CONFLICT") {
+        setError("Incorrect PIN. Try again.");
+        setPin("");
+      } else {
+        handleApiError(err);
         onClose();
-      },
-      onError: handleApiError,
-    });
+      }
+    },
+  });
 
-  const { data: hourCodeOpts, isLoading: isFetchingOpts } =
-    api.schedules.getHourCodes.useQuery();
-  const options = hourCodeOpts?.map((x) => ({
-    label: x.label,
-    value: x.id,
-  }));
-
-  const handleForm = (data: TimeClockEvent) => {
-    mutate(data);
+  const handleDigit = (d: string) => {
+    if (pin.length >= 4) return;
+    const next = pin + d;
+    setError("");
+    setPin(next);
+    if (next.length === 4) {
+      mutate({
+        userId: staff.userId,
+        clockPIN: next,
+      });
+    }
   };
+
+  const handleBackspace = () => {
+    setPin((p) => p.slice(0, -1));
+    setError("");
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (isLoading) return;
+      if (/^[0-9]$/.test(e.key)) handleDigit(e.key);
+      if (e.key === "Backspace") handleBackspace();
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin, isLoading]);
+
+  const isCurrentlyIn = staff.timeClockEvents.length % 2 === 1;
 
   return (
     <dialog className="modal modal-open">
       <form method="dialog" className="modal-backdrop">
         <button onClick={onClose}>close</button>
       </form>
-      <div className="modal-box">
-        <form method="dialog">
-          <button
-            onClick={onClose}
-            className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </form>
-        <form onSubmit={handleSubmit(handleForm)}>
-          <div className="card-body">
-            <div className="card-title capitalize">
-              Time Card - {user.username}
-            </div>
-
-            <label className="form-control">
-              <span className="label-text">Clock PIN</span>
-              <input
-                className="input input-bordered uppercase"
-                placeholder="0000"
-                minLength={4}
-                maxLength={4}
-                disabled={isMutating}
-                {...register("clockPIN", {
-                  required: true,
-                  maxLength: 4,
-                  minLength: 4,
-                })}
-              />
-            </label>
-
-            {!!user.settings?.canModifyHourCode && (
-              <div>
-                <div className="label-text">Role</div>
-                <Controller
-                  control={control}
-                  name="hourCodeId"
-                  rules={{
-                    required: true,
-                  }}
-                  render={({ field }) => (
-                    <Select
-                      className="h-10 w-full"
-                      disabled={isFetchingOpts}
-                      options={options}
-                      value={field.value}
-                      onChange={(v) => field.onChange(v)}
-                    />
-                  )}
-                />
-              </div>
-            )}
-
-            <div className="card-actions justify-end">
-              <button
-                type="submit"
-                className="btn btn-secondary btn-sm"
-                disabled={!formState.isValid || isMutating}
-              >
-                Submit
-              </button>
-            </div>
+      <div className="modal-box flex flex-col items-center gap-4 p-6">
+        {/* Header */}
+        <div className="flex w-full items-start justify-between">
+          <div>
+            <h3 className="text-lg font-semibold capitalize">{staff.displayName}</h3>
+            <p className="text-sm text-base-content/60">
+              {isCurrentlyIn ? "Clocking out…" : "Clocking in…"}
+            </p>
           </div>
-        </form>
+          <span
+            className={`badge badge-sm ${isCurrentlyIn ? "badge-success" : "badge-ghost"}`}
+          >
+            {isCurrentlyIn ? "Clocked In" : "Clocked Out"}
+          </span>
+        </div>
+
+        {/* PIN dots */}
+        <div className="flex gap-3 py-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className={`h-4 w-4 rounded-full border-2 transition-all ${
+                pin.length > i
+                  ? "border-primary bg-primary"
+                  : "border-base-300 bg-transparent"
+              }`}
+            />
+          ))}
+        </div>
+
+        {error && (
+          <div className="alert alert-error py-2 text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
+        )}
+
+        {/* Numeric pad */}
+        <div className="grid grid-cols-3 gap-2">
+          {["1","2","3","4","5","6","7","8","9"].map((d) => (
+            <button
+              key={d}
+              type="button"
+              className="btn btn-outline btn-lg h-14 w-14 text-xl font-semibold"
+              disabled={isLoading || pin.length >= 4}
+              onClick={() => handleDigit(d)}
+            >
+              {d}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="btn btn-ghost btn-lg h-14 w-14 text-lg"
+            disabled={isLoading || pin.length === 0}
+            onClick={handleBackspace}
+          >
+            ⌫
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline btn-lg h-14 w-14 text-xl font-semibold"
+            disabled={isLoading || pin.length >= 4}
+            onClick={() => handleDigit("0")}
+          >
+            0
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-lg h-14 w-14 text-sm"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+
+        {isLoading && (
+          <span className="loading loading-dots loading-md" />
+        )}
       </div>
     </dialog>
   );
 };
 
-const ShiftFeed = () => {
-  const { data, isLoading } = api.schedules.getShiftsByUser.useQuery({
-    dateRange: [dayjs().startOf("day").toDate(), dayjs().endOf("day").toDate()],
-  });
-  const [punchId, setPunchId] = useState<string | undefined>(undefined);
+// ── Staff Card ─────────────────────────────────────────
 
-  if (isLoading) {
-    return <LoadingPage />;
+const StaffCard = ({
+  staff,
+  onClick,
+}: {
+  staff: EligibleStaff;
+  onClick: () => void;
+}) => {
+  const isCurrentlyIn = staff.timeClockEvents.length % 2 === 1;
+  const lastPunch = staff.timeClockEvents[staff.timeClockEvents.length - 1];
+
+  return (
+    <button
+      onClick={onClick}
+      className="card card-compact bg-base-100 shadow-md transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] border border-base-200 cursor-pointer text-left"
+    >
+      <div className="card-body gap-2">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-base-300 text-sm font-bold uppercase">
+              {staff.displayName.charAt(0)}
+            </div>
+            <div>
+              <div className="font-semibold capitalize leading-tight">{staff.displayName}</div>
+              {lastPunch && (
+                <div className="text-xs text-base-content/50">
+                  Last punch: {dayjs(lastPunch.createdAt).format("h:mm A")}
+                </div>
+              )}
+            </div>
+          </div>
+          <span
+            className={`badge badge-sm font-medium ${
+              isCurrentlyIn ? "badge-success" : "badge-ghost"
+            }`}
+          >
+            {isCurrentlyIn ? "In" : "Out"}
+          </span>
+        </div>
+
+        <div className={`btn btn-sm w-full ${isCurrentlyIn ? "btn-error btn-outline" : "btn-primary"}`}>
+          {isCurrentlyIn ? "Clock Out" : "Clock In"}
+        </div>
+      </div>
+    </button>
+  );
+};
+
+// ── Staff Roster ───────────────────────────────────────
+
+const StaffRoster = () => {
+  const now = dayjs();
+  const { data, isLoading } = api.schedules.getEligibleStaff.useQuery({
+    dateRange: [now.startOf("day").toDate(), now.endOf("day").toDate()],
+  });
+
+  const [activeStaff, setActiveStaff] = useState<EligibleStaff | undefined>();
+
+  if (isLoading) return <LoadingPage />;
+
+  if (!data?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-16 text-base-content/40">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="h-12 w-12">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+        </svg>
+        <p className="text-sm">No staff with clock PINs found.</p>
+        <p className="text-xs">Admins can set PINs in User Management.</p>
+      </div>
+    );
   }
 
-  const punchIdData = !punchId
-    ? undefined
-    : data?.find((d) => d.user.id === punchId);
+  const clocked = data.filter((s) => s.timeClockEvents.length % 2 === 1);
+  const out = data.filter((s) => s.timeClockEvents.length % 2 === 0);
 
   return (
     <>
-      {!!punchId && (
-        <ClockInModal
-          user={{
-            username: punchIdData?.user.username ?? "",
-            settings: punchIdData?.settings,
-            timePunches: punchIdData?.timeClockEvents ?? [],
-          }}
-          onClose={() => setPunchId(undefined)}
+      {activeStaff && (
+        <PinModal
+          staff={activeStaff}
+          onClose={() => setActiveStaff(undefined)}
+          onSuccess={() => setActiveStaff(undefined)}
         />
       )}
-      <div className="grid gap-2 p-2 md:grid-cols-2">
-        {data
-          ?.filter(
-            (z) => !!z.settings?.defaultHourCodeId && !!z.settings?.clockPIN,
-          )
-          .map((x) => (
-            <div
-              className="card card-compact bg-base-100 shadow-lg"
-              key={x.user.id}
-            >
-              <div className="card-body">
-                <div className="card-title capitalize">{x.user.username}</div>
-                <div className="grid grid-cols-2">
-                  <div>
-                    <div className="font-medium">Scheduled Shifts Today:</div>
-                    {!!x.shifts.length ? (
-                      x.shifts.map((s) => (
-                        <div key={s.id} className="flex items-center gap-1">
-                          {dayjs(s.start).format("hh:mm A")}
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="h-4 w-6"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-                            />
-                          </svg>
-                          {dayjs(s.end).format("h:mm A")}
-                        </div>
-                      ))
-                    ) : (
-                      <div>None</div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-medium">Time Card Punches Today:</div>
-                    {!!x.timeClockEvents.length ? (
-                      x.timeClockEvents.map((t, idx) => (
-                        <div key={t.id} className="flex items-center gap-1">
-                          {idx % 2 === 0 ? (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="h-6 w-6 text-success"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
-                              />
-                            </svg>
-                          ) : (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="h-6 w-6 text-error"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z"
-                              />
-                            </svg>
-                          )}
-                          {dayjs(t.createdAt).format("h:mm A")}
-                        </div>
-                      ))
-                    ) : (
-                      <div>None</div>
-                    )}
-                  </div>
-                </div>
 
-                <div className="card-actions justify-end">
-                  <button
-                    disabled={isLoading || !x.settings?.clockPIN}
-                    className="btn btn-outline btn-primary"
-                    onClick={() => setPunchId(x.user.id)}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="h-6 w-6"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"
-                      />
-                    </svg>
-                    Punch Time Card
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-      </div>
+      {clocked.length > 0 && (
+        <div className="mb-4">
+          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-success/80">
+            Clocked In ({clocked.length})
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {clocked.map((s) => (
+              <StaffCard key={s.userId} staff={s} onClick={() => setActiveStaff(s)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {out.length > 0 && (
+        <div>
+          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-base-content/40">
+            Not Clocked In ({out.length})
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {out.map((s) => (
+              <StaffCard key={s.userId} staff={s} onClick={() => setActiveStaff(s)} />
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 };
 
+// ── Page ───────────────────────────────────────────────
+
 function TimeClockPage() {
-  // ? does the clock need fixed
-  const getToday = () => dayjs().format("h:mm:ss A");
-  const [time, setTime] = useState(getToday);
+  const getTime = () => dayjs().format("h:mm:ss A");
+  const [time, setTime] = useState(getTime);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(getToday);
-    }, 1000);
-
+    const timer = setInterval(() => setTime(getTime), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const { data } = api.profile.getSettingsByUser.useQuery();
+  const { data: settings } = api.profile.getSettingsByUser.useQuery();
 
   return (
     <PageLayout>
-      <h1 className="m-2 flex justify-between gap-2 p-2">
-        <div className="flex flex-row gap-2">
-          <div className="badge badge-neutral">
-            {dayjs().format("dddd, MMMM D, YYYY ")}
+      <div className="p-4 lg:p-6">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-base-content">Time Clock</h1>
+            <p className="mt-0.5 text-sm text-base-content/60">
+              {dayjs().format("dddd, MMMM D, YYYY")}
+              <span className="ml-2 font-mono">{time}</span>
+            </p>
           </div>
-          <div className="badge badge-secondary">{time}</div>
+          {settings?.isAdmin && (
+            <Link href="/timeclock/admin" className="btn btn-outline btn-sm gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+              </svg>
+              Manage
+            </Link>
+          )}
         </div>
-        {!!data?.isAdmin && (
-          <Link className="btn btn-sm" href={"/timeclock/admin"}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-6 w-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
-              />
-            </svg>
-            Admin View
-          </Link>
-        )}
-      </h1>
-      <ShiftFeed />
+
+        <StaffRoster />
+      </div>
     </PageLayout>
   );
 }

@@ -188,12 +188,11 @@ export const schedulesRouter = createTRPCRouter({
     .input(
       z.object({
         label: z.string(),
-        hourlyRate: z.number().min(725),
+        hourlyRate: z.number().min(0).default(0),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      // await inRateWindow(ctx.userId);
 
       const hc = await ctx.db.hourCode.create({
         data: {
@@ -224,7 +223,7 @@ export const schedulesRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         label: z.string(),
-        hourlyRate: z.number().min(725),
+        hourlyRate: z.number().min(0).default(0),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -281,7 +280,6 @@ export const schedulesRouter = createTRPCRouter({
   createTimeClockEvent: orgProcedure
     .input(
       z.object({
-        hourCodeId: z.string(),
         clockPIN: z.string().length(4).optional(),
         userId: z.string(),
         manualDateTime: z.date().optional(),
@@ -290,42 +288,37 @@ export const schedulesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const createdById = ctx.userId;
-      // await inRateWindow(createdById);
 
-      const userSettings = await ctx.db.userSettings.findFirst({
-        where: { userId: input.userId },
+      const membership = await ctx.db.organizationMembership.findFirst({
+        where: { organizationId: ctx.organizationId, userId: input.userId },
       });
-      if (!userSettings?.defaultHourCodeId) {
+      if (!membership?.pin) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
-            "No default hour code found in user settings. Please add one to the user's permissions.",
+            "No clock PIN found for this user. Please set one in User Management.",
         });
       }
 
-      const adminUser = await ctx.db.userSettings.findFirst({
-        where: { userId: input.adminUserId },
-      });
+      const isAdminRequest = !!input.adminUserId && input.adminUserId === ctx.userId;
+      const adminMembership = isAdminRequest
+        ? await ctx.db.organizationMembership.findFirst({
+            where: { organizationId: ctx.organizationId, userId: input.adminUserId },
+          })
+        : null;
 
       const pinMismatch =
-        input.clockPIN?.toUpperCase() !== userSettings.clockPIN?.toUpperCase();
-      // admin can create manual TC events to make corrections
-      if (pinMismatch && !adminUser?.isAdmin) {
+        input.clockPIN?.toUpperCase() !== membership.pin.toUpperCase();
+      if (pinMismatch && !adminMembership?.isAdmin) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Incorrect Clock PIN" + `isadmin: ${userSettings.isAdmin}`,
+          message: "Incorrect Clock PIN",
         });
-      }
-
-      let workingHourCode = input?.hourCodeId ?? "";
-      if (!input) {
-        workingHourCode = userSettings.defaultHourCodeId;
       }
 
       const tce = await ctx.db.timeClockEvent.create({
         data: {
           userId: input.userId,
-          hourCodeId: workingHourCode,
           createdBy: createdById,
           createdAt: input.manualDateTime ?? undefined,
           organizationId: ctx.organizationId,
@@ -341,91 +334,59 @@ export const schedulesRouter = createTRPCRouter({
       return tce;
     }),
 
-  // todo remove PIN from response
-  getShiftsByUser: orgAdminProcedure
+  getEligibleStaff: orgAdminProcedure
     .input(
       z.object({
         dateRange: z.tuple([z.date(), z.date()]).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      // await inRateWindow(ctx.userId);
-
-      const shifts = await ctx.db.shift.findMany({
-        where: {
-          organizationId: ctx.organizationId,
-          start: {
-            gte: input.dateRange?.[0],
-          },
-          end: {
-            lte: input.dateRange?.[1],
-          },
-        },
-        orderBy: {
-          start: "asc",
-        },
-      });
-      const users = await clerkClient.users.getUserList({
-        limit: 500,
-      });
-      const settings = await ctx.db.userSettings.findMany();
-      const tces = await ctx.db.timeClockEvent.findMany({
-        where: {
-          organizationId: ctx.organizationId,
-          createdAt: {
-            gte: input.dateRange?.[0],
-            lte: input.dateRange?.[1],
-          },
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
+      const memberships = await ctx.db.organizationMembership.findMany({
+        where: { organizationId: ctx.organizationId, pin: { not: null } },
       });
 
-      const groupedResult = users.map((u) => {
-        const fu = filterUserForClient(u);
-        const uShifts = shifts.filter((s) => s.userId === u.id);
-        const uSetts = settings.find((s) => s.userId === u.id);
-        const uTces = tces.filter((t) => t.userId === u.id);
+      const clerkUserIds = memberships
+        .filter((m) => m.userId !== null)
+        .map((m) => m.userId!);
+
+      const clerkUsers =
+        clerkUserIds.length > 0
+          ? await clerkClient.users
+              .getUserList({ userId: clerkUserIds, limit: 500 })
+              .then((res) => res.map(filterUserForClient))
+          : [];
+
+      const tces = input.dateRange
+        ? await ctx.db.timeClockEvent.findMany({
+            where: {
+              organizationId: ctx.organizationId,
+              createdAt: {
+                gte: input.dateRange[0],
+                lte: input.dateRange[1],
+              },
+            },
+            orderBy: { createdAt: "asc" },
+            include: { hourCode: true },
+          })
+        : [];
+
+      return memberships.map((m) => {
+        const clerkUser = clerkUsers.find((u) => u.id === m.userId);
+        const displayName = clerkUser
+          ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
+            clerkUser.username ||
+            m.displayName
+          : m.displayName;
+        const userTces = tces.filter((t) => t.userId === (m.userId ?? m.id));
         return {
-          user: fu,
-          shifts: uShifts,
-          settings: uSetts,
-          timeClockEvents: uTces,
+          userId: m.userId ?? m.id,
+          membershipId: m.id,
+          displayName,
+          username: clerkUser?.username ?? m.displayName,
+          hasPin: !!m.pin,
+          isAdmin: m.isAdmin,
+          timeClockEvents: userTces,
         };
       });
-      const sortedResult = groupedResult.sort((a, b) => {
-        // Extract the start dates, handling possible null/undefined values
-        const aStart = a.shifts?.[0]?.start
-          ? new Date(a.shifts[0].start)
-          : null;
-        const bStart = b.shifts?.[0]?.start
-          ? new Date(b.shifts[0].start)
-          : null;
-
-        // Convert dates to timestamps (number)
-        const aTime = aStart ? aStart.getTime() : null;
-        const bTime = bStart ? bStart.getTime() : null;
-
-        // If both starts are null, they are considered equal
-        if (aTime === null && bTime === null) {
-          return 0;
-        }
-
-        // If aTime is null, place b before a
-        if (aTime === null) {
-          return 1;
-        }
-
-        // If bTime is null, place a before b
-        if (bTime === null) {
-          return -1;
-        }
-
-        // If both start dates exist, compare them
-        return aTime - bTime;
-      });
-
-      return sortedResult;
     }),
 });

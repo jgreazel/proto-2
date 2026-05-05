@@ -251,6 +251,97 @@ const CreatePanel = ({ onDone }: { onDone: () => void }) => {
 
 // ── Panel: Edit User ───────────────────────────────────
 
+const PinSection = ({
+  userId,
+  hasPin,
+}: {
+  userId: string;
+  hasPin: boolean;
+}) => {
+  const utils = api.useUtils();
+  const [pinInput, setPinInput] = useState("");
+  const [mode, setMode] = useState<"view" | "set">("view");
+
+  const { mutate: updatePin, isLoading } = api.profile.updateMemberPin.useMutation({
+    onSuccess: async () => {
+      toast.success(pinInput ? "PIN set!" : "PIN cleared!");
+      await utils.profile.getUsers.invalidate();
+      setPinInput("");
+      setMode("view");
+    },
+    onError: handleApiError,
+  });
+
+  if (mode === "view") {
+    return (
+      <div className="flex items-center justify-between rounded-lg border border-base-300 px-3 py-2">
+        <div>
+          <span className="label-text font-medium">Time Clock PIN</span>
+          <p className="text-xs text-base-content/50">
+            {hasPin ? "PIN is set — employee can clock in/out" : "No PIN — employee cannot use time clock"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasPin && (
+            <span className="badge badge-success badge-sm">Set</span>
+          )}
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            onClick={() => setMode("set")}
+          >
+            {hasPin ? "Change" : "Set PIN"}
+          </button>
+          {hasPin && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs text-error"
+              disabled={isLoading}
+              onClick={() => updatePin({ userId, pin: null })}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+      <span className="label-text font-medium">Set Time Clock PIN</span>
+      <p className="text-xs text-base-content/50">Enter a 4-digit numeric PIN</p>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="\d{4}"
+          maxLength={4}
+          placeholder="0000"
+          className="input input-bordered input-sm w-24 font-mono tracking-widest"
+          value={pinInput}
+          onChange={(e) => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        />
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          disabled={pinInput.length !== 4 || isLoading}
+          onClick={() => updatePin({ userId, pin: pinInput })}
+        >
+          {isLoading ? <span className="loading loading-spinner loading-xs" /> : "Save"}
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() => { setPinInput(""); setMode("view"); }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const EditPanel = ({
   user,
   onDone,
@@ -346,6 +437,11 @@ const EditPanel = ({
           </button>
         </div>
       </form>
+
+      <PinSection
+        userId={user.id}
+        hasPin={!!user.membership?.pin}
+      />
 
       <div className="divider my-0 text-xs text-error/60">Danger Zone</div>
 
