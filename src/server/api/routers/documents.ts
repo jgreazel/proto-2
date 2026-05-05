@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, orgProcedure, orgAdminProcedure } from "~/server/api/trpc";
 
 import {
   ListObjectsCommand,
@@ -13,61 +13,79 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const Bucket = process.env.AWS_BUCKET;
 
+// S3 keys are prefixed with orgId for tenant isolation
+function orgPrefix(organizationId: string) {
+  return `org-${organizationId}/`;
+}
+
 export const documentsRouter = createTRPCRouter({
-  getAll: privateProcedure.query(async ({ ctx }) => {
-    const response = await ctx.s3.send(new ListObjectsCommand({ Bucket }));
-    return response.Contents ?? [];
+  getAll: orgProcedure.query(async ({ ctx }) => {
+    const prefix = orgPrefix(ctx.organizationId);
+    const response = await ctx.s3.send(
+      new ListObjectsCommand({ Bucket, Prefix: prefix }),
+    );
+    return (response.Contents ?? []).map((obj) => ({
+      ...obj,
+      Key: obj.Key?.replace(prefix, ""),
+    }));
   }),
 
-  getSignedUrl: privateProcedure
+  getSignedUrl: orgProcedure
     .input(
       z.object({
         key: z.string(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      const cmd = new GetObjectCommand({ Bucket, Key: input.key });
+      const cmd = new GetObjectCommand({
+        Bucket,
+        Key: `${orgPrefix(ctx.organizationId)}${input.key}`,
+      });
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const src = await getSignedUrl(ctx.s3, cmd, { expiresIn: 3600 });
       return src;
     }),
 
-  getStandardUploadPresignedUrl: privateProcedure
+  getStandardUploadPresignedUrl: orgProcedure
     .input(z.object({ key: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { s3 } = ctx;
 
       const putObjectCommand = new PutObjectCommand({
         Bucket,
-        Key: input.key,
+        Key: `${orgPrefix(ctx.organizationId)}${input.key}`,
       });
 
       return await getSignedUrl(s3, putObjectCommand);
     }),
 
-  renameItem: privateProcedure
+  renameItem: orgAdminProcedure
     .input(z.object({ oldKey: z.string(), newKey: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      const prefix = orgPrefix(ctx.organizationId);
       const copyCmd = new CopyObjectCommand({
         Bucket,
-        CopySource: `${Bucket ?? ""}/${input.oldKey}`,
-        Key: input.newKey,
+        CopySource: `${Bucket ?? ""}/${prefix}${input.oldKey}`,
+        Key: `${prefix}${input.newKey}`,
       });
       await ctx.s3.send(copyCmd);
 
       const deleteCmd = new DeleteObjectCommand({
         Bucket,
-        Key: input.oldKey,
+        Key: `${prefix}${input.oldKey}`,
       });
       await ctx.s3.send(deleteCmd);
 
       return { key: input.newKey };
     }),
 
-  deleteItem: privateProcedure
+  deleteItem: orgAdminProcedure
     .input(z.object({ key: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const deleteCmd = new DeleteObjectCommand({ Bucket, Key: input.key });
+      const deleteCmd = new DeleteObjectCommand({
+        Bucket,
+        Key: `${orgPrefix(ctx.organizationId)}${input.key}`,
+      });
       return await ctx.s3.send(deleteCmd);
     }),
 });

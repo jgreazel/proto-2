@@ -5,8 +5,8 @@ import { hashSync } from "bcrypt-ts";
 
 import {
   createTRPCRouter,
-  adminProcedure,
-  privateProcedure,
+  orgAdminProcedure,
+  orgProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
 
@@ -28,11 +28,15 @@ export const profileRouter = createTRPCRouter({
       return filterUserForClient(user);
     }),
 
-  leaveFeedback: privateProcedure
+  leaveFeedback: orgProcedure
     .input(z.object({ message: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const msg = await ctx.db.feedback.create({
-        data: { message: input.message, createdBy: ctx.userId },
+        data: {
+          message: input.message,
+          createdBy: ctx.userId,
+          organizationId: ctx.organizationId,
+        },
       });
       if (!msg) {
         throw new TRPCError({
@@ -43,25 +47,46 @@ export const profileRouter = createTRPCRouter({
       return msg;
     }),
 
-  getUsers: adminProcedure.query(async ({ ctx }) => {
-    // await inRateWindow(ctx.userId);
-
-    const users = await clerkClient.users.getUserList({ limit: 500 });
-    const userSettings = await ctx.db.userSettings.findMany({
-      where: { userId: { in: users.map((u) => u.id) } },
+  getUsers: orgAdminProcedure.query(async ({ ctx }) => {
+    // Get org members instead of global Clerk user list
+    const memberships = await ctx.db.organizationMembership.findMany({
+      where: { organizationId: ctx.organizationId },
+      orderBy: { createdAt: "asc" },
     });
-    const result = users.map((u) => {
-      const user = filterUserForClient(u);
-      const s = userSettings.find((x) => x.userId === u.id);
+
+    // For Clerk-linked members, fetch their Clerk profiles
+    const clerkUserIds = memberships
+      .filter((m) => m.userId !== null)
+      .map((m) => m.userId!);
+
+    const clerkUsers =
+      clerkUserIds.length > 0
+        ? await clerkClient.users
+            .getUserList({ userId: clerkUserIds, limit: 500 })
+            .then((res) => res.map(filterUserForClient))
+        : [];
+
+    // Also get legacy UserSettings for backwards compat
+    const userSettings = await ctx.db.userSettings.findMany({
+      where: { userId: { in: clerkUserIds } },
+    });
+
+    return memberships.map((m) => {
+      const clerkUser = clerkUsers.find((u) => u.id === m.userId);
+      const settings = userSettings.find((s) => s.userId === m.userId);
       return {
-        ...user,
-        settings: s,
+        id: clerkUser?.id ?? m.id,
+        username: clerkUser?.username ?? m.displayName,
+        firstName: clerkUser?.firstName ?? m.displayName.split(" ")[0] ?? null,
+        lastName: clerkUser?.lastName ?? m.displayName.split(" ").slice(1).join(" ") ?? null,
+        imageUrl: clerkUser?.imageUrl ?? null,
+        membership: m,
+        settings,
       };
     });
-    return result;
   }),
 
-  createUser: adminProcedure
+  createUser: orgAdminProcedure
     .input(
       z.object({
         username: z.string(),
@@ -99,6 +124,17 @@ export const profileRouter = createTRPCRouter({
           },
         });
 
+        // Create org membership for the new user
+        await ctx.db.organizationMembership.create({
+          data: {
+            organizationId: ctx.organizationId,
+            userId: user.id,
+            displayName: `${input.firstName} ${input.lastName}`,
+            isAdmin: input.isAdmin,
+            role: input.isAdmin ? "admin" : "staff",
+          },
+        });
+
         return user;
       } catch (e) {
         throw new TRPCError({
@@ -108,7 +144,7 @@ export const profileRouter = createTRPCRouter({
       }
     }),
 
-  updateSettings: adminProcedure
+  updateSettings: orgAdminProcedure
     .input(
       z.object({
         userId: z.string(),
@@ -128,10 +164,28 @@ export const profileRouter = createTRPCRouter({
           message: "Failure to update record",
         });
       }
+
+      // Also update the org membership
+      const membership = await ctx.db.organizationMembership.findFirst({
+        where: {
+          organizationId: ctx.organizationId,
+          userId: input.userId,
+        },
+      });
+      if (membership) {
+        await ctx.db.organizationMembership.update({
+          where: { id: membership.id },
+          data: {
+            isAdmin: input.isAdmin,
+            role: input.isAdmin ? "admin" : "staff",
+          },
+        });
+      }
+
       return result;
     }),
 
-  getSettingsByUser: privateProcedure
+  getSettingsByUser: orgProcedure
     .input(z.object({ userId: z.string() }).optional())
     .query(async ({ ctx, input }) => {
       const setting = await ctx.db.userSettings.findFirst({
@@ -140,7 +194,7 @@ export const profileRouter = createTRPCRouter({
       return setting ?? undefined;
     }),
 
-  deleteUser: adminProcedure
+  deleteUser: orgAdminProcedure
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       if (input.userId === ctx.userId) {
@@ -151,7 +205,20 @@ export const profileRouter = createTRPCRouter({
       }
 
       try {
-        // Remove settings from our DB first
+        // Remove org membership
+        const membership = await ctx.db.organizationMembership.findFirst({
+          where: {
+            organizationId: ctx.organizationId,
+            userId: input.userId,
+          },
+        });
+        if (membership) {
+          await ctx.db.organizationMembership.delete({
+            where: { id: membership.id },
+          });
+        }
+
+        // Remove settings from our DB
         await ctx.db.userSettings.deleteMany({
           where: { userId: input.userId },
         });

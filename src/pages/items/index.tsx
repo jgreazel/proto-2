@@ -688,10 +688,10 @@ function ItemsPage() {
 
           {/* Controls row — inside the banner */}
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <div role="tablist" className="tabs-boxed tabs bg-black/15">
+            <div role="tablist" className="tabs-boxed tabs bg-black/25">
               <a
                 role="tab"
-                className={`tab ${itemType === "concession" ? "!bg-white !text-primary font-bold shadow-sm" : "font-medium text-white hover:bg-white/15"}`}
+                className={`tab ${itemType === "concession" ? "!bg-white !text-primary font-bold shadow-sm" : "font-medium text-white/90 hover:bg-white/20"}`}
                 onClick={() => setItemType("concession")}
               >
                 <svg
@@ -712,7 +712,7 @@ function ItemsPage() {
               </a>
               <a
                 role="tab"
-                className={`tab ${itemType === "admission" ? "!bg-white !text-primary font-bold shadow-sm" : "font-medium text-white hover:bg-white/15"}`}
+                className={`tab ${itemType === "admission" ? "!bg-white !text-primary font-bold shadow-sm" : "font-medium text-white/90 hover:bg-white/20"}`}
                 onClick={() => setItemType("admission")}
               >
                 <svg

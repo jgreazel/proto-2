@@ -2,7 +2,7 @@ import { clerkClient } from "@clerk/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, orgProcedure, orgAdminProcedure } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
 // import inRateWindow from "../helpers/inRateWindow";
@@ -11,7 +11,7 @@ import dayjs from "dayjs";
 const ONEYEARMILLIS = 86400000;
 
 export const schedulesRouter = createTRPCRouter({
-  getShifts: privateProcedure
+  getShifts: orgProcedure
     .input(
       z.object({
         userId: z.string().optional(),
@@ -23,6 +23,7 @@ export const schedulesRouter = createTRPCRouter({
 
       const shifts = await ctx.db.shift.findMany({
         where: {
+          organizationId: ctx.organizationId,
           userId: input.userId,
           start: {
             gte: input.dateRange?.[0],
@@ -43,7 +44,7 @@ export const schedulesRouter = createTRPCRouter({
       );
     }),
 
-  createShift: privateProcedure
+  createShift: orgAdminProcedure
     .input(
       z.object({
         userId: z.string(),
@@ -59,6 +60,7 @@ export const schedulesRouter = createTRPCRouter({
         data: {
           ...input,
           createdBy: createdById,
+          organizationId: ctx.organizationId,
         },
       });
       if (!shift) {
@@ -72,7 +74,7 @@ export const schedulesRouter = createTRPCRouter({
       return { ...shift, username };
     }),
 
-  editShift: privateProcedure
+  editShift: orgAdminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -83,6 +85,14 @@ export const schedulesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
+
+      // Verify shift belongs to org
+      const existing = await ctx.db.shift.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Shift not found" });
+      }
 
       const shift = await ctx.db.shift.update({
         where: { id: input.id },
@@ -100,10 +110,18 @@ export const schedulesRouter = createTRPCRouter({
       return { ...shift, username };
     }),
 
-  deleteShift: privateProcedure
+  deleteShift: orgAdminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
+
+      // Verify shift belongs to org
+      const existing = await ctx.db.shift.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Shift not found" });
+      }
 
       const result = await ctx.db.shift.delete({
         where: { id: input.id },
@@ -118,7 +136,7 @@ export const schedulesRouter = createTRPCRouter({
     }),
 
   // safest to use source.startof('day') on the UI
-  cloneDay: privateProcedure
+  cloneDay: orgAdminProcedure
     .input(z.object({ source: z.date(), target: z.date() }))
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
@@ -127,6 +145,7 @@ export const schedulesRouter = createTRPCRouter({
       srcBegin.setHours(0, 0, 0, 0);
       const srcShifts = await ctx.db.shift.findMany({
         where: {
+          organizationId: ctx.organizationId,
           start: {
             gte: srcBegin,
             lt: new Date(input.source.getTime() + ONEYEARMILLIS),
@@ -150,6 +169,7 @@ export const schedulesRouter = createTRPCRouter({
           start: targetStart,
           end: targetEnd,
           createdBy: ctx.userId,
+          organizationId: ctx.organizationId,
         };
       });
       const result = await ctx.db.shift.createMany({
@@ -164,7 +184,7 @@ export const schedulesRouter = createTRPCRouter({
       return result;
     }),
 
-  createHourCode: privateProcedure
+  createHourCode: orgAdminProcedure
     .input(
       z.object({
         label: z.string(),
@@ -180,6 +200,7 @@ export const schedulesRouter = createTRPCRouter({
           label: input.label,
           hourlyRate: input.hourlyRate,
           createdBy: createdById,
+          organizationId: ctx.organizationId,
         },
       });
       if (!hc) {
@@ -191,11 +212,14 @@ export const schedulesRouter = createTRPCRouter({
       return hc;
     }),
 
-  getHourCodes: privateProcedure.query(
-    async ({ ctx }) => await ctx.db.hourCode.findMany(),
+  getHourCodes: orgProcedure.query(
+    async ({ ctx }) =>
+      await ctx.db.hourCode.findMany({
+        where: { organizationId: ctx.organizationId },
+      }),
   ),
 
-  editHourCode: privateProcedure
+  editHourCode: orgAdminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -205,6 +229,14 @@ export const schedulesRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
+
+      // Verify hour code belongs to org
+      const existing = await ctx.db.hourCode.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Hour code not found" });
+      }
 
       const hc = await ctx.db.hourCode.update({
         where: { id: input.id },
@@ -220,10 +252,18 @@ export const schedulesRouter = createTRPCRouter({
       return hc;
     }),
 
-  deleteHourCode: privateProcedure
+  deleteHourCode: orgAdminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
+
+      // Verify hour code belongs to org
+      const existing = await ctx.db.hourCode.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Hour code not found" });
+      }
 
       const result = await ctx.db.hourCode.delete({
         where: { id: input.id },
@@ -238,7 +278,7 @@ export const schedulesRouter = createTRPCRouter({
     }),
 
   // new
-  createTimeClockEvent: privateProcedure
+  createTimeClockEvent: orgProcedure
     .input(
       z.object({
         hourCodeId: z.string(),
@@ -288,6 +328,7 @@ export const schedulesRouter = createTRPCRouter({
           hourCodeId: workingHourCode,
           createdBy: createdById,
           createdAt: input.manualDateTime ?? undefined,
+          organizationId: ctx.organizationId,
         },
       });
 
@@ -301,7 +342,7 @@ export const schedulesRouter = createTRPCRouter({
     }),
 
   // todo remove PIN from response
-  getShiftsByUser: privateProcedure
+  getShiftsByUser: orgAdminProcedure
     .input(
       z.object({
         dateRange: z.tuple([z.date(), z.date()]).optional(),
@@ -312,6 +353,7 @@ export const schedulesRouter = createTRPCRouter({
 
       const shifts = await ctx.db.shift.findMany({
         where: {
+          organizationId: ctx.organizationId,
           start: {
             gte: input.dateRange?.[0],
           },
@@ -329,6 +371,7 @@ export const schedulesRouter = createTRPCRouter({
       const settings = await ctx.db.userSettings.findMany();
       const tces = await ctx.db.timeClockEvent.findMany({
         where: {
+          organizationId: ctx.organizationId,
           createdAt: {
             gte: input.dateRange?.[0],
             lte: input.dateRange?.[1],

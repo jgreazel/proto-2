@@ -14,6 +14,17 @@ type UserWithSettings = {
   username: string | null;
   firstName: string | null;
   lastName: string | null;
+  imageUrl?: string | null;
+  membership?: {
+    id: string;
+    organizationId: string;
+    role: string;
+    isAdmin: boolean;
+    isPinOnly: boolean;
+    isSystemAccount: boolean;
+    displayName: string;
+    pin: string | null;
+  };
   settings?: {
     isAdmin: boolean;
   } | null;
@@ -93,7 +104,7 @@ const CreatePanel = ({ onDone }: { onDone: () => void }) => {
     >
       <h2 className="text-lg font-bold">New User</h2>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium">First Name</label>
           <input
@@ -168,7 +179,7 @@ const CreatePanel = ({ onDone }: { onDone: () => void }) => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium">Password</label>
           <input
@@ -418,6 +429,31 @@ const UserListItem = ({
   </button>
 );
 
+// ── Back Button (mobile detail view) ───────────────────
+
+const BackButton = ({ onClick }: { onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className="btn btn-ghost btn-sm mb-2 gap-1 self-start lg:hidden"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+      className="h-4 w-4"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.75 19.5 8.25 12l7.5-7.5"
+      />
+    </svg>
+    Back
+  </button>
+);
+
 // ── Main Page ──────────────────────────────────────────
 
 function UsersPage() {
@@ -450,11 +486,18 @@ function UsersPage() {
     setMode("idle");
   };
 
+  // On mobile, when a panel is active we show it instead of the list
+  const panelActive = mode !== "idle";
+
   return (
     <PageLayout>
-      <div className="flex h-full gap-6 p-6">
-        {/* ── Left: User List ── */}
-        <div className="flex w-64 shrink-0 flex-col gap-3">
+      <div className="flex h-full flex-col p-4 lg:flex-row lg:gap-6 lg:p-6">
+        {/* ── Left: User List (hidden on mobile when panel is open) ── */}
+        <div
+          className={`flex flex-col gap-3 ${
+            panelActive ? "hidden lg:flex" : "flex"
+          } lg:w-64 lg:shrink-0`}
+        >
           <button
             onClick={handleNewUser}
             className="btn btn-primary btn-sm w-full"
@@ -520,8 +563,13 @@ function UsersPage() {
           </div>
         </div>
 
-        {/* ── Right: Detail Panel ── */}
-        <div className="min-w-0 max-w-md flex-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-6 shadow-lg">
+        {/* ── Right: Detail Panel (full-width on mobile, constrained on desktop) ── */}
+        <div
+          className={`min-w-0 flex-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-4 shadow-lg sm:p-6 lg:max-w-md ${
+            panelActive ? "flex flex-col" : "hidden lg:flex lg:flex-col"
+          }`}
+        >
+          {panelActive && <BackButton onClick={handleDone} />}
           {mode === "idle" && <EmptyPanel />}
           {mode === "create" && <CreatePanel onDone={handleDone} />}
           {mode === "edit" && selectedUser && (

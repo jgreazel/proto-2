@@ -1,16 +1,17 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, privateProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, orgAdminProcedure } from "~/server/api/trpc";
 
 export const timeclockAdminRouter = createTRPCRouter({
-  getTimeclockEvents: privateProcedure
+  getTimeclockEvents: orgAdminProcedure
     .input(
       z.object({ range: z.tuple([z.date(), z.date()]), userId: z.string() }),
     )
     .query(async ({ input, ctx }) => {
       const tces = await ctx.db.timeClockEvent.findMany({
         where: {
+          organizationId: ctx.organizationId,
           createdAt: {
             gte: input.range[0],
             lte: input.range[1],
@@ -28,7 +29,7 @@ export const timeclockAdminRouter = createTRPCRouter({
       return tces;
     }),
 
-  upsertTimeclockEvent: privateProcedure
+  upsertTimeclockEvent: orgAdminProcedure
     .input(
       z.object({
         eventId: z.string().optional(),
@@ -39,6 +40,16 @@ export const timeclockAdminRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       try {
+        // For updates, verify the event belongs to the org
+        if (input.eventId) {
+          const existing = await ctx.db.timeClockEvent.findFirst({
+            where: { id: input.eventId, organizationId: ctx.organizationId },
+          });
+          if (!existing) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
+          }
+        }
+
         const upsertedEvent = await ctx.db.timeClockEvent.upsert({
           where: { id: input.eventId ?? "" },
           update: {
@@ -50,6 +61,7 @@ export const timeclockAdminRouter = createTRPCRouter({
             createdAt: input.time,
             createdBy: ctx.userId,
             userId: input.userId ?? "undefined",
+            organizationId: ctx.organizationId,
           },
         });
         return upsertedEvent;
@@ -59,9 +71,17 @@ export const timeclockAdminRouter = createTRPCRouter({
       }
     }),
 
-  deleteTimeclockEvent: privateProcedure
+  deleteTimeclockEvent: orgAdminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // Verify event belongs to org
+      const existing = await ctx.db.timeClockEvent.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
+      }
+
       const result = await ctx.db.timeClockEvent.delete({
         where: { id: input.id },
       });

@@ -1157,22 +1157,24 @@ export function ReportsPage() {
           <div className="mx-auto max-w-7xl space-y-3 px-4 py-3 sm:px-6">
             {/* Date presets + saved reports + custom picker */}
             <div className="flex flex-wrap items-center gap-2">
-              {PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  className={`btn btn-xs sm:btn-sm ${
-                    selectedPreset === p.label ? "btn-primary" : "btn-ghost"
-                  }`}
-                  onClick={() => handlePreset(p)}
-                >
-                  {p.label}
-                </button>
-              ))}
+              <div className="flex flex-wrap items-center gap-1 rounded-lg border border-base-300 bg-base-200/50 p-1">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.label}
+                    className={`btn btn-xs sm:btn-sm ${
+                      selectedPreset === p.label ? "btn-primary" : "btn-ghost"
+                    }`}
+                    onClick={() => handlePreset(p)}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
 
               {/* Saved reports dropdown */}
               <div className="relative">
                 <button
-                  className="btn btn-ghost btn-xs sm:btn-sm gap-1"
+                  className="btn btn-outline btn-xs sm:btn-sm gap-1"
                   onClick={() => setShowSavedMenu((v) => !v)}
                   title="Save this view for quick access later, or load a previously saved report"
                 >
@@ -1252,21 +1254,27 @@ export function ReportsPage() {
                 ))}
               </div>
               {dateRange && (
-                <div className="flex items-center gap-2">
-                  <button
-                    className={`btn btn-xs gap-1 ${comparing ? "btn-secondary" : "btn-ghost"}`}
-                    onClick={() => setComparing((v) => !v)}
+                <div className="flex items-center gap-3">
+                  <label
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      comparing
+                        ? "border-secondary bg-secondary/10 text-secondary"
+                        : "border-base-300 text-base-content/60 hover:border-base-content/30"
+                    }`}
                     title={comparing
-                      ? `Click to hide comparison. Currently comparing to ${dayjs(prevStart).format("MMM D")} – ${dayjs(prevEnd).format("MMM D")}`
-                      : "Show ↑/↓ % changes compared to the same-length period right before your selected dates"}
+                      ? `Comparing to ${dayjs(prevStart).format("MMM D")} – ${dayjs(prevEnd).format("MMM D")}`
+                      : "Compare with the previous period of the same length"}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-3.5 w-3.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-                    </svg>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-xs toggle-secondary"
+                      checked={comparing}
+                      onChange={() => setComparing((v) => !v)}
+                    />
                     {comparing
-                      ? `vs ${dayjs(prevStart).format("MMM D")} – ${dayjs(prevEnd).format("MMM D")}`
-                      : "Compare"}
-                  </button>
+                      ? `Comparing vs ${dayjs(prevStart).format("MMM D")} – ${dayjs(prevEnd).format("MMM D")}`
+                      : "Compare to previous period"}
+                  </label>
                   <span className="text-xs text-base-content/50">
                     {dateRange[0].format("MMM D")} — {dateRange[1].format("MMM D, YYYY")}
                     {isFetching && <span className="loading loading-dots loading-xs ml-2" />}

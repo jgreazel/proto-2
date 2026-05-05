@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/layout";
 import { LoadingSpinner } from "~/components/loading";
@@ -398,7 +398,7 @@ const ItemFeed = (props: {
       )}
 
       {/* Items grouped by category */}
-      <div className="p-4">
+      <div className="bg-base-200/30 p-4">
         {filteredCategories.map((categoryName) => (
           <div key={categoryName} className="mb-6 last:mb-0">
             <div className="divider my-1 text-xs uppercase">
@@ -412,7 +412,7 @@ const ItemFeed = (props: {
                 <button
                   onClick={() => props.onClick(item)}
                   key={item.id}
-                  className="flex h-auto min-h-[4rem] flex-col items-start gap-1 rounded-xl border border-base-200 bg-base-100 p-3 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.98]"
+                  className="flex h-auto min-h-[4rem] flex-col items-start gap-1 rounded-xl border-2 border-base-300 bg-base-100 p-3 text-left shadow transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.98]"
                 >
                   <span className="font-medium capitalize text-base-content">
                     {item.label}
@@ -481,17 +481,27 @@ const CheckInDrawer = ({ onClose }: { onClose: () => void }) => {
     range: [getStartOfDay(today), getEndOfDay(today)],
     includeVoided: true,
   });
-  const { mutate, isLoading: isCreating } = api.passes.admitPatron.useMutation({
+  const checkingInIds = useRef(new Set<string>());
+  const [, forceRender] = useState(0);
+  const { mutate } = api.passes.admitPatron.useMutation({
     onSuccess: async (data) => {
       toast.success(`Enjoy your swim, ${data.patron.firstName}!`);
+      checkingInIds.current.delete(data.patron.id);
+      forceRender((n) => n + 1);
       await refetch();
     },
-    onError: handleApiError,
+    onError: (err, variables) => {
+      checkingInIds.current.delete(variables.patronId);
+      forceRender((n) => n + 1);
+      handleApiError(err);
+    },
   });
   const [filter, setFilter] = useState("");
 
   const onClick = (p: Patron) => {
-    if (isCreating) return;
+    if (checkingInIds.current.has(p.id)) return;
+    checkingInIds.current.add(p.id);
+    forceRender((n) => n + 1);
     mutate({ patronId: p.id });
   };
 
@@ -603,9 +613,9 @@ const CheckInDrawer = ({ onClose }: { onClose: () => void }) => {
                             <button
                               className="btn btn-primary btn-xs"
                               onClick={() => onClick(p)}
-                              disabled={isCreating}
+                              disabled={checkingInIds.current.has(p.id)}
                             >
-                              {isCreating ? (
+                              {checkingInIds.current.has(p.id) ? (
                                 <span className="loading loading-spinner loading-xs" />
                               ) : (
                                 "Check In"
@@ -643,6 +653,24 @@ function CheckoutPage() {
   const [cart, setCart] = useState<Item[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const cartTotal = cart.reduce((acc, x) => (acc += x.sellingPrice), 0);
+
+  // Track cart visibility for mobile FAB
+  const cartRef = useRef<HTMLDivElement>(null);
+  const [cartVisible, setCartVisible] = useState(true);
+
+  useEffect(() => {
+    const el = cartRef.current;
+    if (!el) return;
+    // Find the scrollable ancestor (layout's overflow-auto div)
+    const scrollParent = el.closest(".overflow-auto") ?? el.closest("[style*='overflow']");
+    const root = scrollParent instanceof HTMLElement ? scrollParent : null;
+    const observer = new IntersectionObserver(
+      ([entry]) => setCartVisible(entry!.isIntersecting),
+      { root, threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Group cart items by ID for quantity display
   const groupedCart = cart.reduce(
@@ -922,7 +950,7 @@ function CheckoutPage() {
           <div className="hidden md:block md:flex-1">{shoppingList}</div>
 
           {/* Shopping Cart */}
-          <div className="w-full md:w-[380px] md:shrink-0">
+          <div ref={cartRef} className="w-full md:w-[380px] md:shrink-0">
             <div className="sticky top-4 overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-lg">
               {/* Cart Header */}
               <div className="flex items-center gap-3 border-b border-base-300 p-4">
@@ -1170,6 +1198,39 @@ function CheckoutPage() {
           {/* Item Browser (mobile) */}
           <div className="block md:hidden">{shoppingList}</div>
         </div>
+      {/* Floating "View Cart" FAB — mobile only, when cart is scrolled out of view */}
+      {!cartVisible && cart.length > 0 && (
+        <button
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full btn btn-primary shadow-lg md:hidden px-5 py-3"
+          onClick={() => {
+            const el = cartRef.current;
+            if (!el) return;
+            const scrollParent = el.closest(".overflow-auto");
+            if (scrollParent) {
+              scrollParent.scrollTo({ top: 0, behavior: "smooth" });
+            } else {
+              el.scrollIntoView({ behavior: "smooth" });
+            }
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="h-5 w-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+            />
+          </svg>
+          Cart · {dbUnitToDollars(cartTotal)}
+          <div className="badge badge-sm">{cart.length}</div>
+        </button>
+      )}
       {/* History Drawer */}
       {showHistory && (
         <HistoryDrawer onClose={() => setShowHistory(false)} />

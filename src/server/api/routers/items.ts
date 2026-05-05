@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import {
   createTRPCRouter,
-  publicProcedure,
-  privateProcedure,
+  orgProcedure,
+  orgAdminProcedure,
 } from "~/server/api/trpc";
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
@@ -16,7 +16,7 @@ const SELL_MIN = 0;
 const SELL_MAX = 50000;
 
 export const itemsRouter = createTRPCRouter({
-  getAll: privateProcedure
+  getAll: orgProcedure
     .input(
       z
         .object({
@@ -27,6 +27,7 @@ export const itemsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
       let items = await ctx.db.inventoryItem.findMany({
+        where: { organizationId: ctx.organizationId },
         take: 100,
         orderBy: [{ createdAt: "desc" }],
       });
@@ -48,7 +49,7 @@ export const itemsRouter = createTRPCRouter({
       });
     }),
 
-  getById: privateProcedure
+  getById: orgProcedure
     .input(
       z.object({
         id: z.string(),
@@ -57,8 +58,8 @@ export const itemsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       // await inRateWindow(ctx.userId);
 
-      const item = await ctx.db.inventoryItem.findUnique({
-        where: { id: input.id },
+      const item = await ctx.db.inventoryItem.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
       });
 
       if (item === null) {
@@ -73,7 +74,7 @@ export const itemsRouter = createTRPCRouter({
       };
     }),
 
-  createConcessionItem: privateProcedure
+  createConcessionItem: orgAdminProcedure
     .input(
       z.object({
         label: z.string().min(1).max(50, "Too many characters"),
@@ -101,12 +102,13 @@ export const itemsRouter = createTRPCRouter({
           purchasePrice: input.purchasePrice,
           inStock: input.inStock,
           category: input.category,
+          organizationId: ctx.organizationId,
         },
       });
       return item;
     }),
 
-  createAdmissionItem: privateProcedure
+  createAdmissionItem: orgAdminProcedure
     .input(
       z.object({
         label: z.string().min(1).max(50, "Too many characters"),
@@ -129,12 +131,13 @@ export const itemsRouter = createTRPCRouter({
           isSeasonal: input.isSeasonal,
           isDay: input.isDay,
           patronLimit: input.patronLimit,
+          organizationId: ctx.organizationId,
         },
       });
       return item;
     }),
 
-  updateConcessionItem: privateProcedure
+  updateConcessionItem: orgAdminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -154,8 +157,8 @@ export const itemsRouter = createTRPCRouter({
       // await inRateWindow(ctx.userId);
 
       // Get the current item to store old values
-      const currentItem = await ctx.db.inventoryItem.findUnique({
-        where: { id: input.id },
+      const currentItem = await ctx.db.inventoryItem.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
       });
 
       if (!currentItem) {
@@ -182,6 +185,7 @@ export const itemsRouter = createTRPCRouter({
               itemId: input.id,
               userId: ctx.userId,
               changeNote: changeNote ?? null,
+              organizationId: ctx.organizationId,
               oldValues: {
                 label: currentItem.label,
                 sellingPrice: currentItem.sellingPrice,
@@ -204,13 +208,24 @@ export const itemsRouter = createTRPCRouter({
       return item;
     }),
 
-  deleteConcessionItem: privateProcedure
+  deleteConcessionItem: orgAdminProcedure
     .input(
       z.object({
         id: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const existingItem = await ctx.db.inventoryItem.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+      });
+
+      if (!existingItem) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Item not found",
+        });
+      }
+
       await ctx.db.transactionItems.deleteMany({
         where: { itemId: input.id },
       });
@@ -222,7 +237,7 @@ export const itemsRouter = createTRPCRouter({
       return deletedItem;
     }),
 
-  updateAdmissionItem: privateProcedure
+  updateAdmissionItem: orgAdminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -238,8 +253,8 @@ export const itemsRouter = createTRPCRouter({
       // await inRateWindow(ctx.userId);
 
       // Get the current item to store old values
-      const currentItem = await ctx.db.inventoryItem.findUnique({
-        where: { id: input.id },
+      const currentItem = await ctx.db.inventoryItem.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
       });
 
       if (!currentItem) {
@@ -266,6 +281,7 @@ export const itemsRouter = createTRPCRouter({
               itemId: input.id,
               userId: ctx.userId,
               changeNote: changeNote ?? null,
+              organizationId: ctx.organizationId,
               oldValues: {
                 label: currentItem.label,
                 sellingPrice: currentItem.sellingPrice,
@@ -290,7 +306,7 @@ export const itemsRouter = createTRPCRouter({
       return item;
     }),
 
-  restockItems: privateProcedure
+  restockItems: orgAdminProcedure
     .input(
       z.object({
         items: z.array(
@@ -306,7 +322,10 @@ export const itemsRouter = createTRPCRouter({
       // await inRateWindow(ctx.userId);
 
       const items = await ctx.db.inventoryItem.findMany({
-        where: { id: { in: input.items.map((i) => i.id) } },
+        where: {
+          id: { in: input.items.map((i) => i.id) },
+          organizationId: ctx.organizationId,
+        },
       });
 
       // Update items and create change logs
@@ -330,6 +349,7 @@ export const itemsRouter = createTRPCRouter({
               data: {
                 itemId: item.id,
                 userId: ctx.userId,
+                organizationId: ctx.organizationId,
                 changeNote:
                   input.changeNote ??
                   `Restocked: ${inputItem.restockAmount > 0 ? "+" : ""}${
@@ -354,7 +374,7 @@ export const itemsRouter = createTRPCRouter({
       return { message: "Inventory successfully updated!", success: true };
     }),
 
-  checkout: privateProcedure
+  checkout: orgProcedure
     .input(
       z.array(
         z.object({
@@ -367,7 +387,10 @@ export const itemsRouter = createTRPCRouter({
       // await inRateWindow(ctx.userId);
 
       const items = await ctx.db.inventoryItem.findMany({
-        where: { id: { in: input.map((i) => i.id) } },
+        where: {
+          id: { in: input.map((i) => i.id) },
+          organizationId: ctx.organizationId,
+        },
       });
       const includedSeasonPass = items.some((i) => i.isSeasonal);
 
@@ -400,6 +423,7 @@ export const itemsRouter = createTRPCRouter({
       const transaction = await ctx.db.transaction.create({
         data: {
           createdBy: ctx.userId,
+          organizationId: ctx.organizationId,
           items: {
             createMany: {
               data: input.map((i) => ({
@@ -445,7 +469,7 @@ export const itemsRouter = createTRPCRouter({
     }),
 
   // Sales history and void management endpoints
-  getCompletedSales: privateProcedure
+  getCompletedSales: orgProcedure
     .input(
       z
         .object({
@@ -462,6 +486,7 @@ export const itemsRouter = createTRPCRouter({
       // Fetch transactions within the time window
       const transactions = await ctx.db.transaction.findMany({
         where: {
+          organizationId: ctx.organizationId,
           createdAt: {
             gte: cutoffTime,
           },
@@ -525,7 +550,7 @@ export const itemsRouter = createTRPCRouter({
       return completedSales;
     }),
 
-  voidTransaction: privateProcedure
+  voidTransaction: orgProcedure
     .input(
       z.object({
         transactionId: z.string(),
@@ -539,8 +564,11 @@ export const itemsRouter = createTRPCRouter({
       // await inRateWindow(ctx.userId);
 
       // First, get the transaction with its items
-      const transaction = await ctx.db.transaction.findUnique({
-        where: { id: input.transactionId },
+      const transaction = await ctx.db.transaction.findFirst({
+        where: {
+          id: input.transactionId,
+          organizationId: ctx.organizationId,
+        },
         include: {
           items: {
             include: {
@@ -613,6 +641,7 @@ export const itemsRouter = createTRPCRouter({
                 data: {
                   itemId: transactionItem.itemId,
                   userId: ctx.userId,
+                  organizationId: ctx.organizationId,
                   changeNote: `Voided transaction ${input.transactionId}: ${input.voidReason}`,
                   oldValues: {
                     inStock: currentItem.inStock,
@@ -648,15 +677,17 @@ export const itemsRouter = createTRPCRouter({
     }),
 
   // Category management endpoints
-  getCategories: privateProcedure.query(async ({ ctx }) => {
+  getCategories: orgProcedure.query(async ({ ctx }) => {
     // Get categories from both the dedicated Category table and existing items
     const [dedicatedCategories, itemCategories] = await Promise.all([
       ctx.db.category.findMany({
+        where: { organizationId: ctx.organizationId },
         select: { name: true },
         orderBy: { name: "asc" },
       }),
       ctx.db.inventoryItem.findMany({
         where: {
+          organizationId: ctx.organizationId,
           isConcessionItem: true,
           category: { not: null },
         },
@@ -676,16 +707,16 @@ export const itemsRouter = createTRPCRouter({
     return Array.from(allCategories).sort();
   }),
 
-  createCategory: privateProcedure
+  createCategory: orgAdminProcedure
     .input(
       z.object({
         name: z.string().min(1).max(50, "Category name too long"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check if category already exists
-      const existingCategory = await ctx.db.category.findUnique({
-        where: { name: input.name },
+      // Check if category already exists in this org
+      const existingCategory = await ctx.db.category.findFirst({
+        where: { name: input.name, organizationId: ctx.organizationId },
       });
 
       if (existingCategory) {
@@ -700,13 +731,14 @@ export const itemsRouter = createTRPCRouter({
         data: {
           name: input.name,
           createdBy: ctx.userId,
+          organizationId: ctx.organizationId,
         },
       });
 
       return category;
     }),
 
-  updateItemCategory: privateProcedure
+  updateItemCategory: orgAdminProcedure
     .input(
       z.object({
         itemId: z.string(),
@@ -720,8 +752,8 @@ export const itemsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Get the current item to store old values
-      const currentItem = await ctx.db.inventoryItem.findUnique({
-        where: { id: input.itemId },
+      const currentItem = await ctx.db.inventoryItem.findFirst({
+        where: { id: input.itemId, organizationId: ctx.organizationId },
       });
 
       if (!currentItem) {
@@ -750,6 +782,7 @@ export const itemsRouter = createTRPCRouter({
           data: {
             itemId: input.itemId,
             userId: ctx.userId,
+            organizationId: ctx.organizationId,
             changeNote: input.changeNote ?? "Category updated",
             oldValues: {
               category: currentItem.category,
