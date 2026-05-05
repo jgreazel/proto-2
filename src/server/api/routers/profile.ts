@@ -234,4 +234,66 @@ export const profileRouter = createTRPCRouter({
         });
       }
     }),
+
+  updateUserName: orgAdminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        firstName: z.string().min(1).max(80),
+        lastName: z.string().min(1).max(80),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify the user is a member of this org
+      const membership = await ctx.db.organizationMembership.findFirst({
+        where: { organizationId: ctx.organizationId, userId: input.userId },
+      });
+      if (!membership) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found in this organization" });
+      }
+      await clerkClient.users.updateUser(input.userId, {
+        firstName: input.firstName,
+        lastName: input.lastName,
+      });
+      return { success: true };
+    }),
+
+  updateMemberPin: orgAdminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        pin: z.string().length(4).regex(/^\d{4}$/, "PIN must be 4 digits").nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const membership = await ctx.db.organizationMembership.findFirst({
+        where: { organizationId: ctx.organizationId, userId: input.userId },
+      });
+      if (!membership) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found in this organization" });
+      }
+
+      // Check if PIN is already taken by another member in this org
+      if (input.pin !== null) {
+        const conflict = await ctx.db.organizationMembership.findFirst({
+          where: {
+            organizationId: ctx.organizationId,
+            pin: input.pin,
+            NOT: { id: membership.id },
+          },
+        });
+        if (conflict) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `PIN ${input.pin} is already assigned to another team member. Choose a different PIN.`,
+          });
+        }
+      }
+
+      const updated = await ctx.db.organizationMembership.update({
+        where: { id: membership.id },
+        data: { pin: input.pin },
+      });
+      return { success: true, hasPin: !!updated.pin };
+    }),
 });

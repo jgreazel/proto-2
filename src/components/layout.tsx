@@ -128,6 +128,26 @@ export const LinkListItems = ({
         </Link>
       </li>
       <li>
+        <Link href="/timeclock">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="h-5 w-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+            />
+          </svg>
+          Time Clock
+          <kbd className="kbd kbd-xs ml-auto opacity-30">G T</kbd>
+        </Link>
+      </li>
+      <li>
         <Link href="/passes">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -236,6 +256,26 @@ export const LinkListItems = ({
               </svg>
               Manage Users
               <kbd className="kbd kbd-xs ml-auto opacity-30">G U</kbd>
+            </Link>
+          </li>
+          <li>
+            <Link href="/timeclock/admin">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-5 w-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z"
+                />
+              </svg>
+              Time Clock Admin
+              <kbd className="kbd kbd-xs ml-auto opacity-30">G C</kbd>
             </Link>
           </li>
         </>
@@ -414,6 +454,7 @@ const GoToIndicator = ({
       <div className="flex flex-wrap gap-2">
         {[
           { key: "R", label: "Register" },
+          { key: "T", label: "Time Clock" },
           { key: "P", label: "Passes" },
           ...(isAdmin
             ? [
@@ -421,6 +462,7 @@ const GoToIndicator = ({
                 { key: "F", label: "Files" },
                 { key: "E", label: "Reports" },
                 { key: "U", label: "Users" },
+                { key: "C", label: "TC Admin" },
               ]
             : []),
           { key: "H", label: "Home" },
@@ -475,10 +517,11 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
 
       const routes: Record<string, string> = {
         r: "/register",
+        t: "/timeclock",
         p: "/passes",
         h: "/",
         ...(isAdmin
-          ? { i: "/items", f: "/files", e: "/reports", u: "/users" }
+          ? { i: "/items", f: "/files", e: "/reports", u: "/users", c: "/timeclock/admin" }
           : {}),
       };
 
@@ -563,6 +606,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
           <div className="navbar-center hidden md:flex">
             <div className="flex items-center gap-1">
               <DesktopNavLink href="/register" label="Register" shortcutKey="R" currentPath={router.pathname} />
+              <DesktopNavLink href="/timeclock" label="Time Clock" shortcutKey="T" currentPath={router.pathname} />
               <DesktopNavLink href="/passes" label="Passes" shortcutKey="P" currentPath={router.pathname} />
             </div>
           </div>
