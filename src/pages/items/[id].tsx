@@ -5,7 +5,6 @@ import { LoadingPage, LoadingSpinner } from "~/components/loading";
 import { Controller, useForm } from "react-hook-form";
 
 import { api } from "~/utils/api";
-import { Button } from "~/components/button";
 import { useParams } from "next/navigation";
 import handleApiError from "~/helpers/handleApiError";
 import { InputNumber } from "antd";
@@ -29,10 +28,12 @@ export const AdmissionItemForm = (props: {
   isSubmitting: boolean;
   isLoading: boolean;
   data?: AdmissionFormData;
+  onDelete?: () => void;
 }) => {
   const { onSubmit, isSubmitting, isLoading, data } = props;
 
   const [showPatronLimit, setShowPatronLimit] = useState(false);
+  const [areYouSure, setAreYouSure] = useState(false);
 
   const {
     register,
@@ -184,13 +185,44 @@ export const AdmissionItemForm = (props: {
       )}
 
       {!isSubmitting && (
-        <Button
-          primary
-          disabled={isSubmitting || !formState.isValid}
-          type="submit"
-        >
-          {data ? "Save" : "Create"}
-        </Button>
+        <div className="flex gap-2">
+          <button
+            className="btn btn-primary btn-sm flex-1"
+            disabled={isSubmitting || !formState.isValid}
+            type="submit"
+          >
+            {data ? "Save" : "Create"}
+          </button>
+          {!!data && (
+            <button
+              onClick={() => setAreYouSure(true)}
+              type="button"
+              className="btn btn-outline btn-error btn-sm"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      )}
+      {areYouSure && (
+        <dialog id="delete_modal" className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="text-lg font-bold">Are you sure?</h3>
+            <p className="py-4">This action cannot be undone.</p>
+            <div className="modal-action">
+              <button
+                onClick={() => props.onDelete?.()}
+                type="button"
+                className="btn btn-error"
+              >
+                Yes
+              </button>
+              <button onClick={() => setAreYouSure(false)} className="btn">
+                No
+              </button>
+            </div>
+          </div>
+        </dialog>
       )}
       {isSubmitting && (
         <div className="flex items-center justify-center">
@@ -548,6 +580,15 @@ const EditItemWizard = (props: { id: string }) => {
       },
       onError: handleApiError,
     });
+  const { mutate: deleteAdmissionItem, isLoading: isDeletingA } =
+    api.items.deleteAdmissionItem.useMutation({
+      onSuccess: async () => {
+        void ctx.items.getById.invalidate();
+        await router.push("/items");
+        toast.success("Item Deleted!");
+      },
+      onError: handleApiError,
+    });
 
   if (isLoading) {
     return (
@@ -577,7 +618,7 @@ const EditItemWizard = (props: { id: string }) => {
             passType: data?.item.isSeasonal ? "seasonal" : "day",
           }}
           isLoading={isLoading}
-          isSubmitting={isUpdatingA}
+          isSubmitting={isUpdatingA || isDeletingA}
           onSubmit={(data) =>
             admissionMutate({
               ...data,
@@ -590,6 +631,7 @@ const EditItemWizard = (props: { id: string }) => {
                   : undefined,
             })
           }
+          onDelete={() => deleteAdmissionItem({ id: data?.item.id ?? props.id })}
         />
       )}
     </div>
