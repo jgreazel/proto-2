@@ -237,6 +237,34 @@ export const itemsRouter = createTRPCRouter({
       return deletedItem;
     }),
 
+  deleteAdmissionItem: orgAdminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existingItem = await ctx.db.inventoryItem.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+      });
+
+      if (!existingItem) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Item not found",
+        });
+      }
+
+      await ctx.db.transactionItems.deleteMany({
+        where: { itemId: input.id },
+      });
+      const deletedItem = await ctx.db.inventoryItem.delete({
+        where: { id: input.id },
+      });
+
+      return deletedItem;
+    }),
+
   updateAdmissionItem: orgAdminProcedure
     .input(
       z.object({
