@@ -22,6 +22,7 @@ type ConcessionFormData = {
 type AdmissionFormData = {
   label: string;
   sellingPrice: number;
+  passType: "seasonal" | "day";
   patronLimit?: number;
   changeNote?: string;
 };
@@ -69,8 +70,22 @@ export const InlineItemEdit = ({
       onError: handleApiError,
     });
 
+  const { mutate: deleteAdmissionItem, isLoading: isDeletingAdmission } =
+    api.items.deleteAdmissionItem.useMutation({
+      onSuccess: () => {
+        toast.success("Item deleted!");
+        void ctx.items.getAll.invalidate();
+        onSave();
+      },
+      onError: handleApiError,
+    });
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const isLoading = isUpdatingConcession || isUpdatingAdmission || isDeleting;
+  const isLoading =
+    isUpdatingConcession ||
+    isUpdatingAdmission ||
+    isDeleting ||
+    isDeletingAdmission;
 
   if (item.item.isConcessionItem) {
     return (
@@ -88,9 +103,21 @@ export const InlineItemEdit = ({
     return (
       <AdmissionItemEdit
         item={item}
-        onSave={(data) => updateAdmission({ ...data, id: item.item.id })}
+        onSave={(data) =>
+          updateAdmission({
+            ...data,
+            id: item.item.id,
+            isDay: data.passType === "day",
+            isSeasonal: data.passType === "seasonal",
+            patronLimit:
+              data.passType === "seasonal" ? data.patronLimit ?? 1 : undefined,
+          })
+        }
         onCancel={onCancel}
+        onDelete={() => deleteAdmissionItem({ id: item.item.id })}
         isLoading={isLoading}
+        showDeleteConfirm={showDeleteConfirm}
+        setShowDeleteConfirm={setShowDeleteConfirm}
       />
     );
   }
@@ -354,12 +381,18 @@ const AdmissionItemEdit = ({
   item,
   onSave,
   onCancel,
+  onDelete,
   isLoading,
+  showDeleteConfirm,
+  setShowDeleteConfirm,
 }: {
   item: ItemWithCreatedBy;
   onSave: (data: AdmissionFormData) => void;
   onCancel: () => void;
+  onDelete: () => void;
   isLoading: boolean;
+  showDeleteConfirm: boolean;
+  setShowDeleteConfirm: (show: boolean) => void;
 }) => {
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [pendingData, setPendingData] = useState<AdmissionFormData | null>(
@@ -371,6 +404,7 @@ const AdmissionItemEdit = ({
       defaultValues: {
         label: item.item.label,
         sellingPrice: item.item.sellingPrice,
+        passType: item.item.isSeasonal ? "seasonal" : "day",
         patronLimit: item.item.patronLimit ?? undefined,
         changeNote: "",
       },
@@ -429,11 +463,14 @@ const AdmissionItemEdit = ({
         <span className="text-sm text-base-content/50">—</span>
       </td>
       <td>
-        {item.item.isDay ? (
-          <div className="badge badge-secondary badge-sm">Day Pass</div>
-        ) : (
-          <div className="badge badge-accent badge-sm">Season Pass</div>
-        )}
+        <select
+          {...register("passType", { required: true })}
+          className="select select-bordered select-xs w-full"
+          disabled={isLoading}
+        >
+          <option value="day">Day Pass</option>
+          <option value="seasonal">Season Pass</option>
+        </select>
       </td>
       <td>
         <div className="flex gap-1">
@@ -479,8 +516,52 @@ const AdmissionItemEdit = ({
               />
             </svg>
           </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="btn btn-circle btn-ghost btn-sm text-error"
+            disabled={isLoading}
+            title="Delete item"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-4 w-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+              />
+            </svg>
+          </button>
         </div>
       </td>
+      {showDeleteConfirm && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="text-lg font-bold">Delete Item?</h3>
+            <p className="py-4">This action cannot be undone.</p>
+            <div className="modal-action">
+              <button
+                onClick={onDelete}
+                className="btn btn-error"
+                disabled={isLoading}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="btn"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
       {showNoteDialog && pendingData && (
         <dialog className="modal modal-open">
           <div className="modal-box">
