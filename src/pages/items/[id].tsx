@@ -580,7 +580,7 @@ const EditItemWizard = (props: { id: string }) => {
       },
       onError: handleApiError,
     });
-  const { mutate: deleteAdmissionItem, isLoading: isDeletingA } =
+  const { mutate: deleteAdmissionItem, isLoading: isDeletingAdmission } =
     api.items.deleteAdmissionItem.useMutation({
       onSuccess: async () => {
         void ctx.items.getById.invalidate();
@@ -618,7 +618,7 @@ const EditItemWizard = (props: { id: string }) => {
             passType: data?.item.isSeasonal ? "seasonal" : "day",
           }}
           isLoading={isLoading}
-          isSubmitting={isUpdatingA || isDeletingA}
+          isSubmitting={isUpdatingA || isDeletingAdmission}
           onSubmit={(data) =>
             admissionMutate({
               ...data,

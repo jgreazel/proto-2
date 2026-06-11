@@ -260,7 +260,6 @@ export const itemsRouter = createTRPCRouter({
       });
       const deletedItem = await ctx.db.inventoryItem.delete({
         where: { id: input.id },
-        include: { transactions: true },
       });
 
       return deletedItem;
