@@ -1,4 +1,4 @@
-import { DatePicker, Select, TimePicker } from "antd";
+import { TimePicker } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -359,8 +359,6 @@ const WeekOverview = ({
     return result;
   }, [events, users, days]);
 
-  if (isLoading) return <div className="skeleton h-48 w-full rounded-xl" />;
-
   // Sort: users with activity this week first, then inactive
   const sortedUsers = useMemo(() => {
     const withActivity = users.filter((u) => {
@@ -376,12 +374,14 @@ const WeekOverview = ({
 
   const [showInactive, setShowInactive] = useState(false);
 
+  if (isLoading) return <div className="skeleton h-48 w-full rounded-xl" />;
+
   // Mobile: card list per user. Desktop: table grid.
   return (
     <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
       <div className="border-b border-base-300 px-4 py-3 sm:px-6">
         <h3 className="text-base font-medium">Weekly Overview</h3>
-        <p className="mt-0.5 text-xs text-base-content/60">Select a team member's day to view or edit their punches below ↓</p>
+        <p className="mt-0.5 text-xs text-base-content/60">Select a team member&apos;s day to view or edit their punches below ↓</p>
       </div>
 
       {/* Desktop table — capped height so punch detail is always visible */}
