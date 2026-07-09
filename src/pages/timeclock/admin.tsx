@@ -70,6 +70,10 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
 
   const onSave = (eventId?: string) => {
     void handleSubmit((d) => {
+      if (!d.time || !d.time.isValid()) {
+        toast.error("Please select a valid time");
+        return;
+      }
       upsert({
         eventId: eventId ?? undefined,
         time: mergeDateTime(d.time).toDate(),
