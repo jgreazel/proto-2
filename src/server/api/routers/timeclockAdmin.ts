@@ -18,6 +18,7 @@ export const timeclockAdminRouter = createTRPCRouter({
           },
           userId: input.userId,
         },
+        orderBy: { createdAt: "asc" },
       });
       if (!tces) {
         throw new TRPCError({
@@ -25,6 +26,20 @@ export const timeclockAdminRouter = createTRPCRouter({
           message: "Failed to fetch time punches",
         });
       }
+      return tces;
+    }),
+
+  // Returns all org events for a date range, grouped by user — powers the overview dashboard
+  getWeekOverview: orgAdminProcedure
+    .input(z.object({ range: z.tuple([z.date(), z.date()]) }))
+    .query(async ({ input, ctx }) => {
+      const tces = await ctx.db.timeClockEvent.findMany({
+        where: {
+          organizationId: ctx.organizationId,
+          createdAt: { gte: input.range[0], lte: input.range[1] },
+        },
+        orderBy: { createdAt: "asc" },
+      });
       return tces;
     }),
 

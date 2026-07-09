@@ -1,11 +1,10 @@
-import { DatePicker, Select, TimePicker } from "antd";
+import { TimePicker } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import isAuth from "~/components/isAuth";
 import { PageLayout } from "~/components/layout";
-import { LoadingPage } from "~/components/loading";
 import handleApiError from "~/helpers/handleApiError";
 import { api } from "~/utils/api";
 
@@ -18,20 +17,158 @@ type PunchEvent = {
   createdAt: Date;
 };
 
-type FilterForm = {
-  date: Dayjs;
-  userId: string;
-};
-
 type PunchForm = {
   time: Dayjs;
 };
 
-// ── Punches Table ──────────────────────────────────────
+type UserInfo = { id: string; label: string };
 
-const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
+// ── Helpers ────────────────────────────────────────────
+
+function getWeekRange(anchor: Dayjs): [Date, Date] {
+  return [anchor.startOf("week").toDate(), anchor.endOf("week").toDate()];
+}
+
+function computeHours(events: { createdAt: Date }[]) {
+  const sorted = [...events].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+  let mins = 0;
+  for (let i = 0; i < sorted.length - 1; i += 2) {
+    mins += (new Date(sorted[i + 1]!.createdAt).getTime() - new Date(sorted[i]!.createdAt).getTime()) / 60000;
+  }
+  return { hours: Math.floor(mins / 60), minutes: Math.round(mins % 60), isOdd: sorted.length % 2 !== 0 };
+}
+
+// ── Missing Punches Alert ──────────────────────────────
+
+const MissingPunchesAlert = ({
+  issues,
+  onFix,
+}: {
+  issues: { userId: string; userName: string; date: Dayjs; punchCount: number }[];
+  onFix: (userId: string, date: Dayjs) => void;
+}) => {
+  if (!issues.length) return null;
+
+  return (
+    <div className="rounded-xl border border-warning/40 bg-warning/5 p-4">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 text-xl">⚠️</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-medium text-warning-content">
+            {issues.length} missing clock-out{issues.length > 1 ? "s" : ""} this week
+          </h3>
+          <p className="mt-1 text-xs text-base-content/60">
+            These team members have an odd number of punches — likely a missed clock-out. Tap to fix.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {issues.map((issue) => (
+              <button
+                key={`${issue.userId}-${issue.date.format("YYYY-MM-DD")}`}
+                className="btn btn-warning btn-sm min-h-[44px] gap-1"
+                onClick={() => onFix(issue.userId, issue.date)}
+                aria-label={`Fix missing clock-out for ${issue.userName} on ${issue.date.format("dddd M/D")}`}
+              >
+                <span className="max-w-[120px] truncate">{issue.userName}</span>
+                <span className="opacity-70">· {issue.date.format("ddd M/D")}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Punch Card (mobile) / Row (desktop) ────────────────
+
+const PunchRow = ({
+  punch,
+  idx,
+  isEditing,
+  isBusy,
+  control,
+  onEdit,
+  onSave,
+  onCancel,
+  onDelete,
+}: {
+  punch: PunchEvent;
+  idx: number;
+  isEditing: boolean;
+  isBusy: boolean;
+  control: ReturnType<typeof useForm<PunchForm>>["control"];
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onDelete: () => void;
+}) => {
+  const isIn = idx % 2 === 0;
+
+  // Mobile: card layout
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 ${idx % 2 === 0 ? "bg-base-100" : "bg-base-200/30"}`}>
+      <span className={`badge badge-sm ${isIn ? "badge-success" : "badge-error"}`}>
+        {isIn ? "In" : "Out"}
+      </span>
+
+      <div className="flex-1">
+        {isEditing ? (
+          <Controller
+            control={control}
+            name="time"
+            render={({ field }) => (
+              <TimePicker
+                value={field.value}
+                format="h:mm A"
+                onChange={(v) => field.onChange(v)}
+                size="small"
+                className="w-full max-w-[140px]"
+                allowClear={false}
+              />
+            )}
+          />
+        ) : (
+          <span className="text-sm font-medium">
+            {dayjs(punch.createdAt).format("h:mm A")}
+          </span>
+        )}
+      </div>
+
+      <div className="flex gap-1">
+        {isEditing ? (
+          <>
+            <button className="btn btn-primary btn-sm min-h-[44px]" disabled={isBusy} onClick={onSave}>Save</button>
+            <button className="btn btn-ghost btn-sm min-h-[44px]" onClick={onCancel} aria-label="Cancel editing">✕</button>
+            <button className="btn btn-ghost btn-sm min-h-[44px] text-error" disabled={isBusy} onClick={onDelete} aria-label="Delete punch">🗑</button>
+          </>
+        ) : (
+          <button className="btn btn-ghost btn-sm min-h-[44px]" disabled={isBusy} onClick={onEdit}>Edit</button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Punches Section ────────────────────────────────────
+
+const PunchesSection = ({
+  userId,
+  userName,
+  date,
+  onClose,
+}: {
+  userId: string;
+  userName: string;
+  date: Dayjs;
+  onClose: () => void;
+}) => {
   const utils = api.useUtils();
   const range: [Date, Date] = [date.startOf("day").toDate(), date.endOf("day").toDate()];
+
+  const mergeDateTime = (time: Dayjs) =>
+    date.hour(time.hour()).minute(time.minute()).second(time.second());
 
   const { data, isLoading, error } = api.timeclockAdmin.getTimeclockEvents.useQuery(
     { userId, range },
@@ -48,6 +185,7 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
   const { mutate: upsert, isLoading: isSaving } = api.timeclockAdmin.upsertTimeclockEvent.useMutation({
     onSuccess: async () => {
       await utils.timeclockAdmin.getTimeclockEvents.invalidate();
+      await utils.timeclockAdmin.getWeekOverview.invalidate();
       toast.success("Saved!");
       setEditingId(null);
       setShowAdd(false);
@@ -59,6 +197,9 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
   const { mutate: deletePunch, isLoading: isDeleting } = api.timeclockAdmin.deleteTimeclockEvent.useMutation({
     onSuccess: async () => {
       await utils.timeclockAdmin.getTimeclockEvents.invalidate();
+      await utils.timeclockAdmin.getWeekOverview.invalidate();
+      setEditingId(null);
+      reset();
       toast.success("Deleted!");
     },
     onError: handleApiError,
@@ -66,9 +207,13 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
 
   const onSave = (eventId?: string) => {
     void handleSubmit((d) => {
+      if (!d.time || !d.time.isValid()) {
+        toast.error("Please select a valid time");
+        return;
+      }
       upsert({
         eventId: eventId ?? undefined,
-        time: d.time.toDate(),
+        time: mergeDateTime(d.time).toDate(),
         userId: eventId ? undefined : userId,
       });
     })();
@@ -82,34 +227,39 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
 
   const isBusy = isSaving || isDeleting;
 
+  const sorted = useMemo(
+    () => [...(data ?? [])].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+    [data],
+  );
+
+  const { hours, minutes, isOdd } = useMemo(() => computeHours(sorted), [sorted]);
+
   if (isLoading) return <div className="skeleton h-40 w-full rounded-xl" />;
   if (error) return <div className="alert alert-error text-sm">{error.message}</div>;
 
-  // Compute hour totals from paired punches
-  const sorted = [...(data ?? [])].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  let totalMinutes = 0;
-  for (let i = 0; i < sorted.length - 1; i += 2) {
-    totalMinutes += (new Date(sorted[i + 1]!.createdAt).getTime() - new Date(sorted[i]!.createdAt).getTime()) / 60000;
-  }
-  const totalHours = Math.floor(totalMinutes / 60);
-  const totalMins = Math.round(totalMinutes % 60);
-
   return (
     <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
-      <div className="flex items-center justify-between border-b border-base-300 px-6 py-4">
-        <div>
-          <h3 className="text-base font-medium">Time Punches</h3>
+      {/* Header */}
+      <div className="flex flex-col gap-2 border-b border-base-300 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate text-base font-medium">{userName}</h3>
+            <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
+          </div>
           <p className="mt-0.5 text-xs text-base-content/60">
-            {date.format("MMMM D, YYYY")}
-            {totalMinutes > 0 && (
+            📅 {date.format("dddd, MMMM D, YYYY")}
+            {hours + minutes > 0 && (
               <span className="ml-2 font-medium text-success">
-                Total: {totalHours}h {totalMins}m
+                Total: {hours}h {minutes}m
               </span>
+            )}
+            {isOdd && (
+              <span className="ml-2 font-medium text-warning">⚠ Missing clock-out</span>
             )}
           </p>
         </div>
         <button
-          className="btn btn-primary btn-sm"
+          className="btn btn-primary btn-sm w-full sm:w-auto"
           disabled={isBusy || !!editingId || showAdd}
           onClick={() => { setShowAdd(true); reset({ time: dayjs() }); }}
         >
@@ -117,171 +267,284 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
         </button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-base-200">
-          <thead className="bg-base-200/50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-base-content/60">#</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-base-content/60">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-base-content/60">Time</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-base-content/60">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-base-200 bg-base-100">
-            {showAdd && (
-              <tr className="bg-primary/5">
-                <td className="px-6 py-3 text-sm text-base-content/40">{(sorted.length + 1)}</td>
-                <td className="px-6 py-3">
-                  <span className={`badge badge-sm ${sorted.length % 2 === 0 ? "badge-success" : "badge-error"}`}>
-                    {sorted.length % 2 === 0 ? "In" : "Out"}
-                  </span>
-                </td>
-                <td className="px-6 py-3">
-                  <Controller
-                    control={control}
-                    name="time"
-                    render={({ field }) => (
-                      <TimePicker value={field.value} format="h:mm A" onChange={(v) => field.onChange(v)} size="small" />
-                    )}
-                  />
-                </td>
-                <td className="px-6 py-3">
-                  <div className="flex gap-2">
-                    <button className="btn btn-primary btn-xs" disabled={isBusy} onClick={() => onSave()}>Save</button>
-                    <button className="btn btn-ghost btn-xs" onClick={() => { setShowAdd(false); reset(); }}>Cancel</button>
-                  </div>
-                </td>
-              </tr>
+      {/* Add form */}
+      {showAdd && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-primary/20 bg-primary/5 px-4 py-3 sm:px-6">
+          <span className={`badge badge-sm ${sorted.length % 2 === 0 ? "badge-success" : "badge-error"}`}>
+            {sorted.length % 2 === 0 ? "In" : "Out"}
+          </span>
+          <Controller
+            control={control}
+            name="time"
+            render={({ field }) => (
+              <TimePicker
+                value={field.value}
+                format="h:mm A"
+                onChange={(v) => field.onChange(v)}
+                size="small"
+                className="w-full max-w-[140px]"
+                allowClear={false}
+              />
             )}
-            {sorted.map((punch, idx) => (
-              <tr key={punch.id} className={idx % 2 === 0 ? "bg-base-100" : "bg-base-200/30"}>
-                <td className="px-6 py-3 text-sm text-base-content/40">{idx + 1}</td>
-                <td className="px-6 py-3">
-                  <span className={`badge badge-sm ${idx % 2 === 0 ? "badge-success" : "badge-error"}`}>
-                    {idx % 2 === 0 ? "In" : "Out"}
-                  </span>
-                </td>
-                <td className="px-6 py-3 text-sm">
-                  {editingId === punch.id ? (
-                    <Controller
-                      control={control}
-                      name="time"
-                      render={({ field }) => (
-                        <TimePicker value={field.value} format="h:mm A" onChange={(v) => field.onChange(v)} size="small" />
-                      )}
-                    />
-                  ) : (
-                    dayjs(punch.createdAt).format("h:mm A")
-                  )}
-                </td>
-                <td className="px-6 py-3">
-                  {editingId === punch.id ? (
-                    <div className="flex gap-2">
-                      <button className="btn btn-primary btn-xs" disabled={isBusy} onClick={() => onSave(punch.id)}>Save</button>
-                      <button className="btn btn-ghost btn-xs" onClick={() => { setEditingId(null); reset(); }}>Cancel</button>
-                      <button className="btn btn-ghost btn-xs text-error" disabled={isBusy} onClick={() => deletePunch({ id: punch.id })}>Delete</button>
-                    </div>
-                  ) : (
-                    <button
-                      className="btn btn-ghost btn-xs"
-                      disabled={!!editingId || showAdd || isBusy}
-                      onClick={() => startEdit(punch)}
-                    >
-                      Edit
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!sorted.length && !showAdd && (
-              <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-sm text-base-content/40">
-                  No punches recorded for this day.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          />
+          <span className="text-xs text-base-content/50">on {date.format("M/D")}</span>
+          <div className="flex gap-2">
+            <button className="btn btn-primary btn-xs" disabled={isBusy} onClick={() => onSave()}>Save</button>
+            <button className="btn btn-ghost btn-xs" onClick={() => { setShowAdd(false); reset(); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Punch list */}
+      <div className="divide-y divide-base-200">
+        {sorted.map((punch, idx) => (
+          <PunchRow
+            key={punch.id}
+            punch={punch}
+            idx={idx}
+            isEditing={editingId === punch.id}
+            isBusy={isBusy}
+            control={control}
+            onEdit={() => startEdit(punch)}
+            onSave={() => onSave(punch.id)}
+            onCancel={() => { setEditingId(null); reset(); }}
+            onDelete={() => deletePunch({ id: punch.id })}
+          />
+        ))}
+        {!sorted.length && !showAdd && (
+          <div className="px-4 py-8 text-center text-sm text-base-content/40">
+            No punches recorded for this day.
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-// ── Filter Form ────────────────────────────────────────
+// ── Week Overview Table ────────────────────────────────
 
-const FilterForm = ({
-  onSearch,
+const WeekOverview = ({
+  weekStart,
+  users,
+  onSelectCell,
 }: {
-  onSearch: (userId: string, date: Dayjs) => void;
+  weekStart: Dayjs;
+  users: UserInfo[];
+  onSelectCell: (userId: string, date: Dayjs) => void;
 }) => {
-  const { control, handleSubmit, formState } = useForm<FilterForm>({
-    defaultValues: { date: dayjs() },
-  });
-  const { data: users, isLoading } = api.profile.getUsers.useQuery();
+  const range: [Date, Date] = getWeekRange(weekStart);
+  const { data: events, isLoading } = api.timeclockAdmin.getWeekOverview.useQuery({ range });
 
-  const opts = (users ?? []).map((u) => ({
-    value: u.id,
-    label: u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username ?? u.id,
-  }));
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => weekStart.startOf("week").add(i, "day")),
+    [weekStart],
+  );
 
+  const grid = useMemo(() => {
+    if (!events) return {};
+    // Build a lookup map for O(events) instead of O(users * days * events)
+    const lookup: Record<string, typeof events> = {};
+    for (const e of events) {
+      const key = `${e.userId}|${dayjs(e.createdAt).format("YYYY-MM-DD")}`;
+      (lookup[key] ??= []).push(e);
+    }
+    const result: Record<string, Record<string, typeof events>> = {};
+    for (const user of users) {
+      result[user.id] = {};
+      for (const day of days) {
+        const dayKey = day.format("YYYY-MM-DD");
+        result[user.id]![dayKey] = lookup[`${user.id}|${dayKey}`] ?? [];
+      }
+    }
+    return result;
+  }, [events, users, days]);
+
+  // Sort: users with activity this week first, then inactive
+  const sortedUsers = useMemo(() => {
+    const withActivity = users.filter((u) => {
+      const userEvents = Object.values(grid[u.id] ?? {});
+      return userEvents.some((evts) => evts.length > 0);
+    });
+    const noActivity = users.filter((u) => {
+      const userEvents = Object.values(grid[u.id] ?? {});
+      return !userEvents.some((evts) => evts.length > 0);
+    });
+    return { active: withActivity, inactive: noActivity };
+  }, [users, grid]);
+
+  const [showInactive, setShowInactive] = useState(false);
+
+  if (isLoading) return <div className="skeleton h-48 w-full rounded-xl" />;
+
+  // Mobile: card list per user. Desktop: table grid.
   return (
     <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
-      <div className="border-b border-base-300 px-6 py-4">
-        <h3 className="text-base font-medium">View Punches</h3>
-        <p className="mt-0.5 text-xs text-base-content/60">Select a team member and date to view or edit their time punches</p>
+      <div className="border-b border-base-300 px-4 py-3 sm:px-6">
+        <h3 className="text-base font-medium">Weekly Overview</h3>
+        <p className="mt-0.5 text-xs text-base-content/60">Select a team member&apos;s day to view or edit their punches below ↓</p>
       </div>
-      <form
-        className="flex flex-wrap items-end gap-3 px-6 py-4"
-        onSubmit={handleSubmit((d) => onSearch(d.userId, d.date))}
-      >
-        <Controller
-          control={control}
-          name="userId"
-          rules={{ required: true }}
-          render={({ field }) => (
-            <label className="form-control w-full max-w-xs">
-              <div className="label pb-1">
-                <span className="label-text text-xs font-medium">Team Member</span>
+
+      {/* Desktop table — capped height so punch detail is always visible */}
+      <div className="hidden max-h-[45vh] overflow-auto md:block">
+        <table className="min-w-full">
+          <thead className="sticky top-0 z-10 bg-base-200">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-medium text-base-content/60">Team Member</th>
+              {days.map((d) => (
+                <th key={d.format("ddd")} className="px-3 py-2 text-center text-xs font-medium text-base-content/60">
+                  {d.format("ddd M/D")}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sortedUsers.active.map((user, rowIdx) => (
+              <tr
+                key={user.id}
+                className={`cursor-pointer transition-colors hover:bg-primary/10 ${rowIdx % 2 === 0 ? "bg-base-100" : "bg-base-200/40"}`}
+              >
+                <td className="max-w-[150px] truncate px-4 py-2 text-sm font-medium">{user.label}</td>
+                {days.map((day) => {
+                  const dayKey = day.format("YYYY-MM-DD");
+                  const dayEvents = grid[user.id]?.[dayKey] ?? [];
+                  const count = dayEvents.length;
+                  const isOdd = count % 2 !== 0;
+                  const { hours, minutes } = computeHours(dayEvents);
+                  const isFuture = day.isAfter(dayjs(), "day");
+
+                  return (
+                    <td key={dayKey} className="px-1 py-2 text-center">
+                      {isFuture ? (
+                        <span className="text-xs text-base-content/20">—</span>
+                      ) : count === 0 ? (
+                        <button
+                          onClick={() => onSelectCell(user.id, day)}
+                          className="btn btn-ghost btn-xs text-base-content/30"
+                        >
+                          —
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onSelectCell(user.id, day)}
+                          className={`btn btn-xs gap-0.5 ${isOdd ? "btn-warning" : "btn-ghost"}`}
+                        >
+                          {isOdd && <span>⚠</span>}
+                          <span className="text-xs">
+                            {hours > 0 || minutes > 0 ? `${hours}h${minutes > 0 ? `${minutes}m` : ""}` : `${count}p`}
+                          </span>
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+
+            {/* Inactive users — same table, separator row */}
+            {sortedUsers.inactive.length > 0 && (
+              <tr>
+                <td colSpan={8} className="px-0 py-0">
+                  <button
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs text-base-content/50 hover:bg-base-200/50"
+                    onClick={() => setShowInactive(!showInactive)}
+                  >
+                    <span>{showInactive ? "▼" : "▶"}</span>
+                    <span>{sortedUsers.inactive.length} team member{sortedUsers.inactive.length > 1 ? "s" : ""} with no activity this week</span>
+                  </button>
+                </td>
+              </tr>
+            )}
+            {showInactive && sortedUsers.inactive.map((user, rowIdx) => (
+              <tr
+                key={user.id}
+                className={`cursor-pointer text-base-content/40 transition-colors hover:bg-primary/10 ${rowIdx % 2 === 0 ? "bg-base-100" : "bg-base-200/40"}`}
+              >
+                <td className="max-w-[150px] truncate px-4 py-2 text-sm">{user.label}</td>
+                {days.map((day) => {
+                  const isFuture = day.isAfter(dayjs(), "day");
+                  return (
+                    <td key={day.format("YYYY-MM-DD")} className="px-1 py-2 text-center">
+                      {isFuture ? (
+                        <span className="text-xs text-base-content/10">—</span>
+                      ) : (
+                        <button
+                          onClick={() => onSelectCell(user.id, day)}
+                          className="btn btn-ghost btn-xs text-base-content/20"
+                        >
+                          —
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile card view */}
+      <div className="max-h-[50vh] divide-y divide-base-200 overflow-auto md:hidden">
+        {sortedUsers.active.map((user) => {
+          const userDays = days
+            .filter((d) => !d.isAfter(dayjs(), "day"))
+            .map((day) => {
+              const dayKey = day.format("YYYY-MM-DD");
+              const dayEvents = grid[user.id]?.[dayKey] ?? [];
+              return { day, events: dayEvents };
+            });
+
+          if (!userDays.length) return null;
+
+          const hasIssue = userDays.some((d) => d.events.length % 2 !== 0 && d.events.length > 0);
+
+          return (
+            <div key={user.id} className="px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{user.label}</span>
+                {hasIssue && <span className="text-xs text-warning">⚠ missing punch</span>}
               </div>
-              <Select
-                loading={isLoading}
-                options={opts}
-                value={field.value}
-                onChange={field.onChange}
-                placeholder="Select employee…"
-                className="w-full"
-                showSearch
-                filterOption={(input, opt) => (opt?.label ?? "").toLowerCase().includes(input.toLowerCase())}
-              />
-            </label>
-          )}
-        />
-        <Controller
-          control={control}
-          name="date"
-          rules={{ required: true }}
-          render={({ field }) => (
-            <label className="form-control w-full max-w-xs">
-              <div className="label pb-1">
-                <span className="label-text text-xs font-medium">Date</span>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {userDays.map(({ day, events: dayEvts }) => {
+                  const isOdd = dayEvts.length % 2 !== 0 && dayEvts.length > 0;
+                  const { hours, minutes } = computeHours(dayEvts);
+                  return (
+                    <button
+                      key={day.format("YYYY-MM-DD")}
+                      onClick={() => onSelectCell(user.id, day)}
+                      className={`btn btn-sm min-h-[44px] min-w-[44px] gap-0.5 ${isOdd ? "btn-warning" : "btn-ghost"}`}
+                      aria-label={`${user.label} ${day.format("dddd M/D")} - ${dayEvts.length} punches`}
+                    >
+                      <span className="text-[10px] opacity-70">{day.format("ddd")}</span>
+                      {dayEvts.length === 0 ? "—" : `${hours}h${minutes > 0 ? `${minutes}m` : ""}`}
+                      {isOdd && <span>⚠</span>}
+                    </button>
+                  );
+                })}
               </div>
-              <DatePicker
-                value={field.value}
-                format="MM/DD/YYYY"
-                onChange={(d) => field.onChange(d)}
-                className="w-full"
-              />
-            </label>
-          )}
-        />
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={!formState.isValid}
-        >
-          View Punches
-        </button>
-      </form>
+            </div>
+          );
+        })}
+
+        {/* Mobile inactive collapse */}
+        {sortedUsers.inactive.length > 0 && (
+          <div className="px-4 py-3">
+            <button
+              className="text-xs text-base-content/50"
+              onClick={() => setShowInactive(!showInactive)}
+            >
+              {showInactive ? "▼ Hide" : "▶ Show"} {sortedUsers.inactive.length} inactive member{sortedUsers.inactive.length > 1 ? "s" : ""}
+            </button>
+            {showInactive && (
+              <div className="mt-2 space-y-1">
+                {sortedUsers.inactive.map((user) => (
+                  <div key={user.id} className="text-xs text-base-content/40">{user.label}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -289,20 +552,95 @@ const FilterForm = ({
 // ── Page ───────────────────────────────────────────────
 
 function TimeclockAdminPage() {
-  const [selection, setSelection] = useState<{ userId: string; date: Dayjs } | null>(null);
+  const [weekStart, setWeekStart] = useState<Dayjs>(dayjs().startOf("week"));
+  const [selection, setSelection] = useState<{ userId: string; userName: string; date: Dayjs } | null>(null);
+
+  const { data: usersData } = api.profile.getUsers.useQuery();
+  const users: UserInfo[] = useMemo(
+    () => (usersData ?? []).map((u) => ({
+      id: u.id,
+      label: u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username ?? u.id,
+    })),
+    [usersData],
+  );
+
+  // Compute missing punches from the week overview
+  const weekRange: [Date, Date] = getWeekRange(weekStart);
+  const { data: weekEvents } = api.timeclockAdmin.getWeekOverview.useQuery({ range: weekRange });
+
+  const issues = useMemo(() => {
+    if (!weekEvents || !users.length) return [];
+    const result: { userId: string; userName: string; date: Dayjs; punchCount: number }[] = [];
+    const days = Array.from({ length: 7 }, (_, i) => weekStart.startOf("week").add(i, "day"));
+
+    for (const user of users) {
+      for (const day of days) {
+        if (day.isAfter(dayjs(), "day")) continue;
+        const dayEvents = weekEvents.filter(
+          (e) => e.userId === user.id && dayjs(e.createdAt).format("YYYY-MM-DD") === day.format("YYYY-MM-DD"),
+        );
+        if (dayEvents.length > 0 && dayEvents.length % 2 !== 0) {
+          result.push({ userId: user.id, userName: user.label, date: day, punchCount: dayEvents.length });
+        }
+      }
+    }
+    return result;
+  }, [weekEvents, users, weekStart]);
+
+  const handleSelectCell = (userId: string, date: Dayjs) => {
+    const user = users.find((u) => u.id === userId);
+    setSelection({ userId, userName: user?.label ?? userId, date });
+  };
 
   return (
     <PageLayout>
-      <div className="space-y-6 p-4 lg:p-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-base-content">Time Clock Admin</h1>
-          <p className="mt-1 text-sm text-base-content/60">Manage time punches</p>
+      <div className="space-y-4 p-4 lg:space-y-6 lg:p-6">
+        {/* Header with week navigation */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-base-content sm:text-2xl">Time Clock Admin</h1>
+            <p className="mt-0.5 text-xs text-base-content/60">
+              Week of {weekStart.format("MMM D")} – {weekStart.endOf("week").format("MMM D, YYYY")}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setWeekStart((w) => w.subtract(1, "week"))}
+            >
+              ← Prev
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setWeekStart(dayjs().startOf("week"))}
+              disabled={weekStart.isSame(dayjs().startOf("week"), "day")}
+            >
+              This Week
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setWeekStart((w) => w.add(1, "week"))}
+              disabled={weekStart.isAfter(dayjs(), "week")}
+            >
+              Next →
+            </button>
+          </div>
         </div>
 
-        <FilterForm onSearch={(userId, date) => setSelection({ userId, date })} />
+        {/* Alerts */}
+        <MissingPunchesAlert issues={issues} onFix={handleSelectCell} />
 
+        {/* Weekly overview grid */}
+        <WeekOverview weekStart={weekStart} users={users} onSelectCell={handleSelectCell} />
+
+        {/* Selected day detail */}
         {selection && (
-          <PunchesSection userId={selection.userId} date={selection.date} />
+          <PunchesSection
+            userId={selection.userId}
+            userName={selection.userName}
+            date={selection.date}
+            onClose={() => setSelection(null)}
+          />
         )}
       </div>
     </PageLayout>
