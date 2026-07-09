@@ -361,18 +361,33 @@ const WeekOverview = ({
 
   if (isLoading) return <div className="skeleton h-48 w-full rounded-xl" />;
 
+  // Sort: users with activity this week first, then inactive
+  const sortedUsers = useMemo(() => {
+    const withActivity = users.filter((u) => {
+      const userEvents = Object.values(grid[u.id] ?? {});
+      return userEvents.some((evts) => evts.length > 0);
+    });
+    const noActivity = users.filter((u) => {
+      const userEvents = Object.values(grid[u.id] ?? {});
+      return !userEvents.some((evts) => evts.length > 0);
+    });
+    return { active: withActivity, inactive: noActivity };
+  }, [users, grid]);
+
+  const [showInactive, setShowInactive] = useState(false);
+
   // Mobile: card list per user. Desktop: table grid.
   return (
     <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
       <div className="border-b border-base-300 px-4 py-3 sm:px-6">
         <h3 className="text-base font-medium">Weekly Overview</h3>
-        <p className="mt-0.5 text-xs text-base-content/60">Tap any cell to view/edit punches for that day</p>
+        <p className="mt-0.5 text-xs text-base-content/60">Select a team member's day to view or edit their punches below ↓</p>
       </div>
 
-      {/* Desktop table */}
-      <div className="hidden overflow-x-auto md:block">
+      {/* Desktop table — capped height so punch detail is always visible */}
+      <div className="hidden max-h-[45vh] overflow-auto md:block">
         <table className="min-w-full">
-          <thead className="bg-base-200/50">
+          <thead className="sticky top-0 z-10 bg-base-200">
             <tr>
               <th className="px-4 py-2 text-left text-xs font-medium text-base-content/60">Team Member</th>
               {days.map((d) => (
@@ -382,9 +397,12 @@ const WeekOverview = ({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-base-200">
-            {users.map((user) => (
-              <tr key={user.id}>
+          <tbody>
+            {sortedUsers.active.map((user, rowIdx) => (
+              <tr
+                key={user.id}
+                className={`cursor-pointer transition-colors hover:bg-primary/10 ${rowIdx % 2 === 0 ? "bg-base-100" : "bg-base-200/40"}`}
+              >
                 <td className="max-w-[150px] truncate px-4 py-2 text-sm font-medium">{user.label}</td>
                 {days.map((day) => {
                   const dayKey = day.format("YYYY-MM-DD");
@@ -423,11 +441,55 @@ const WeekOverview = ({
             ))}
           </tbody>
         </table>
+
+        {/* Inactive users collapsed section */}
+        {sortedUsers.inactive.length > 0 && (
+          <div className="border-t border-base-300">
+            <button
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs text-base-content/50 hover:bg-base-200/50"
+              onClick={() => setShowInactive(!showInactive)}
+            >
+              <span>{showInactive ? "▼" : "▶"}</span>
+              <span>{sortedUsers.inactive.length} team member{sortedUsers.inactive.length > 1 ? "s" : ""} with no activity this week</span>
+            </button>
+            {showInactive && (
+              <table className="min-w-full">
+                <tbody>
+                  {sortedUsers.inactive.map((user, rowIdx) => (
+                    <tr
+                      key={user.id}
+                      className={`text-base-content/40 transition-colors hover:bg-primary/5 ${rowIdx % 2 === 0 ? "bg-base-100" : "bg-base-200/40"}`}
+                    >
+                      <td className="max-w-[150px] truncate px-4 py-2 text-sm">{user.label}</td>
+                      {days.map((day) => {
+                        const isFuture = day.isAfter(dayjs(), "day");
+                        return (
+                          <td key={day.format("YYYY-MM-DD")} className="px-1 py-2 text-center">
+                            {isFuture ? (
+                              <span className="text-xs text-base-content/10">—</span>
+                            ) : (
+                              <button
+                                onClick={() => onSelectCell(user.id, day)}
+                                className="btn btn-ghost btn-xs text-base-content/20"
+                              >
+                                —
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Mobile card view */}
-      <div className="divide-y divide-base-200 md:hidden">
-        {users.map((user) => {
+      <div className="max-h-[50vh] divide-y divide-base-200 overflow-auto md:hidden">
+        {sortedUsers.active.map((user) => {
           const userDays = days
             .filter((d) => !d.isAfter(dayjs(), "day"))
             .map((day) => {
@@ -467,6 +529,25 @@ const WeekOverview = ({
             </div>
           );
         })}
+
+        {/* Mobile inactive collapse */}
+        {sortedUsers.inactive.length > 0 && (
+          <div className="px-4 py-3">
+            <button
+              className="text-xs text-base-content/50"
+              onClick={() => setShowInactive(!showInactive)}
+            >
+              {showInactive ? "▼ Hide" : "▶ Show"} {sortedUsers.inactive.length} inactive member{sortedUsers.inactive.length > 1 ? "s" : ""}
+            </button>
+            {showInactive && (
+              <div className="mt-2 space-y-1">
+                {sortedUsers.inactive.map((user) => (
+                  <div key={user.id} className="text-xs text-base-content/40">{user.label}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
