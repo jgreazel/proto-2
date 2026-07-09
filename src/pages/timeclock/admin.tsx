@@ -66,8 +66,9 @@ const MissingPunchesAlert = ({
             {issues.map((issue) => (
               <button
                 key={`${issue.userId}-${issue.date.format("YYYY-MM-DD")}`}
-                className="btn btn-warning btn-sm gap-1"
+                className="btn btn-warning btn-sm min-h-[44px] gap-1"
                 onClick={() => onFix(issue.userId, issue.date)}
+                aria-label={`Fix missing clock-out for ${issue.userName} on ${issue.date.format("dddd M/D")}`}
               >
                 <span className="max-w-[120px] truncate">{issue.userName}</span>
                 <span className="opacity-70">· {issue.date.format("ddd M/D")}</span>
@@ -138,12 +139,12 @@ const PunchRow = ({
       <div className="flex gap-1">
         {isEditing ? (
           <>
-            <button className="btn btn-primary btn-xs" disabled={isBusy} onClick={onSave}>Save</button>
-            <button className="btn btn-ghost btn-xs" onClick={onCancel}>✕</button>
-            <button className="btn btn-ghost btn-xs text-error" disabled={isBusy} onClick={onDelete}>🗑</button>
+            <button className="btn btn-primary btn-sm min-h-[44px]" disabled={isBusy} onClick={onSave}>Save</button>
+            <button className="btn btn-ghost btn-sm min-h-[44px]" onClick={onCancel} aria-label="Cancel editing">✕</button>
+            <button className="btn btn-ghost btn-sm min-h-[44px] text-error" disabled={isBusy} onClick={onDelete} aria-label="Delete punch">🗑</button>
           </>
         ) : (
-          <button className="btn btn-ghost btn-xs" disabled={isBusy} onClick={onEdit}>Edit</button>
+          <button className="btn btn-ghost btn-sm min-h-[44px]" disabled={isBusy} onClick={onEdit}>Edit</button>
         )}
       </div>
     </div>
@@ -197,6 +198,8 @@ const PunchesSection = ({
     onSuccess: async () => {
       await utils.timeclockAdmin.getTimeclockEvents.invalidate();
       await utils.timeclockAdmin.getWeekOverview.invalidate();
+      setEditingId(null);
+      reset();
       toast.success("Deleted!");
     },
     onError: handleApiError,
@@ -332,18 +335,25 @@ const WeekOverview = ({
   const range: [Date, Date] = getWeekRange(weekStart);
   const { data: events, isLoading } = api.timeclockAdmin.getWeekOverview.useQuery({ range });
 
-  const days = Array.from({ length: 7 }, (_, i) => weekStart.startOf("week").add(i, "day"));
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => weekStart.startOf("week").add(i, "day")),
+    [weekStart],
+  );
 
   const grid = useMemo(() => {
     if (!events) return {};
+    // Build a lookup map for O(events) instead of O(users * days * events)
+    const lookup: Record<string, typeof events> = {};
+    for (const e of events) {
+      const key = `${e.userId}|${dayjs(e.createdAt).format("YYYY-MM-DD")}`;
+      (lookup[key] ??= []).push(e);
+    }
     const result: Record<string, Record<string, typeof events>> = {};
     for (const user of users) {
       result[user.id] = {};
       for (const day of days) {
         const dayKey = day.format("YYYY-MM-DD");
-        result[user.id]![dayKey] = events.filter(
-          (e) => e.userId === user.id && dayjs(e.createdAt).format("YYYY-MM-DD") === dayKey,
-        );
+        result[user.id]![dayKey] = lookup[`${user.id}|${dayKey}`] ?? [];
       }
     }
     return result;
@@ -424,8 +434,7 @@ const WeekOverview = ({
               const dayKey = day.format("YYYY-MM-DD");
               const dayEvents = grid[user.id]?.[dayKey] ?? [];
               return { day, events: dayEvents };
-            })
-            .filter((d) => d.events.length > 0 || d.day.isSame(dayjs(), "day"));
+            });
 
           if (!userDays.length) return null;
 
@@ -445,7 +454,8 @@ const WeekOverview = ({
                     <button
                       key={day.format("YYYY-MM-DD")}
                       onClick={() => onSelectCell(user.id, day)}
-                      className={`btn btn-xs gap-0.5 ${isOdd ? "btn-warning" : "btn-ghost"}`}
+                      className={`btn btn-sm min-h-[44px] min-w-[44px] gap-0.5 ${isOdd ? "btn-warning" : "btn-ghost"}`}
+                      aria-label={`${user.label} ${day.format("dddd M/D")} - ${dayEvts.length} punches`}
                     >
                       <span className="text-[10px] opacity-70">{day.format("ddd")}</span>
                       {dayEvts.length === 0 ? "—" : `${hours}h${minutes > 0 ? `${minutes}m` : ""}`}
