@@ -33,6 +33,10 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
   const utils = api.useUtils();
   const range: [Date, Date] = [date.startOf("day").toDate(), date.endOf("day").toDate()];
 
+  // Combine the filter date with a time-only value from TimePicker
+  const mergeDateTime = (time: Dayjs) =>
+    date.hour(time.hour()).minute(time.minute()).second(time.second());
+
   const { data, isLoading, error } = api.timeclockAdmin.getTimeclockEvents.useQuery(
     { userId, range },
     { enabled: !!userId },
@@ -68,7 +72,7 @@ const PunchesSection = ({ userId, date }: { userId: string; date: Dayjs }) => {
     void handleSubmit((d) => {
       upsert({
         eventId: eventId ?? undefined,
-        time: d.time.toDate(),
+        time: mergeDateTime(d.time).toDate(),
         userId: eventId ? undefined : userId,
       });
     })();
