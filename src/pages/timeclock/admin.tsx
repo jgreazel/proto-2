@@ -439,52 +439,48 @@ const WeekOverview = ({
                 })}
               </tr>
             ))}
+
+            {/* Inactive users — same table, separator row */}
+            {sortedUsers.inactive.length > 0 && (
+              <tr>
+                <td colSpan={8} className="px-0 py-0">
+                  <button
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs text-base-content/50 hover:bg-base-200/50"
+                    onClick={() => setShowInactive(!showInactive)}
+                  >
+                    <span>{showInactive ? "▼" : "▶"}</span>
+                    <span>{sortedUsers.inactive.length} team member{sortedUsers.inactive.length > 1 ? "s" : ""} with no activity this week</span>
+                  </button>
+                </td>
+              </tr>
+            )}
+            {showInactive && sortedUsers.inactive.map((user, rowIdx) => (
+              <tr
+                key={user.id}
+                className={`cursor-pointer text-base-content/40 transition-colors hover:bg-primary/10 ${rowIdx % 2 === 0 ? "bg-base-100" : "bg-base-200/40"}`}
+              >
+                <td className="max-w-[150px] truncate px-4 py-2 text-sm">{user.label}</td>
+                {days.map((day) => {
+                  const isFuture = day.isAfter(dayjs(), "day");
+                  return (
+                    <td key={day.format("YYYY-MM-DD")} className="px-1 py-2 text-center">
+                      {isFuture ? (
+                        <span className="text-xs text-base-content/10">—</span>
+                      ) : (
+                        <button
+                          onClick={() => onSelectCell(user.id, day)}
+                          className="btn btn-ghost btn-xs text-base-content/20"
+                        >
+                          —
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
-
-        {/* Inactive users collapsed section */}
-        {sortedUsers.inactive.length > 0 && (
-          <div className="border-t border-base-300">
-            <button
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs text-base-content/50 hover:bg-base-200/50"
-              onClick={() => setShowInactive(!showInactive)}
-            >
-              <span>{showInactive ? "▼" : "▶"}</span>
-              <span>{sortedUsers.inactive.length} team member{sortedUsers.inactive.length > 1 ? "s" : ""} with no activity this week</span>
-            </button>
-            {showInactive && (
-              <table className="min-w-full">
-                <tbody>
-                  {sortedUsers.inactive.map((user, rowIdx) => (
-                    <tr
-                      key={user.id}
-                      className={`text-base-content/40 transition-colors hover:bg-primary/5 ${rowIdx % 2 === 0 ? "bg-base-100" : "bg-base-200/40"}`}
-                    >
-                      <td className="max-w-[150px] truncate px-4 py-2 text-sm">{user.label}</td>
-                      {days.map((day) => {
-                        const isFuture = day.isAfter(dayjs(), "day");
-                        return (
-                          <td key={day.format("YYYY-MM-DD")} className="px-1 py-2 text-center">
-                            {isFuture ? (
-                              <span className="text-xs text-base-content/10">—</span>
-                            ) : (
-                              <button
-                                onClick={() => onSelectCell(user.id, day)}
-                                className="btn btn-ghost btn-xs text-base-content/20"
-                              >
-                                —
-                              </button>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Mobile card view */}
