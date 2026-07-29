@@ -26,14 +26,58 @@ _How to handle mentions of legacy platforms (RecDesk, CivicRec, MyRec) without d
 Our focus was entirely on making the simplest, fastest tool possible for live pool-side workflows like tracking concessions and shift check-ins in 90-degree heat. Out of curiosity, what features in your current system are the most critical to your team's workflow?"
 ```
 
+### 3. The Follow-Up Sequence (Where Replies Actually Come From)
+
+_One-and-done is the real ignore risk — not a missing "can we meet?" ask. Never put a call or meeting request in email #1; it raises the commitment cost and kills reply rate. The video CTA is already the lowest-friction ask available._
+
+**Day 0 — Send Playbook #1 verbatim. Do not edit or polish it.**
+
+**Day 6 — The Bump.** Reply in the same thread (keeps it threaded, no new subject):
+
+```text
+Hey [Name],
+
+Bumping this in case it got buried — totally understand if pool ops aren't
+top of mind right now.
+
+Short version: I'd just like to know whether paper lifeguard logs and cash
+drawer reconciliation are a headache for you too, or if Audubon was unusual.
+One sentence either way is genuinely useful to me.
+```
+
+**Day 13 — The Close-the-Loop.** Highest-reply-rate message in most sequences. Same thread:
+
+```text
+Hey [Name],
+
+Last one from me — I'll assume this isn't a fit and stop cluttering your inbox.
+
+If it turns out gate counts or lifeguard hours become a pain point during your
+off-season review this fall, I'm easy to find. Good luck wrapping up the season.
+```
+
+**Day 14 — Phone fallback, 10 minutes max, only if no reply to all three.** Municipal staff answer their phones; this is a legitimate touch, not networking. Do NOT cold-call before the email sequence has run — the email is what makes the call warm.
+
+```text
+"Hi [Name], this is Jon Greazel — I'm a software engineer over in Altoona. I sent
+a couple emails about the pool operations dashboard we built for Audubon. Not
+trying to sell you anything on this call, I'm honestly just trying to find out
+whether the paper-log and cash-drawer stuff is a real headache for you too, or
+whether Audubon was a one-off. Do you have 60 seconds?"
+```
+
+**Escalation rule:** if Chad (Carroll) goes silent through Day 14, restart the sequence at Day 0 with Jack Wardell, the Recreation Superintendent. He is likelier to own the day-to-day operational pain.
+
+**Time cost of the full sequence:** ~15 min per town, spread across two weeks. Fits the async constraint.
+
 ---
 
 ## Active Target Pipeline
 
-| Town                 | Population | Target Persona                          | Contact Status | Notes                                                       |
-| :------------------- | :--------- | :-------------------------------------- | :------------- | :---------------------------------------------------------- |
-| **Carroll, IA**      | ~10,000    | Chad Tiemeyer (Director of Parks & Rec) | Not Started    | Top tier regional hub. High priority target.                |
-| **Atlantic, IA**     | ~6,500     | Maggie Robinson (Parks & Rec Director)  | Not Started    | Great size match, close geographic peer to Audubon.         |
+| Town                 | Population | Target Persona                          | Contact                                              | Contact Status | Notes                                                       |
+| :------------------- | :--------- | :-------------------------------------- | :--------------------------------------------------- | :------------- | :---------------------------------------------------------- |
+| **Carroll, IA**      | ~10,000    | Chad Tiemeyer (Director of Parks & Rec) | ctiemeyer@cityofcarroll.com · 712-792-1000 x510      | Not Started    | Top tier regional hub. High priority target. Fallback: Jack Wardell, Recreation Superintendent — jwardell@cityofcarroll.com · 712-792-5400 x276. |
+| **Atlantic, IA**     | ~6,500     | Maggie Robinson (Parks & Rec Director)  | mrobinson@cityofatlantic.com · 712-243-3542          | Not Started    | Great size match, close geographic peer to Audubon. 1200 Sunnyside Lane, Atlantic, IA 50022. |
 | **Harlan, IA**       | ~4,800     | City Clerk / Parks Board Lead           | Not Started    | Direct neighbor to Audubon; high word-of-mouth leverage.    |
 | **Atlantic/Denison** | ~8,000     | Parks & Rec Lead                        | Not Started    | Active regional pool footprint.                             |
 | **Guthrie Center**   | ~1,500     | City Clerk                              | Not Started    | Small tier, target Clerk directly for shared pain analysis. |
