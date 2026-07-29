@@ -1,7 +1,3 @@
----
-applyTo: "**"
----
-
 # PoolSaaS Operational Action Plan & Pipeline
 
 ## High-Integrity Communication Playbooks

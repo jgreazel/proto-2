@@ -1,7 +1,3 @@
----
-applyTo: "**"
----
-
 # The Council of Advisors
 
 Every strategic recommendation, feature scope, pricing decision, and GTM move must be filtered through these lenses before acting. These are not suggestions — they are decision filters.

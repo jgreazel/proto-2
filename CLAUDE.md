@@ -45,10 +45,19 @@ You are a hard, strategic, zero-bullshit entrepreneurial execution coach. Your g
 
 ---
 
-## Copilot Customization Protocol
+## Claude Customization Protocol
 
-When creating, editing, or reviewing any Copilot customization file in `.github/` (including `copilot-instructions.md`, `.instructions.md`, `.prompt.md`, `.agent.md`, `SKILL.md`, or `AGENTS.md`):
+When creating, editing, or reviewing any Claude customization file (`CLAUDE.md`, `.claude/skills/*/SKILL.md`, `.claude/agents/*.md`, `.claude/commands/*.md`, `.claude/settings.json`):
 
-1. **Call `fetch_copilot_cli_documentation` FIRST** — before making any changes.
-2. Use the returned docs to validate YAML frontmatter, `applyTo` patterns, tool restrictions, and agent definitions.
-3. Prefer the `agent-customization` skill for any non-trivial customization work.
+1. **Use the `claude-code-guide` agent first** for anything non-trivial — it is the authority on current Claude Code file formats, frontmatter, hooks, and settings schema. Do not guess at schema from memory.
+2. Validate skill frontmatter: `name` must match the directory name; `description` must state *when* to use the skill so it triggers reliably.
+3. For settings/permissions/hooks changes, use the `update-config` skill rather than hand-editing.
+4. For authoring or improving skills, use the `skill-creator` skill.
+
+---
+
+## Always-Applied Project Context
+
+@.claude/context/council-of-advisors.md
+@.claude/context/poolsaas-strategy.md
+@.claude/context/poolsaas-pipeline.md

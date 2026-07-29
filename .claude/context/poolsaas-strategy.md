@@ -1,7 +1,3 @@
----
-applyTo: "**"
----
-
 # PoolSaaS Project Memory & Strategy Guide
 
 ## Core Thesis & Mindset
