@@ -519,7 +519,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
         r: "/register",
         t: "/timeclock",
         p: "/passes",
-        h: "/",
+        h: "/app",
         ...(isAdmin
           ? { i: "/items", f: "/files", e: "/reports", u: "/users", c: "/timeclock/admin" }
           : {}),
@@ -547,7 +547,7 @@ const FullNav = ({ disabled }: { disabled: boolean }) => {
   if (!userLoaded) return <div></div>;
 
   const home = (
-    <Link href="/" className="flex h-full items-center gap-2 px-2">
+    <Link href="/app" className="flex h-full items-center gap-2 px-2">
       <img src="/LOGO.png" alt="Guard Shack" className="h-full max-h-12 w-auto object-contain py-1" />
       <span className="hidden text-xl font-bold text-base-content sm:inline">Guard Shack</span>
     </Link>
