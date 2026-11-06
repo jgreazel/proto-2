@@ -3,7 +3,7 @@ name: Factory
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "2-59/5 * * * *"
   workflow_dispatch:
   issues:
     types: [opened, reopened, closed]
