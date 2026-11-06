@@ -6,7 +6,6 @@ import { createTRPCRouter, orgProcedure, orgAdminProcedure } from "~/server/api/
 
 import { filterUserForClient } from "../helpers/filterUsersForClient";
 // import inRateWindow from "../helpers/inRateWindow";
-import dayjs from "dayjs";
 
 const ONEYEARMILLIS = 86400000;
 

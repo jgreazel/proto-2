@@ -1,4 +1,3 @@
-import { clerkClient } from "@clerk/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -8,7 +7,6 @@ import {
   orgAdminProcedure,
 } from "~/server/api/trpc";
 
-import { filterUserForClient } from "../helpers/filterUsersForClient";
 // import inRateWindow from "../helpers/inRateWindow";
 
 const SELL_MIN = 0;
