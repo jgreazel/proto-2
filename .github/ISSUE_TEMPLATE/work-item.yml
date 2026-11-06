@@ -1,0 +1,24 @@
+name: Work item
+description: A card for the factory. Move it to Ready on the board and Copilot builds it.
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What should change?
+      description: The outcome, in a sentence or two. Copilot reads this literally.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Done when
+      description: Checkable acceptance criteria, one per line.
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / pointers
+      description: Optional files, screenshots, or constraints.

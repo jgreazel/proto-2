@@ -1,0 +1,36 @@
+# Board -> Copilot dispatcher. User-owned Projects emit no Actions events, so it polls.
+name: Factory
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  issues:
+    types: [opened, reopened, closed]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: factory
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    environment:
+      name: factory
+      deployment: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: .github/factory
+      - run: bash .github/factory/dispatch.sh
+        env:
+          GH_TOKEN: ${{ secrets.FACTORY_TOKEN }}
+          FACTORY_PROJECT: "2"
