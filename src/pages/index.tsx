@@ -2,7 +2,7 @@ import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 
-const contactEmail = "jon@guardshack.work";
+const contactEmail = "jdgreazel@gmail.com";
 
 export default function HomePage() {
   return (
