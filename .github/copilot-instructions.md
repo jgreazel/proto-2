@@ -11,7 +11,8 @@ Nobody will answer questions mid-task, and your PR auto-merges once CI is green.
 ## Definition of done (run all before finishing)
 1. `npm run lint`
 2. `npx tsc --noEmit`
-3. `SKIP_ENV_VALIDATION=1 npm run build`
+3. `SKIP_ENV_VALIDATION=1 npm run build` (in the agent sandbox these env vars are preset; locally use
+   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_Y2xlcmsuZXhhbXBsZS5jb20k CLERK_SECRET_KEY=sk_test_ci_dummy`)
 
 All three must pass. CI runs the same steps and is the only merge gate.
 
