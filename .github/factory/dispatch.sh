@@ -3,6 +3,7 @@
 #   Ready        -> assign Copilot, card -> In progress
 #   Copilot done -> un-draft PR, enable auto-merge (squash), card -> In review
 #   CI red / conflicts -> nudge @copilot (once per head SHA, max N), then -> Blocked
+#   Copilot review: request it, wait (max REVIEW_WAIT_MIN), one fix round on comments, then merge
 #   Issue closed -> Done
 # Needs GH_TOKEN = user token (repo + project scopes). GITHUB_TOKEN can't assign Copilot.
 set -euo pipefail
@@ -12,6 +13,8 @@ OWNER="${R%%/*}"
 PN="${FACTORY_PROJECT:-2}"
 MAX_NUDGES="${FACTORY_MAX_NUDGES:-3}"
 BOT="copilot-swe-agent"
+REVIEWER="copilot-pull-request-reviewer[bot]"
+REVIEW_WAIT_MIN="${FACTORY_REVIEW_WAIT_MIN:-20}"
 
 log() { echo "[factory] $*"; }
 
@@ -75,6 +78,44 @@ $marker
   log "PR #$pr nudged ($((count + 1))/$MAX_NUDGES): $msg"
 }
 
+
+# Copilot code review gate. 0 = ok to merge, 1 = wait.
+# One fix round: comments -> nudge Copilot once -> merge after it pushes.
+review_gate() { # pr sha
+  local pr=$1 sha=$2 reviews comments last rid rsha n req age
+  reviews=$(gh api --paginate "repos/$R/pulls/$pr/reviews?per_page=100"     --jq "[.[] | select(.user.login==\"$REVIEWER\")]" | jq -s 'add // []')
+  comments=$(gh api --paginate "repos/$R/issues/$pr/comments?per_page=100" | jq -s 'add // []')
+  if [[ "$(jq length <<<"$reviews")" == "0" ]]; then
+    req=$(jq -r '[.[] | select(.body | contains("<!-- factory-review-requested -->"))][0].created_at // empty' <<<"$comments")
+    if [[ -z "$req" ]]; then
+      gh api -X POST "repos/$R/pulls/$pr/requested_reviewers" -f "reviewers[]=$REVIEWER" >/dev/null         || log "PR #$pr Copilot review request failed"
+      gh pr comment "$pr" -R "$R" --body "Factory: waiting up to ${REVIEW_WAIT_MIN}m for Copilot code review before merge.
+<!-- factory-review-requested -->" >/dev/null
+      log "PR #$pr Copilot review requested"
+      return 1
+    fi
+    age=$(( ($(date +%s) - $(date -d "$req" +%s)) / 60 ))
+    if ((age < REVIEW_WAIT_MIN)); then log "PR #$pr waiting on Copilot review (${age}m)"; return 1; fi
+    log "PR #$pr no Copilot review after ${age}m, merging on CI"
+    return 0
+  fi
+  # already did the fix round: merge once Copilot pushed past the reviewed commit
+  rsha=$(jq -r '[.[] | select(.body | contains("<!-- factory-review-fix"))][0].body // empty' <<<"$comments"     | grep -o 'sha=[0-9a-f]*' | cut -d= -f2 || true)
+  if [[ -n "$rsha" ]]; then
+    [[ "$sha" != "$rsha" ]] && return 0
+    log "PR #$pr waiting on Copilot to address review"; return 1
+  fi
+  last=$(jq -c 'last' <<<"$reviews")
+  rid=$(jq -r .id <<<"$last")
+  n=$(gh api "repos/$R/pulls/$pr/reviews/$rid/comments" --jq length)
+  ((n == 0)) && { log "PR #$pr Copilot review clean"; return 0; }
+  gh pr comment "$pr" -R "$R" --body "@copilot Address the $n Copilot code review comment(s) on this PR: fix each one, or reply explaining why not. Then re-run lint, tsc, and build.
+
+<!-- factory-review-fix sha=$sha -->" >/dev/null
+  log "PR #$pr asked Copilot to address $n review comment(s)"
+  return 1
+}
+
 jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r it; do
   repo=$(jq -r '.content.repository.nameWithOwner' <<<"$it")
   [[ "$repo" == "$R" ]] || continue
@@ -128,7 +169,9 @@ jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r i
         nudge "$p" "$sha" "CI failed on this PR. Read the failing CI run logs, fix the cause, and re-run lint, tsc, and build." \
           || { set_status "$item" Blocked; log "#$num out of nudges -> Blocked"; continue; }
       fi
+      [[ "$ci" == "SUCCESS" ]] || { [[ "$status" == "In review" ]] || { set_status "$item" "In review"; log "#$num -> In review"; }; continue; }
       if [[ "$(jq -r '.autoMergeRequest // empty' <<<"$pr")" == "" ]]; then
+        review_gate "$p" "$sha" || { [[ "$status" == "In review" ]] || { set_status "$item" "In review"; log "#$num -> In review"; }; continue; }
         gh pr merge "$p" -R "$R" --auto --squash >/dev/null && log "PR #$p auto-merge (squash) enabled" \
           || log "PR #$p auto-merge not enabled yet"
       fi
