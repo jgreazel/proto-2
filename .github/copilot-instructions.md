@@ -23,6 +23,8 @@ All three must pass. CI runs the same steps and is the only merge gate.
   assumption under an **Assumptions** heading in the PR description. Do not stop to ask.
 - Only stop without code if the task is impossible or unsafe; explain why in the PR description.
 - Never commit secrets or `.env` files. Do not edit `.github/workflows/` or `.github/factory/`.
+  (Coding-agent rule. PRs authored by the repo owner, jgreazel, may change these paths; code
+  review should not flag that.)
 - Prisma schema changes need a migration under `prisma/migrations/`.
 - If a comment asks you to fix CI or merge conflicts, merge `main` into your branch, fix, and re-run
   the definition-of-done steps.
