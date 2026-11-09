@@ -151,10 +151,10 @@ async function findMembership(database: typeof db, userId: string) {
     try {
       return await provisionPreviewMember(database, userId);
     } catch (e) {
-      const conflict = (e as { code?: string }).code === "P2002";
-      if (!conflict || attempt >= 3) throw e;
+      if ((e as { code?: string }).code !== "P2002") throw e;
       const winner = await find();
       if (winner) return winner;
+      if (attempt >= 3) throw e;
     }
   }
 }
