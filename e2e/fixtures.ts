@@ -9,10 +9,14 @@ export const test = base.extend({
       const origin = new URL(baseURL).origin;
       await context.route(
         (url) => url.origin === origin,
-        (route) =>
-          route.continue({
+        // fetch without following redirects so the header never reaches the redirect target
+        async (route) => {
+          const response = await route.fetch({
             headers: { ...route.request().headers(), "x-vercel-protection-bypass": bypass },
-          }),
+            maxRedirects: 0,
+          });
+          await route.fulfill({ response });
+        },
       );
     }
     await use(context);

@@ -109,7 +109,7 @@ review_gate() { # pr sha
     [[ "$sha" != "$rsha" ]] && return 0
     # no new commit: Copilot replied instead, or the round timed out
     at=$(jq -r .created_at <<<"$fix")
-    jq -e --arg at "$at" 'any(.[]; .created_at > $at and (.user.login | test("^Copilot$|copilot-swe-agent")))' <<<"$comments" >/dev/null       && { log "PR #$pr Copilot replied to review without changes"; return 0; }
+    jq -e --arg at "$at" 'any(.[]; .created_at > $at and (.user.login | IN("Copilot", "copilot-swe-agent", "copilot-swe-agent[bot]")))' <<<"$comments" >/dev/null       && { log "PR #$pr Copilot replied to review without changes"; return 0; }
     age=$(( ($(date +%s) - $(date -d "$at" +%s)) / 60 ))
     ((age >= REVIEW_WAIT_MIN * 3)) && { log "PR #$pr review fix round timed out (${age}m), merging on CI"; return 0; }
     log "PR #$pr waiting on Copilot to address review (${age}m)"; return 1
