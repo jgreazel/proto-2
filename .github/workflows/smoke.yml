@@ -16,7 +16,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      BASE_URL: ${{ github.event.deployment_status.environment_url }}
+      # prod Clerk only loads on the real domain, not the per-deploy vercel.app URL
+      BASE_URL: ${{ github.event.deployment.environment == 'Production' && 'https://www.guardshack.work' || github.event.deployment_status.environment_url }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       # signed-in test only runs on preview (dev Clerk + dev DB)
       E2E_USERNAME: ${{ github.event.deployment.environment == 'Preview' && secrets.E2E_USERNAME || '' }}
