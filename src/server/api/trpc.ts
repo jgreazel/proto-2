@@ -129,6 +129,43 @@ export const adminProcedure = t.procedure.use(enforceUserIsAdmin);
 // These resolve the user's org membership and inject organizationId into context.
 // Use these instead of privateProcedure/adminProcedure for tenant-isolated routes.
 
+const PREVIEW_ORG_SLUG = "preview";
+
+/**
+ * Finds the user's membership.
+ * Vercel preview deploys only: auto-joins unknown users to a shared "Preview" org
+ * as owner + admin, so preview builds are usable against the dev DB (#30).
+ */
+async function findMembership(database: typeof db, userId: string) {
+  const membership = await database.organizationMembership.findFirst({
+    where: { userId },
+    include: { organization: true },
+  });
+  if (membership) return membership;
+  if (process.env.VERCEL_ENV !== "preview") return null;
+
+  const org = await database.organization.upsert({
+    where: { slug: PREVIEW_ORG_SLUG },
+    update: {},
+    create: { name: "Preview", slug: PREVIEW_ORG_SLUG },
+  });
+  await database.userSettings.upsert({
+    where: { userId },
+    update: { isAdmin: true, canSchedule: true },
+    create: { userId, isAdmin: true, canSchedule: true, createdBy: userId },
+  });
+  return database.organizationMembership.create({
+    data: {
+      organizationId: org.id,
+      userId,
+      displayName: "Preview user",
+      role: "owner",
+      isAdmin: true,
+    },
+    include: { organization: true },
+  });
+}
+
 /**
  * Resolves the calling user's OrganizationMembership from their Clerk userId.
  * Injects organizationId and membershipId into context.
@@ -138,10 +175,7 @@ const enforceOrgMembership = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const membership = await ctx.db.organizationMembership.findFirst({
-    where: { userId: ctx.userId },
-    include: { organization: true },
-  });
+  const membership = await findMembership(ctx.db, ctx.userId);
 
   if (!membership) {
     throw new TRPCError({
@@ -169,10 +203,7 @@ const enforceOrgAdmin = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const membership = await ctx.db.organizationMembership.findFirst({
-    where: { userId: ctx.userId },
-    include: { organization: true },
-  });
+  const membership = await findMembership(ctx.db, ctx.userId);
 
   if (!membership) {
     throw new TRPCError({
@@ -206,10 +237,7 @@ const enforceOrgOwner = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  const membership = await ctx.db.organizationMembership.findFirst({
-    where: { userId: ctx.userId },
-    include: { organization: true },
-  });
+  const membership = await findMembership(ctx.db, ctx.userId);
 
   if (!membership) {
     throw new TRPCError({
