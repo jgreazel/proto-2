@@ -137,13 +137,29 @@ const PREVIEW_ORG_SLUG = "preview";
  * as owner + admin, so preview builds are usable against the dev DB (#30).
  */
 async function findMembership(database: typeof db, userId: string) {
-  const membership = await database.organizationMembership.findFirst({
-    where: { userId },
-    include: { organization: true },
-  });
+  const find = () =>
+    database.organizationMembership.findFirst({
+      where: { userId },
+      include: { organization: true },
+    });
+  const membership = await find();
   if (membership) return membership;
   if (process.env.VERCEL_ENV !== "preview") return null;
 
+  // concurrent first requests race on unique keys; the loser re-reads (P2002, up to 3 tries)
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await provisionPreviewMember(database, userId);
+    } catch (e) {
+      const conflict = (e as { code?: string }).code === "P2002";
+      if (!conflict || attempt >= 3) throw e;
+      const winner = await find();
+      if (winner) return winner;
+    }
+  }
+}
+
+async function provisionPreviewMember(database: typeof db, userId: string) {
   const org = await database.organization.upsert({
     where: { slug: PREVIEW_ORG_SLUG },
     update: {},
