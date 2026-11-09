@@ -15,6 +15,8 @@ MAX_NUDGES="${FACTORY_MAX_NUDGES:-3}"
 BOT="copilot-swe-agent"
 REVIEWER="copilot-pull-request-reviewer[bot]"
 REVIEW_WAIT_MIN="${FACTORY_REVIEW_WAIT_MIN:-20}"
+# trust state markers only from the factory account
+ME=$(gh api user --jq .login)
 
 log() { echo "[factory] $*"; }
 
@@ -82,11 +84,12 @@ $marker
 # Copilot code review gate. 0 = ok to merge, 1 = wait.
 # One fix round: comments -> nudge Copilot once -> merge after it pushes.
 review_gate() { # pr sha
-  local pr=$1 sha=$2 reviews comments last rid rsha n req age
-  reviews=$(gh api --paginate "repos/$R/pulls/$pr/reviews?per_page=100"     --jq "[.[] | select(.user.login==\"$REVIEWER\")]" | jq -s 'add // []')
-  comments=$(gh api --paginate "repos/$R/issues/$pr/comments?per_page=100" | jq -s 'add // []')
+  local pr=$1 sha=$2 reviews comments mine fix at last rid rsha n req age
+  reviews=$(gh api --paginate "repos/$R/pulls/$pr/reviews?per_page=100"     --jq "[.[] | select(.user.login==\"$REVIEWER\")]" | jq -s 'add // []') || return 1
+  comments=$(gh api --paginate "repos/$R/issues/$pr/comments?per_page=100" | jq -s 'add // []') || return 1
+  mine=$(jq --arg me "$ME" '[.[] | select(.user.login==$me)]' <<<"$comments")
   if [[ "$(jq length <<<"$reviews")" == "0" ]]; then
-    req=$(jq -r '[.[] | select(.body | contains("<!-- factory-review-requested -->"))][0].created_at // empty' <<<"$comments")
+    req=$(jq -r '[.[] | select(.body | contains("<!-- factory-review-requested -->"))][0].created_at // empty' <<<"$mine")
     if [[ -z "$req" ]]; then
       gh api -X POST "repos/$R/pulls/$pr/requested_reviewers" -f "reviewers[]=$REVIEWER" >/dev/null         || log "PR #$pr Copilot review request failed"
       gh pr comment "$pr" -R "$R" --body "Factory: waiting up to ${REVIEW_WAIT_MIN}m for Copilot code review before merge.
@@ -100,14 +103,21 @@ review_gate() { # pr sha
     return 0
   fi
   # already did the fix round: merge once Copilot pushed past the reviewed commit
-  rsha=$(jq -r '[.[] | select(.body | contains("<!-- factory-review-fix"))][0].body // empty' <<<"$comments"     | grep -o 'sha=[0-9a-f]*' | cut -d= -f2 || true)
-  if [[ -n "$rsha" ]]; then
+  fix=$(jq -c '[.[] | select(.body | contains("<!-- factory-review-fix"))][0] // empty' <<<"$mine")
+  if [[ -n "$fix" ]]; then
+    rsha=$(jq -r .body <<<"$fix" | grep -o 'sha=[0-9a-f]*' | cut -d= -f2 || true)
     [[ "$sha" != "$rsha" ]] && return 0
-    log "PR #$pr waiting on Copilot to address review"; return 1
+    # no new commit: Copilot replied instead, or the round timed out
+    at=$(jq -r .created_at <<<"$fix")
+    jq -e --arg at "$at" 'any(.[]; .created_at > $at and (.user.login | test("^Copilot$|copilot-swe-agent")))' <<<"$comments" >/dev/null       && { log "PR #$pr Copilot replied to review without changes"; return 0; }
+    age=$(( ($(date +%s) - $(date -d "$at" +%s)) / 60 ))
+    ((age >= REVIEW_WAIT_MIN * 3)) && { log "PR #$pr review fix round timed out (${age}m), merging on CI"; return 0; }
+    log "PR #$pr waiting on Copilot to address review (${age}m)"; return 1
   fi
   last=$(jq -c 'last' <<<"$reviews")
   rid=$(jq -r .id <<<"$last")
-  n=$(gh api "repos/$R/pulls/$pr/reviews/$rid/comments" --jq length)
+  n=$(gh api "repos/$R/pulls/$pr/reviews/$rid/comments" --jq length) || return 1
+  [[ "$n" =~ ^[0-9]+$ ]] || return 1
   ((n == 0)) && { log "PR #$pr Copilot review clean"; return 0; }
   gh pr comment "$pr" -R "$R" --body "@copilot Address the $n Copilot code review comment(s) on this PR: fix each one, or reply explaining why not. Then re-run lint, tsc, and build.
 

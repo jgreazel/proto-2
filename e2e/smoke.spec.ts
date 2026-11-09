@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Smoke: runs against every Vercel deploy (preview + prod).
 

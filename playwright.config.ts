@@ -9,13 +9,7 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   use: {
     baseURL: process.env.BASE_URL ?? "http://localhost:3000",
-    // Vercel Deployment Protection on previews
-    extraHTTPHeaders: bypass
-      ? {
-          "x-vercel-protection-bypass": bypass,
-          "x-vercel-set-bypass-cookie": "samesitenone",
-        }
-      : undefined,
-    trace: "retain-on-failure",
+    // traces record request headers; never keep them when the bypass secret is in play
+    trace: bypass ? "off" : "retain-on-failure",
   },
 });

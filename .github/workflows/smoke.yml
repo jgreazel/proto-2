@@ -22,9 +22,11 @@ jobs:
       E2E_USERNAME: ${{ github.event.deployment.environment == 'Preview' && secrets.E2E_USERNAME || '' }}
       E2E_PASSWORD: ${{ github.event.deployment.environment == 'Preview' && secrets.E2E_PASSWORD || '' }}
     steps:
+      # harness from the trusted default branch; the deployment URL is only the target
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.deployment.sha }}
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
