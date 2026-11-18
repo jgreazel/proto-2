@@ -150,12 +150,23 @@ $marker
 }
 
 # Required checks only (ruleset); non-required (smoke on protected previews) must not trigger nudges.
+# Contexts come from the ruleset so a required check that has not reported yet counts as pending.
+REQUIRED=$(gh api "repos/$R/rules/branches/$(gh api "repos/$R" --jq .default_branch)" \
+  --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]')
 required_ci() { # pr
-  local s
-  # gh exits non-zero while checks are pending/failing; the jq output is still the answer
-  s=$(gh pr checks "$1" -R "$R" --required --json bucket \
-    --jq 'if any(.[]; .bucket=="fail" or .bucket=="cancel") then "FAILURE" elif length==0 or any(.[]; .bucket=="pending") then "PENDING" else "SUCCESS" end' 2>/dev/null || true)
-  echo "${s:-PENDING}"
+  local s err
+  err=$(mktemp)
+  # gh exits non-zero while checks are pending/failing; the JSON is still the answer
+  s=$(gh pr checks "$1" -R "$R" --json name,bucket 2>"$err" || true)
+  if [[ -z "$s" ]]; then
+    log "PR #$1 check lookup failed: $(head -c 300 "$err")" >&2; rm -f "$err"; echo PENDING; return
+  fi
+  rm -f "$err"
+  jq -r --argjson req "$REQUIRED" '
+    [.[] | select(.name as $n | $req | index($n))] as $c
+    | if any($c[]; .bucket=="fail" or .bucket=="cancel") then "FAILURE"
+      elif ($req | all(. as $r | any($c[]; .name==$r and (.bucket=="pass" or .bucket=="skipping")))) then "SUCCESS"
+      else "PENDING" end' <<<"$s"
 }
 
 # Copilot code review gate. 0 = ok to merge, 1 = wait.
