@@ -46,16 +46,17 @@ $body
 $diff"
 
 # read-only: the reviewer can view files, nothing else
-copilot -p "$prompt" -s --model="$MODEL" --available-tools=view --allow-tool=read \
+COLUMNS=10000 copilot -p "$prompt" -s --model="$MODEL" --available-tools=view --allow-tool=read \
   --no-ask-user --no-custom-instructions --disable-builtin-mcps --stream=off \
   > raw.txt 2> err.txt || unavailable "copilot exit $? $(tail -c 300 err.txt)"
 
-# model may wrap the object in prose, fences or trailing stats
+# model may wrap the object in prose/fences; CLI may hard-wrap lines inside strings
 resp=$(python3 -c '
-import json
+import json, re
 t = open("raw.txt").read()
-obj, _ = json.JSONDecoder().raw_decode(t[t.find("{"):])
-print(json.dumps(obj))' 2>parse.txt) || unavailable "unparseable reply ($(tail -1 parse.txt)): $(head -c 200 raw.txt)"
+obj, _ = json.JSONDecoder(strict=False).raw_decode(t[t.find("{"):])
+tidy = lambda o: {k: tidy(v) for k, v in o.items()} if isinstance(o, dict) else [tidy(v) for v in o] if isinstance(o, list) else re.sub(r"\s+", " ", o) if isinstance(o, str) else o
+print(json.dumps(tidy(obj)))' 2>parse.txt) || unavailable "unparseable reply ($(tail -1 parse.txt)): $(head -c 200 raw.txt)"
 jq -e '.findings | type == "array"' <<<"$resp" >/dev/null || unavailable "no findings array"
 
 majors=$(jq '[.findings[] | select(.severity == "major")] | length' <<<"$resp")
