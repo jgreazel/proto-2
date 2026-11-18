@@ -79,6 +79,7 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           marker="<!-- expert-review -->"
+          if ! compgen -G "verdict-*.json" >/dev/null; then echo "no verdicts (roster missing on base?)"; exit 0; fi
           {
             echo "### Expert review (${SHA:0:7})"
             echo "| Expert | Verdict | Summary |"
