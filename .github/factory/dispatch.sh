@@ -21,7 +21,8 @@ WIP=$(yq '.limits.wip' "$CFG")
 MAX_NUDGES=$(yq '.limits.max_nudges' "$CFG")
 REVIEW_WAIT_MIN=$(yq '.limits.review_wait_min' "$CFG")
 HUMAN_LABEL=$(yq '.gate.human_label' "$CFG")
-BOT="copilot-swe-agent"
+# agent PRs: cloud agent may author as the requester; same-repo copilot/ branch is the marker (forks excluded)
+AGENT_BRANCH="copilot/"
 REVIEWER="copilot-pull-request-reviewer[bot]"
 # trust state markers only from the factory account
 ME=$(gh api user --jq .login)
@@ -119,7 +120,7 @@ query($o:String!,$n:Int!,$endCursor:String){ user(login:$o){ projectV2(number:$n
     fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
     content{ __typename ... on Issue{ number state repository{ nameWithOwner } labels(first:20){ nodes{ name } }
       closedByPullRequestsReferences(first:10, includeClosedPrs:true){ nodes{
-        number state isDraft headRefOid mergeable changedFiles author{ login } autoMergeRequest{ enabledAt }
+        number state isDraft headRefName isCrossRepository headRefOid mergeable changedFiles author{ login } autoMergeRequest{ enabledAt }
         commits(last:1){ nodes{ commit{ statusCheckRollup{ state } } } } } } } } } } } } }' \
   -f o="$OWNER" -F n="$PN" --jq '.data.user.projectV2.items.nodes[]' | jq -s .)
 
@@ -204,7 +205,7 @@ jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r i
   num=$(jq -r '.content.number' <<<"$it")
   state=$(jq -r '.content.state' <<<"$it")
   status=$(jq -r '.fieldValueByName.name // ""' <<<"$it")
-  prs=$(jq -c --arg b "$BOT" '[.content.closedByPullRequestsReferences.nodes[] | select(.author.login==$b)]' <<<"$it")
+  prs=$(jq -c --arg b "$AGENT_BRANCH" '[.content.closedByPullRequestsReferences.nodes[] | select((.headRefName | startswith($b)) and (.isCrossRepository | not))]' <<<"$it")
   pr=$(jq -c '[.[] | select(.state=="OPEN")] | last // empty' <<<"$prs")
   human=$(jq -r --arg l "$HUMAN_LABEL" '[.content.labels.nodes[].name] | index($l) != null' <<<"$it")
 
