@@ -126,11 +126,12 @@ query($o:String!,$n:Int!,$endCursor:String){ user(login:$o){ projectV2(number:$n
 
 active=$(jq --arg w "$WORKING" '[.[] | select(.fieldValueByName.name == $w)] | length' <<<"$ITEMS")
 
-# Copilot still working? true if last copilot_work_* event is "started"
+# Coding agent still working? Reviewer app emits copilot_work_started with no finish, so scope to the SWE agent.
 copilot_working() {
   local last
   last=$(gh api --paginate "repos/$R/issues/$1/timeline?per_page=100" \
-    --jq '.[] | select(.event=="copilot_work_started" or .event=="copilot_work_finished") | .event' | tail -1)
+    --jq '.[] | select((.event=="copilot_work_started" or .event=="copilot_work_finished")
+      and .performed_via_github_app.slug=="copilot-swe-agent") | .event' | tail -1)
   [[ "$last" == "copilot_work_started" ]]
 }
 
