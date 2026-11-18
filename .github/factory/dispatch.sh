@@ -167,13 +167,18 @@ query($o:String!,$n:String!,$pr:Int!){ repository(owner:$o,name:$n){ pullRequest
   fi
   # head moved since the board read -> decide next sweep, never against a stale SHA
   [[ "$(jq -r .headRefOid <<<"$s")" == "$2" ]] || { echo PENDING; return; }
-  req=$(gh api "repos/$R/rules/branches/$(jq -r .baseRefName <<<"$s")" \
+  local base classic
+  base=$(jq -r '.baseRefName | @uri' <<<"$s") # release/1.x -> one path segment
+  req=$(gh api "repos/$R/rules/branches/$base" \
     --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]' 2>"$err") \
     || { log "PR #$1 rules lookup failed: $(head -c 300 "$err")" >&2; rm -f "$err"; echo PENDING; return; }
   rm -f "$err"
-  # classic branch protection too (404 = none; gh prints the error body to stdout)
-  local classic
-  classic=$(gh api "repos/$R/branches/$(jq -r .baseRefName <<<"$s")/protection/required_status_checks" 2>/dev/null) || classic='{}'
+  # classic protection: only 404 means none; any other error must not let unreported checks pass
+  if ! classic=$(gh api "repos/$R/branches/$base/protection/required_status_checks" 2>/dev/null); then
+    [[ "$(jq -r '.status // empty' <<<"$classic" 2>/dev/null)" == "404" ]] \
+      || { log "PR #$1 classic protection lookup failed: $(head -c 300 <<<"$classic")" >&2; echo PENDING; return; }
+    classic='{}'
+  fi
   req=$(jq -c --argjson c "$(jq -c '.contexts // []' <<<"$classic")" '. + $c | unique' <<<"$req")
   jq -r --argjson req "$req" '
     # latest run per check (queued = no startedAt = newest); superseded runs do not count
