@@ -2,6 +2,12 @@ import { expect, test } from "./fixtures";
 
 // Smoke: runs against every Vercel deploy (preview + prod).
 
+test("GET /api/health returns healthy status without signing in", async ({ page }) => {
+  const res = await page.goto("/api/health");
+  expect(res?.status()).toBe(200);
+  expect(await res?.json()).toEqual({ status: "ok" });
+});
+
 test("landing page is public and links sign-in to /app", async ({ page }) => {
   const res = await page.goto("/");
   expect(res?.status()).toBeLessThan(400);
