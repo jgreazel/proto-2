@@ -1,24 +1,34 @@
 #!/usr/bin/env bash
-# Factory dispatcher: moves board cards through Copilot.
-#   Ready        -> assign Copilot, card -> In progress
-#   Copilot done -> un-draft PR, enable auto-merge (squash), card -> In review
-#   CI red / conflicts -> nudge @copilot (once per head SHA, max N), then -> Blocked
-#   Copilot review: request it, wait (max REVIEW_WAIT_MIN), one fix round on comments, then merge
-#   Issue closed -> Done
+# Factory dispatcher: moves board cards through Copilot. Columns and limits come from factory.yml.
+#   ready   -> assign Copilot (WIP-limited), card -> working
+#   Copilot done -> un-draft PR, enable auto-merge (squash), card -> review
+#   red checks / conflicts -> nudge @copilot (once per head SHA, max N), then -> blocked
+#   Copilot review: request it, wait (max review_wait_min), one fix round on comments, then merge
+#   human gate label -> no auto-merge; a person merges
+#   issue closed -> done + end-of-run report
+# Every transition lands in a per-card run log comment on the issue.
 # Needs GH_TOKEN = user token (repo + project scopes). GITHUB_TOKEN can't assign Copilot.
 set -euo pipefail
 
+CFG="${FACTORY_CONFIG:-.github/factory/factory.yml}"
 R="$GITHUB_REPOSITORY"
 OWNER="${R%%/*}"
-PN="${FACTORY_PROJECT:-2}"
-MAX_NUDGES="${FACTORY_MAX_NUDGES:-3}"
+PN="${FACTORY_PROJECT:-$(yq '.project' "$CFG")}"
+col() { yq ".board.columns[] | select(.role == \"$1\") | .name" "$CFG"; }
+BACKLOG=$(col backlog) READY=$(col ready) WORKING=$(col working)
+REVIEW=$(col review) BLOCKED=$(col blocked) DONE=$(col done)
+WIP=$(yq '.limits.wip' "$CFG")
+MAX_NUDGES=$(yq '.limits.max_nudges' "$CFG")
+REVIEW_WAIT_MIN=$(yq '.limits.review_wait_min' "$CFG")
+HUMAN_LABEL=$(yq '.gate.human_label' "$CFG")
 BOT="copilot-swe-agent"
 REVIEWER="copilot-pull-request-reviewer[bot]"
-REVIEW_WAIT_MIN="${FACTORY_REVIEW_WAIT_MIN:-20}"
 # trust state markers only from the factory account
 ME=$(gh api user --jq .login)
 
 log() { echo "[factory] $*"; }
+
+FACTORY_PROJECT="$PN" bash "$(dirname "$0")/provision.sh"
 
 # --- project meta
 META=$(gh api graphql -f query='
@@ -34,6 +44,62 @@ set_status() { # item-id status-name
     --single-select-option-id "$(opt "$2")" >/dev/null
 }
 
+# --- run log: one comment per card, a row per factory event
+RUNLOG="<!-- factory-runlog -->"
+runlog_comment() { # issue -> {id, body} of the run log comment, or empty
+  gh api --paginate "repos/$R/issues/$1/comments?per_page=100" \
+    --jq ".[] | select(.user.login==\"$ME\" and (.body | contains(\"$RUNLOG\"))) | {id, body}" | head -1
+}
+runlog() { # issue message
+  local num=$1 msg=$2 c id body row last
+  row="| $(date -u '+%Y-%m-%d %H:%M') | $msg |"
+  c=$(runlog_comment "$num")
+  if [[ -z "$c" ]]; then
+    gh api "repos/$R/issues/$num/comments" -f body="### Factory run log
+| When (UTC) | Event |
+|---|---|
+$row
+$RUNLOG" >/dev/null
+    return
+  fi
+  id=$(jq -r .id <<<"$c")
+  body=$(jq -r .body <<<"$c" | grep -vF "$RUNLOG")
+  # same event as last row: don't repeat it every sweep
+  last=$(tail -1 <<<"$body" | cut -d'|' -f3 | xargs)
+  [[ "$last" == "$(xargs <<<"$msg")" ]] && return
+  gh api -X PATCH "repos/$R/issues/comments/$id" -f body="$body
+$row
+$RUNLOG" >/dev/null
+}
+card() { log "#$1 $2"; runlog "$1" "$2"; }
+
+# --- end-of-run report, posted when a card reaches done
+report() { # issue pr-json
+  local num=$1 pr=$2 p d start merged mins nudges fixes
+  p=$(jq -r .number <<<"$pr")
+  d=$(gh pr view "$p" -R "$R" --json mergedAt,additions,deletions,changedFiles,comments)
+  merged=$(jq -r '.mergedAt // empty' <<<"$d")
+  start=$(runlog_comment "$num" | jq -r .body | grep -m1 'handed to Copilot' | cut -d'|' -f2 | xargs || true)
+  mins="n/a"
+  if [[ -n "$start" && -n "$merged" ]]; then
+    mins=$(( ($(date -d "$merged" +%s) - $(date -d "$start UTC" +%s)) / 60 ))
+  fi
+  nudges=$(jq '[.comments[] | select(.body | contains("<!-- factory-nudge -->"))] | length' <<<"$d")
+  fixes=$(jq '[.comments[] | select(.body | contains("<!-- factory-review-fix"))] | length' <<<"$d")
+  gh api "repos/$R/issues/$num/comments" -f body="### Factory end-of-run report
+| | |
+|---|---|
+| PR | #$p, merged ${merged:-n/a} |
+| Change | $(jq -r '"\(.changedFiles) files, +\(.additions) / -\(.deletions)"' <<<"$d") |
+| Cycle time (handed to Copilot -> merged) | $mins min |
+| CI / conflict nudges | $nudges of $MAX_NUDGES |
+| Code review fix rounds | $fixes |
+| Expert verdicts | Expert review comment on #$p |
+| Agent session log | #$p -> View session |
+<!-- factory-report -->" >/dev/null
+  log "#$num end-of-run report posted"
+}
+
 # --- auto-add: open issues authored by the owner that aren't on the board yet
 ON_BOARD=$(gh project item-list "$PN" --owner "$OWNER" --limit 500 --format json \
   --jq "[.items[] | select(.content.repository==\"$R\") | .content.number]")
@@ -41,8 +107,8 @@ gh issue list -R "$R" --state open --author "$OWNER" --limit 200 --json number,u
   --jq '.[] | "\(.number) \(.url)"' | while read -r num url; do
   if ! jq -e --argjson n "$num" 'index($n)' <<<"$ON_BOARD" >/dev/null; then
     id=$(gh project item-add "$PN" --owner "$OWNER" --url "$url" --format json --jq .id)
-    set_status "$id" Todo
-    log "#$num added to board (Todo)"
+    set_status "$id" "$BACKLOG"
+    card "$num" "added to board ($BACKLOG)"
   fi
 done
 
@@ -51,11 +117,13 @@ ITEMS=$(gh api graphql --paginate -f query='
 query($o:String!,$n:Int!,$endCursor:String){ user(login:$o){ projectV2(number:$n){
   items(first:50, after:$endCursor){ pageInfo{ hasNextPage endCursor } nodes{ id
     fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
-    content{ __typename ... on Issue{ number state repository{ nameWithOwner }
-      closedByPullRequestsReferences(first:10, includeClosedPrs:false){ nodes{
-        number isDraft headRefOid mergeable changedFiles author{ login } autoMergeRequest{ enabledAt }
+    content{ __typename ... on Issue{ number state repository{ nameWithOwner } labels(first:20){ nodes{ name } }
+      closedByPullRequestsReferences(first:10, includeClosedPrs:true){ nodes{
+        number state isDraft headRefOid mergeable changedFiles author{ login } autoMergeRequest{ enabledAt }
         commits(last:1){ nodes{ commit{ statusCheckRollup{ state } } } } } } } } } } } } }' \
   -f o="$OWNER" -F n="$PN" --jq '.data.user.projectV2.items.nodes[]' | jq -s .)
+
+active=$(jq --arg w "$WORKING" '[.[] | select(.fieldValueByName.name == $w)] | length' <<<"$ITEMS")
 
 # Copilot still working? true if last copilot_work_* event is "started"
 copilot_working() {
@@ -80,18 +148,17 @@ $marker
   log "PR #$pr nudged ($((count + 1))/$MAX_NUDGES): $msg"
 }
 
-
 # Copilot code review gate. 0 = ok to merge, 1 = wait.
 # One fix round: comments -> nudge Copilot once -> merge after it pushes.
 review_gate() { # pr sha
   local pr=$1 sha=$2 reviews comments mine fix at last rid rsha n req age
-  reviews=$(gh api --paginate "repos/$R/pulls/$pr/reviews?per_page=100"     --jq "[.[] | select(.user.login==\"$REVIEWER\")]" | jq -s 'add // []') || return 1
+  reviews=$(gh api --paginate "repos/$R/pulls/$pr/reviews?per_page=100" --jq "[.[] | select(.user.login==\"$REVIEWER\")]" | jq -s 'add // []') || return 1
   comments=$(gh api --paginate "repos/$R/issues/$pr/comments?per_page=100" | jq -s 'add // []') || return 1
   mine=$(jq --arg me "$ME" '[.[] | select(.user.login==$me)]' <<<"$comments")
   if [[ "$(jq length <<<"$reviews")" == "0" ]]; then
     req=$(jq -r '[.[] | select(.body | contains("<!-- factory-review-requested -->"))][0].created_at // empty' <<<"$mine")
     if [[ -z "$req" ]]; then
-      gh api -X POST "repos/$R/pulls/$pr/requested_reviewers" -f "reviewers[]=$REVIEWER" >/dev/null         || log "PR #$pr Copilot review request failed"
+      gh api -X POST "repos/$R/pulls/$pr/requested_reviewers" -f "reviewers[]=$REVIEWER" >/dev/null || log "PR #$pr Copilot review request failed"
       gh pr comment "$pr" -R "$R" --body "Factory: waiting up to ${REVIEW_WAIT_MIN}m for Copilot code review before merge.
 <!-- factory-review-requested -->" >/dev/null
       log "PR #$pr Copilot review requested"
@@ -109,7 +176,7 @@ review_gate() { # pr sha
     [[ "$sha" != "$rsha" ]] && return 0
     # no new commit: Copilot replied instead, or the round timed out
     at=$(jq -r .created_at <<<"$fix")
-    jq -e --arg at "$at" 'any(.[]; .created_at > $at and (.user.login | IN("Copilot", "copilot-swe-agent", "copilot-swe-agent[bot]")))' <<<"$comments" >/dev/null       && { log "PR #$pr Copilot replied to review without changes"; return 0; }
+    jq -e --arg at "$at" 'any(.[]; .created_at > $at and (.user.login | IN("Copilot", "copilot-swe-agent", "copilot-swe-agent[bot]")))' <<<"$comments" >/dev/null && { log "PR #$pr Copilot replied to review without changes"; return 0; }
     age=$(( ($(date +%s) - $(date -d "$at" +%s)) / 60 ))
     ((age >= REVIEW_WAIT_MIN * 3)) && { log "PR #$pr review fix round timed out (${age}m), merging on CI"; return 0; }
     log "PR #$pr waiting on Copilot to address review (${age}m)"; return 1
@@ -126,6 +193,10 @@ review_gate() { # pr sha
   return 1
 }
 
+to_review() { # item num status
+  [[ "$3" == "$REVIEW" ]] || { set_status "$1" "$REVIEW"; card "$2" "-> $REVIEW"; }
+}
+
 jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r it; do
   repo=$(jq -r '.content.repository.nameWithOwner' <<<"$it")
   [[ "$repo" == "$R" ]] || continue
@@ -133,16 +204,23 @@ jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r i
   num=$(jq -r '.content.number' <<<"$it")
   state=$(jq -r '.content.state' <<<"$it")
   status=$(jq -r '.fieldValueByName.name // ""' <<<"$it")
-  pr=$(jq -c --arg b "$BOT" '[.content.closedByPullRequestsReferences.nodes[] | select(.author.login==$b)] | last // empty' <<<"$it")
+  prs=$(jq -c --arg b "$BOT" '[.content.closedByPullRequestsReferences.nodes[] | select(.author.login==$b)]' <<<"$it")
+  pr=$(jq -c '[.[] | select(.state=="OPEN")] | last // empty' <<<"$prs")
+  human=$(jq -r --arg l "$HUMAN_LABEL" '[.content.labels.nodes[].name] | index($l) != null' <<<"$it")
 
   if [[ "$state" == "CLOSED" ]]; then
-    [[ "$status" == "Done" ]] || { set_status "$item" Done; log "#$num -> Done"; }
+    if [[ "$status" != "$DONE" ]]; then
+      set_status "$item" "$DONE"; card "$num" "-> $DONE"
+      merged=$(jq -c '[.[] | select(.state=="MERGED")] | last // empty' <<<"$prs")
+      [[ -n "$merged" ]] && report "$num" "$merged"
+    fi
     continue
   fi
-  [[ -z "$status" ]] && { set_status "$item" Todo; log "#$num -> Todo"; continue; }
+  [[ -z "$status" ]] && { set_status "$item" "$BACKLOG"; card "$num" "-> $BACKLOG"; continue; }
 
   case "$status" in
-    Ready)
+    "$READY")
+      if ((active >= WIP)); then log "#$num waiting: WIP limit $WIP reached"; continue; fi
       if [[ -n "$pr" ]]; then
         # re-queued card with an existing PR: tell Copilot to carry on
         gh pr comment "$(jq -r .number <<<"$pr")" -R "$R" \
@@ -150,10 +228,11 @@ jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r i
       else
         gh issue edit "$num" -R "$R" --add-assignee "@copilot" >/dev/null
       fi
-      set_status "$item" "In progress"
-      log "#$num handed to Copilot -> In progress"
+      set_status "$item" "$WORKING"
+      active=$((active + 1))
+      card "$num" "handed to Copilot -> $WORKING"
       ;;
-    "In progress" | "In review")
+    "$WORKING" | "$REVIEW")
       [[ -n "$pr" ]] || continue
       p=$(jq -r .number <<<"$pr")
       copilot_working "$p" && continue
@@ -164,28 +243,33 @@ jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r i
       mergeable=$(jq -r .mergeable <<<"$pr")
 
       if [[ "$files" == "0" ]]; then
-        set_status "$item" Blocked
-        log "#$num Copilot finished with no changes (PR #$p) -> Blocked"
+        set_status "$item" "$BLOCKED"
+        card "$num" "Copilot finished with no changes (PR #$p) -> $BLOCKED"
         continue
       fi
       if [[ "$draft" == "true" ]]; then
         gh pr ready "$p" -R "$R" >/dev/null
-        log "PR #$p marked ready for review"
+        card "$num" "Copilot finished; PR #$p marked ready for review"
       fi
       if [[ "$mergeable" == "CONFLICTING" ]]; then
         nudge "$p" "$sha" "This PR has merge conflicts. Merge main into your branch, resolve them, and re-run lint, tsc, and build." \
-          || { set_status "$item" Blocked; log "#$num out of nudges -> Blocked"; continue; }
+          || { set_status "$item" "$BLOCKED"; card "$num" "out of nudges (conflicts) -> $BLOCKED"; continue; }
       elif [[ "$ci" == "FAILURE" || "$ci" == "ERROR" ]]; then
-        nudge "$p" "$sha" "CI failed on this PR. Read the failing CI run logs, fix the cause, and re-run lint, tsc, and build." \
-          || { set_status "$item" Blocked; log "#$num out of nudges -> Blocked"; continue; }
+        nudge "$p" "$sha" "A required check failed on this PR (CI, factory checks, or an expert review). Read the failing check output and the Expert review comment, fix the cause, and re-run lint, tsc, and build." \
+          || { set_status "$item" "$BLOCKED"; card "$num" "out of nudges (checks red) -> $BLOCKED"; continue; }
       fi
-      [[ "$ci" == "SUCCESS" ]] || { [[ "$status" == "In review" ]] || { set_status "$item" "In review"; log "#$num -> In review"; }; continue; }
+      [[ "$ci" == "SUCCESS" ]] || { to_review "$item" "$num" "$status"; continue; }
+      if [[ "$human" == "true" ]]; then
+        to_review "$item" "$num" "$status"
+        card "$num" "checks green; waiting for a human to review and merge PR #$p ($HUMAN_LABEL)"
+        continue
+      fi
       if [[ "$(jq -r '.autoMergeRequest // empty' <<<"$pr")" == "" ]]; then
-        review_gate "$p" "$sha" || { [[ "$status" == "In review" ]] || { set_status "$item" "In review"; log "#$num -> In review"; }; continue; }
-        gh pr merge "$p" -R "$R" --auto --squash >/dev/null && log "PR #$p auto-merge (squash) enabled" \
+        review_gate "$p" "$sha" || { to_review "$item" "$num" "$status"; continue; }
+        gh pr merge "$p" -R "$R" --auto --squash >/dev/null && card "$num" "PR #$p auto-merge (squash) armed" \
           || log "PR #$p auto-merge not enabled yet"
       fi
-      [[ "$status" == "In review" ]] || { set_status "$item" "In review"; log "#$num -> In review"; }
+      to_review "$item" "$num" "$status"
       ;;
   esac
 done

@@ -1,0 +1,87 @@
+# Factory gates on every PR: agent scope, criterion evidence, dependency vulns + licenses.
+name: Factory checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: factory-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  agent-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: .github/factory
+      - name: Copilot PRs stay out of protected paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [[ "$AUTHOR_TYPE" != "Bot" || ! "$AUTHOR" =~ ^[Cc]opilot ]]; then
+            echo "$AUTHOR is not the coding agent; agent scope n/a"; exit 0
+          fi
+          gh pr diff "$PR" -R "$GITHUB_REPOSITORY" --name-only > files.txt
+          bad=""
+          while read -r p; do
+            hits=$(awk -v p="$p" 'index($0, p) == 1' files.txt)
+            [[ -n "$hits" ]] && bad+="$hits"$'\n'
+          done < <(yq '.agent.protected_paths[]' .github/factory/factory.yml)
+          if [[ -n "$bad" ]]; then
+            echo "::error::Coding agent changed protected paths:"; echo "$bad"; exit 1
+          fi
+          echo "agent scope ok ($(wc -l < files.txt) files)"
+
+  criteria:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every acceptance criterion has evidence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            const isAgent = pr.user.type === 'Bot' && /^copilot/i.test(pr.user.login);
+            const m = body.match(/(?:fixes|closes|resolves)\s+#(\d+)/i);
+            if (!m) {
+              if (isAgent) return core.setFailed('Copilot PR has no "Fixes #N" link to its card.');
+              return core.info('No linked issue; criterion ledger n/a.');
+            }
+            const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: +m[1] });
+            const sec = (issue.body || '').match(/###\s*Done when\s*\n([\s\S]*?)(?=\n###\s|$)/i);
+            if (!sec) return core.info(`#${m[1]} has no "Done when" section; nothing to check.`);
+            const criteria = sec[1].split('\n')
+              .map(l => l.replace(/^\s*[-*]\s*(\[[ xX]\]\s*)?/, '').trim())
+              .filter(l => l && l !== '_No response_');
+            const ev = body.match(/#+\s*Evidence\s*\n([\s\S]*?)(?=\n#+\s|$)/i);
+            if (!ev) return core.setFailed(`PR needs an "## Evidence" table: one row per criterion (${criteria.length}) with the command or check that proved it.`);
+            const rows = ev[1].split('\n').filter(l => /^\s*\|/.test(l) && !/^\s*\|[\s:|-]+\|\s*$/.test(l)).slice(1);
+            const proven = rows.filter(r => {
+              const cells = r.split('|').slice(1, -1).map(c => c.trim());
+              const proof = cells[cells.length - 1] || '';
+              return cells.length >= 2 && !/^(|tbd|todo|n\/a|-)$/i.test(proof);
+            });
+            await core.summary.addHeading('Criterion ledger', 3)
+              .addList(criteria).addRaw(`Evidence rows: ${proven.length} / ${criteria.length}`).write();
+            if (proven.length < criteria.length)
+              core.setFailed(`${criteria.length} criteria, ${proven.length} evidence rows. Every criterion needs proof.`);
+
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later

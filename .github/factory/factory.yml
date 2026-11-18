@@ -1,0 +1,31 @@
+# Factory config. The factory owns the board: provision.sh applies this to the Project every sweep.
+project: 2
+
+board:
+  # role -> column. Rename a column here and the board follows; option ids are kept, so cards stay put.
+  # `was` = old names to adopt instead of creating a new column.
+  columns:
+    - { role: backlog, name: Backlog,     color: GRAY,   was: [Todo] }
+    - { role: ready,   name: Ready,       color: BLUE }
+    - { role: working, name: In Progress, color: YELLOW, was: [In progress] }
+    - { role: review,  name: Review,      color: PURPLE, was: [In review] }
+    - { role: blocked, name: Blocked,     color: RED }
+    - { role: done,    name: Done,        color: GREEN }
+
+limits:
+  wip: 3               # max cards Copilot works at once; extra Ready cards wait
+  max_nudges: 3        # CI-fix / conflict nudges per card before Blocked
+  review_wait_min: 20  # how long to wait on Copilot code review
+
+review:
+  model: openai/gpt-4.1
+  max_diff_chars: 24000
+  # one charter per expert in .github/agents/experts/<name>.md; each posts expert-review/<name>
+  experts: [ciso, solutions-architect, software-engineer, devops-engineer, cloud-engineer, quality-assurance]
+
+gate:
+  human_label: needs-human  # card with this label waits for a human to merge; no auto-merge
+
+agent:
+  # paths a Copilot PR may not touch (agent-scope check)
+  protected_paths: [".github/workflows/", ".github/factory/", ".github/agents/", ".github/copilot-instructions.md"]

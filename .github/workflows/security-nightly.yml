@@ -1,0 +1,45 @@
+# Nightly scan for new CVEs in code that didn't change. Keeps one tracking issue open while findings exist.
+name: Security nightly
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: npm audit (prod deps, high+)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm audit --omit=dev --json > audit.json || true
+          high=$(jq '(.metadata.vulnerabilities.high // 0) + (.metadata.vulnerabilities.critical // 0)' audit.json)
+          title="Nightly security scan"
+          id=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')
+          if [[ "$high" == "0" ]]; then
+            [[ -n "$id" ]] && gh issue close "$id" -R "$GITHUB_REPOSITORY" -c "Clean on $(date -u +%F)."
+            echo "no high/critical"; exit 0
+          fi
+          {
+            echo "High/critical advisories in production dependencies: **$high** ($(date -u +%F))."
+            echo
+            echo "| Package | Severity | Fix available |"
+            echo "|---|---|---|"
+            jq -r '.vulnerabilities | to_entries[] | select(.value.severity == "high" or .value.severity == "critical")
+              | "| \(.key) | \(.value.severity) | \(if .value.fixAvailable then "yes" else "no" end) |"' audit.json
+            echo
+            echo "Not auto-queued for Copilot: move to Ready on the board to have it fixed."
+          } > body.md
+          if [[ -n "$id" ]]; then gh issue edit "$id" -R "$GITHUB_REPOSITORY" --body-file body.md
+          else gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body-file body.md; fi
+          echo "::warning::$high high/critical advisories"

@@ -1,0 +1,99 @@
+# Expert roster review: one GitHub Models call per expert, each posts expert-review/<expert>.
+name: Expert review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: expert-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  roster:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    outputs:
+      experts: ${{ steps.r.outputs.experts }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: .github
+      - id: r
+        run: echo "experts=$(yq -o=json -I=0 '.review.experts' .github/factory/factory.yml)" >> "$GITHUB_OUTPUT"
+
+  review:
+    needs: roster
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      models: read
+      statuses: write
+      pull-requests: read
+      issues: read
+    strategy:
+      fail-fast: false
+      matrix:
+        expert: ${{ fromJson(needs.roster.outputs.experts) }}
+    steps:
+      # base branch only: the PR under review can't edit its reviewers
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: .github
+      - run: bash .github/factory/expert-review.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          EXPERT: ${{ matrix.expert }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verdict-${{ matrix.expert }}
+          path: verdict-${{ matrix.expert }}.json
+          if-no-files-found: ignore
+
+  summary:
+    needs: review
+    if: ${{ always() && needs.review.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: verdict-*
+          merge-multiple: true
+      - name: Post expert review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          marker="<!-- expert-review -->"
+          {
+            echo "### Expert review (${SHA:0:7})"
+            echo "| Expert | Verdict | Summary |"
+            echo "|---|---|---|"
+            jq -rs '.[] | "| \(.expert) | \(.state) | \(.summary) |"' verdict-*.json
+            echo
+            jq -rs '[.[] | .expert as $e | .findings[] | "- **\(.severity)** \($e) `\(.file)`: \(.note)"] | if length > 0 then "#### Findings\n" + join("\n") else "No findings." end' verdict-*.json
+            echo
+            echo "Only **major** findings fail a review."
+            echo "$marker"
+          } > comment.md
+          id=$(gh api --paginate "repos/$REPO/issues/$PR/comments?per_page=100" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id" | head -1)
+          if [[ -n "$id" ]]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@comment.md >/dev/null
+          else
+            gh pr comment "$PR" -R "$REPO" --body-file comment.md >/dev/null
+          fi
