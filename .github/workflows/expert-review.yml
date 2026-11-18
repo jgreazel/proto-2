@@ -1,4 +1,4 @@
-# Expert roster review: one GitHub Models call per expert, each posts expert-review/<expert>.
+# Expert roster review: one Copilot CLI run per expert, each posts expert-review/<expert>.
 name: Expert review
 
 on:
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      models: read
+      copilot-requests: write
       statuses: write
       pull-requests: read
       issues: read
@@ -45,6 +45,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           sparse-checkout: .github
+      - run: npm install -g @github/copilot
       - run: bash .github/factory/expert-review.sh
         env:
           GH_TOKEN: ${{ github.token }}

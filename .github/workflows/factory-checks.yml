@@ -25,12 +25,12 @@ jobs:
       - name: Copilot PRs stay out of protected paths
         env:
           GH_TOKEN: ${{ github.token }}
-          AUTHOR: ${{ github.event.pull_request.user.login }}
-          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          if [[ "$AUTHOR_TYPE" != "Bot" || ! "$AUTHOR" =~ ^[Cc]opilot ]]; then
-            echo "$AUTHOR is not the coding agent; agent scope n/a"; exit 0
+          # cloud agent can author as the requester; its branch prefix is the reliable marker
+          if [[ "$HEAD_REF" != copilot/* ]]; then
+            echo "$HEAD_REF is not a coding-agent branch; agent scope n/a"; exit 0
           fi
           gh pr diff "$PR" -R "$GITHUB_REPOSITORY" --name-only > files.txt
           bad=""
@@ -52,7 +52,7 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             const body = pr.body || '';
-            const isAgent = pr.user.type === 'Bot' && /^copilot/i.test(pr.user.login);
+            const isAgent = pr.head.ref.startsWith('copilot/');
             const m = body.match(/(?:fixes|closes|resolves)\s+#(\d+)/i);
             if (!m) {
               if (isAgent) return core.setFailed('Copilot PR has no "Fixes #N" link to its card.');

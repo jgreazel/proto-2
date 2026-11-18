@@ -1,7 +1,7 @@
 # Expert roster
 
 One charter per expert. `.github/workflows/expert-review.yml` runs each one on every ready PR
-through GitHub Models and posts a commit status `expert-review/<name>`.
+through Copilot CLI (read-only tools) and posts a commit status `expert-review/<name>`.
 
 - Reviewer is not the builder: the workflow runs as `github-actions[bot]` with read-only
   contents, separate from Copilot (the author).
