@@ -46,17 +46,26 @@ $body
 $diff"
 
 # read-only: the reviewer can view files, nothing else
-COLUMNS=10000 copilot -p "$prompt" -s --model="$MODEL" --available-tools=view --allow-tool=read \
+copilot -p "$prompt" -s --output-format=json --model="$MODEL" --available-tools=view --allow-tool=read \
   --no-ask-user --no-custom-instructions --disable-builtin-mcps --stream=off \
-  > raw.txt 2> err.txt || unavailable "copilot exit $? $(tail -c 300 err.txt)"
+  > raw.jsonl 2> err.txt || unavailable "copilot exit $? $(tail -c 300 err.txt)"
 
-# model may wrap the object in prose/fences; CLI may hard-wrap lines inside strings
+# JSONL schema is undocumented: take the last string anywhere that holds the verdict object
 resp=$(python3 -c '
 import json, re
-t = open("raw.txt").read()
+def strings(o):
+    if isinstance(o, dict): o = list(o.values())
+    if isinstance(o, list):
+        for v in o: yield from strings(v)
+    elif isinstance(o, str): yield o
+found = []
+for line in open("raw.jsonl"):
+    try: found += [s for s in strings(json.loads(line)) if "\"findings\"" in s]
+    except ValueError: pass
+t = found[-1]
 obj, _ = json.JSONDecoder(strict=False).raw_decode(t[t.find("{"):])
 tidy = lambda o: {k: tidy(v) for k, v in o.items()} if isinstance(o, dict) else [tidy(v) for v in o] if isinstance(o, list) else re.sub(r"\s+", " ", o) if isinstance(o, str) else o
-print(json.dumps(tidy(obj)))' 2>parse.txt) || unavailable "unparseable reply ($(tail -1 parse.txt)): $(head -c 200 raw.txt)"
+print(json.dumps(tidy(obj)))' 2>parse.txt) || unavailable "unparseable reply ($(tail -1 parse.txt)): $(tail -c 300 raw.jsonl)"
 jq -e '.findings | type == "array"' <<<"$resp" >/dev/null || unavailable "no findings array"
 
 majors=$(jq '[.findings[] | select(.severity == "major")] | length' <<<"$resp")

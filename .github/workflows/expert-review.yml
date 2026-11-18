@@ -43,7 +43,7 @@ jobs:
       # base branch only: the PR under review can't edit its reviewers
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }} # BOOTSTRAP-ONLY: revert to base.sha before merge
+          ref: ${{ github.event.pull_request.base.sha }}
           sparse-checkout: .github
       - run: npm install -g @github/copilot
       - run: bash .github/factory/expert-review.sh
