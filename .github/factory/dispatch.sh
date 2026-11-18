@@ -170,10 +170,14 @@ query($o:String!,$n:String!,$pr:Int!){ repository(owner:$o,name:$n){ pullRequest
     --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]' 2>"$err") \
     || { log "PR #$1 rules lookup failed: $(head -c 300 "$err")" >&2; rm -f "$err"; echo PENDING; return; }
   rm -f "$err"
+  # classic branch protection too (404 = none; gh prints the error body to stdout)
+  local classic
+  classic=$(gh api "repos/$R/branches/$(jq -r .baseRefName <<<"$s")/protection/required_status_checks" 2>/dev/null) || classic='{}'
+  req=$(jq -c --argjson c "$(jq -c '.contexts // []' <<<"$classic")" '. + $c | unique' <<<"$req")
   jq -r --argjson req "$req" '
-    # latest run per check; superseded (concurrency-cancelled) runs do not count
+    # latest run per check (queued = no startedAt = newest); superseded runs do not count
     ([.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | select(.isRequired)]
-      | group_by(.name) | map(max_by(.startedAt // ""))) as $c
+      | group_by(.name) | map(max_by(.startedAt // "9999"))) as $c
     | if any($c[]; (.conclusion // .state) | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")) then "FAILURE"
       elif ($c | length) == 0 then "PENDING"
       elif all($c[]; (.conclusion // .state) | IN("SUCCESS","NEUTRAL","SKIPPED"))
