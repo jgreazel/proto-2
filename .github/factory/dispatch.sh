@@ -121,7 +121,7 @@ query($o:String!,$n:Int!,$endCursor:String){ user(login:$o){ projectV2(number:$n
     content{ __typename ... on Issue{ number state repository{ nameWithOwner } labels(first:20){ nodes{ name } }
       closedByPullRequestsReferences(first:10, includeClosedPrs:true){ nodes{
         number state isDraft headRefName isCrossRepository headRefOid mergeable changedFiles author{ login } autoMergeRequest{ enabledAt }
-        commits(last:1){ nodes{ commit{ statusCheckRollup{ state } } } } } } } } } } } } }' \
+        } } } } } } } } }' \
   -f o="$OWNER" -F n="$PN" --jq '.data.user.projectV2.items.nodes[]' | jq -s .)
 
 active=$(jq --arg w "$WORKING" '[.[] | select(.fieldValueByName.name == $w)] | length' <<<"$ITEMS")
@@ -147,6 +147,15 @@ nudge() { # pr sha message
 $marker
 <!-- factory-nudge sha=$sha -->" >/dev/null
   log "PR #$pr nudged ($((count + 1))/$MAX_NUDGES): $msg"
+}
+
+# Required checks only (ruleset); non-required (smoke on protected previews) must not trigger nudges.
+required_ci() { # pr
+  local s
+  # gh exits non-zero while checks are pending/failing; the jq output is still the answer
+  s=$(gh pr checks "$1" -R "$R" --required --json bucket \
+    --jq 'if any(.[]; .bucket=="fail" or .bucket=="cancel") then "FAILURE" elif length==0 or any(.[]; .bucket=="pending") then "PENDING" else "SUCCESS" end' 2>/dev/null || true)
+  echo "${s:-PENDING}"
 }
 
 # Copilot code review gate. 0 = ok to merge, 1 = wait.
@@ -240,7 +249,7 @@ jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r i
       draft=$(jq -r .isDraft <<<"$pr")
       sha=$(jq -r .headRefOid <<<"$pr")
       files=$(jq -r .changedFiles <<<"$pr")
-      ci=$(jq -r '.commits.nodes[0].commit.statusCheckRollup.state // "PENDING"' <<<"$pr")
+      ci=$(required_ci "$p")
       mergeable=$(jq -r .mergeable <<<"$pr")
 
       if [[ "$files" == "0" ]]; then
