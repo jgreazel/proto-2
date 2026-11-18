@@ -121,16 +121,17 @@ query($o:String!,$n:Int!,$endCursor:String){ user(login:$o){ projectV2(number:$n
     content{ __typename ... on Issue{ number state repository{ nameWithOwner } labels(first:20){ nodes{ name } }
       closedByPullRequestsReferences(first:10, includeClosedPrs:true){ nodes{
         number state isDraft headRefName isCrossRepository headRefOid mergeable changedFiles author{ login } autoMergeRequest{ enabledAt }
-        commits(last:1){ nodes{ commit{ statusCheckRollup{ state } } } } } } } } } } } } }' \
+        } } } } } } } } }' \
   -f o="$OWNER" -F n="$PN" --jq '.data.user.projectV2.items.nodes[]' | jq -s .)
 
 active=$(jq --arg w "$WORKING" '[.[] | select(.fieldValueByName.name == $w)] | length' <<<"$ITEMS")
 
-# Copilot still working? true if last copilot_work_* event is "started"
+# Coding agent still working? Reviewer app emits copilot_work_started with no finish, so scope to the SWE agent.
 copilot_working() {
   local last
   last=$(gh api --paginate "repos/$R/issues/$1/timeline?per_page=100" \
-    --jq '.[] | select(.event=="copilot_work_started" or .event=="copilot_work_finished") | .event' | tail -1)
+    --jq '.[] | select((.event=="copilot_work_started" or .event=="copilot_work_finished")
+      and .performed_via_github_app.slug=="copilot-swe-agent") | .event' | tail -1)
   [[ "$last" == "copilot_work_started" ]]
 }
 
@@ -147,6 +148,47 @@ nudge() { # pr sha message
 $marker
 <!-- factory-nudge sha=$sha -->" >/dev/null
   log "PR #$pr nudged ($((count + 1))/$MAX_NUDGES): $msg"
+}
+
+# GitHub's own isRequired() per context; base-branch rule contexts catch required checks not reported yet.
+# Non-required checks (smoke on protected previews) must not trigger nudges.
+required_ci() { # pr sha
+  local s err req
+  err=$(mktemp)
+  s=$(gh api graphql -F o="${R%/*}" -F n="${R#*/}" -F pr="$1" -f query='
+query($o:String!,$n:String!,$pr:Int!){ repository(owner:$o,name:$n){ pullRequest(number:$pr){
+  headRefOid baseRefName
+  commits(last:1){ nodes{ commit{ statusCheckRollup{ contexts(first:100){ nodes{ __typename
+    ... on CheckRun{ name startedAt status conclusion isRequired(pullRequestNumber:$pr) }
+    ... on StatusContext{ name: context startedAt: createdAt state isRequired(pullRequestNumber:$pr) } } } } } } } } } }' \
+    --jq '.data.repository.pullRequest' 2>"$err") || s=""
+  if [[ -z "$s" ]]; then
+    log "PR #$1 check lookup failed: $(head -c 300 "$err")" >&2; rm -f "$err"; echo PENDING; return
+  fi
+  # head moved since the board read -> decide next sweep, never against a stale SHA
+  [[ "$(jq -r .headRefOid <<<"$s")" == "$2" ]] || { echo PENDING; return; }
+  local base classic
+  base=$(jq -r '.baseRefName | @uri' <<<"$s") # release/1.x -> one path segment
+  req=$(gh api "repos/$R/rules/branches/$base" \
+    --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]' 2>"$err") \
+    || { log "PR #$1 rules lookup failed: $(head -c 300 "$err")" >&2; rm -f "$err"; echo PENDING; return; }
+  rm -f "$err"
+  # classic protection: only 404 means none; any other error must not let unreported checks pass
+  if ! classic=$(gh api "repos/$R/branches/$base/protection/required_status_checks" 2>/dev/null); then
+    [[ "$(jq -r '.status // empty' <<<"$classic" 2>/dev/null)" == "404" ]] \
+      || { log "PR #$1 classic protection lookup failed: $(head -c 300 <<<"$classic")" >&2; echo PENDING; return; }
+    classic='{}'
+  fi
+  req=$(jq -c --argjson c "$(jq -c '.contexts // []' <<<"$classic")" '. + $c | unique' <<<"$req")
+  jq -r --argjson req "$req" '
+    # latest run per check (queued = no startedAt = newest); superseded runs do not count
+    ([.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | select(.isRequired)]
+      | group_by(.name) | map(max_by(.startedAt // "9999"))) as $c
+    | if any($c[]; (.conclusion // .state) | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")) then "FAILURE"
+      elif ($c | length) == 0 then "PENDING"
+      elif all($c[]; (.conclusion // .state) | IN("SUCCESS","NEUTRAL","SKIPPED"))
+        and all($req[]; . as $r | any($c[]; .name == $r)) then "SUCCESS"
+      else "PENDING" end' <<<"$s"
 }
 
 # Copilot code review gate. 0 = ok to merge, 1 = wait.
@@ -240,7 +282,7 @@ jq -c '.[] | select(.content.__typename=="Issue")' <<<"$ITEMS" | while read -r i
       draft=$(jq -r .isDraft <<<"$pr")
       sha=$(jq -r .headRefOid <<<"$pr")
       files=$(jq -r .changedFiles <<<"$pr")
-      ci=$(jq -r '.commits.nodes[0].commit.statusCheckRollup.state // "PENDING"' <<<"$pr")
+      ci=$(required_ci "$p" "$sha")
       mergeable=$(jq -r .mergeable <<<"$pr")
 
       if [[ "$files" == "0" ]]; then
