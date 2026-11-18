@@ -18,7 +18,7 @@ limits:
   review_wait_min: 20  # how long to wait on Copilot code review
 
 review:
-  model: openai/gpt-4.1
+  model: auto # Copilot CLI model id; auto lets Copilot pick
   max_diff_chars: 24000
   # one charter per expert in .github/agents/experts/<name>.md; each posts expert-review/<name>
   experts: [ciso, solutions-architect, software-engineer, devops-engineer, cloud-engineer, quality-assurance]
