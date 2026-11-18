@@ -149,14 +149,14 @@ $marker
   log "PR #$pr nudged ($((count + 1))/$MAX_NUDGES): $msg"
 }
 
-# GitHub's own gate for this PR: isRequired() per context, mergeStateStatus for unreported ones.
+# GitHub's own isRequired() per context; base-branch rule contexts catch required checks not reported yet.
 # Non-required checks (smoke on protected previews) must not trigger nudges.
 required_ci() { # pr sha
-  local s err
+  local s err req
   err=$(mktemp)
   s=$(gh api graphql -F o="${R%/*}" -F n="${R#*/}" -F pr="$1" -f query='
 query($o:String!,$n:String!,$pr:Int!){ repository(owner:$o,name:$n){ pullRequest(number:$pr){
-  headRefOid mergeStateStatus
+  headRefOid baseRefName
   commits(last:1){ nodes{ commit{ statusCheckRollup{ contexts(first:100){ nodes{ __typename
     ... on CheckRun{ name startedAt status conclusion isRequired(pullRequestNumber:$pr) }
     ... on StatusContext{ name: context startedAt: createdAt state isRequired(pullRequestNumber:$pr) } } } } } } } } } }' \
@@ -164,16 +164,20 @@ query($o:String!,$n:String!,$pr:Int!){ repository(owner:$o,name:$n){ pullRequest
   if [[ -z "$s" ]]; then
     log "PR #$1 check lookup failed: $(head -c 300 "$err")" >&2; rm -f "$err"; echo PENDING; return
   fi
-  rm -f "$err"
   # head moved since the board read -> decide next sweep, never against a stale SHA
   [[ "$(jq -r .headRefOid <<<"$s")" == "$2" ]] || { echo PENDING; return; }
-  jq -r '
+  req=$(gh api "repos/$R/rules/branches/$(jq -r .baseRefName <<<"$s")" \
+    --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]' 2>"$err") \
+    || { log "PR #$1 rules lookup failed: $(head -c 300 "$err")" >&2; rm -f "$err"; echo PENDING; return; }
+  rm -f "$err"
+  jq -r --argjson req "$req" '
     # latest run per check; superseded (concurrency-cancelled) runs do not count
     ([.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]? | select(.isRequired)]
       | group_by(.name) | map(max_by(.startedAt // ""))) as $c
     | if any($c[]; (.conclusion // .state) | IN("FAILURE","ERROR","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")) then "FAILURE"
       elif ($c | length) == 0 then "PENDING"
-      elif .mergeStateStatus | IN("CLEAN","UNSTABLE","HAS_HOOKS") then "SUCCESS"
+      elif all($c[]; (.conclusion // .state) | IN("SUCCESS","NEUTRAL","SKIPPED"))
+        and all($req[]; . as $r | any($c[]; .name == $r)) then "SUCCESS"
       else "PENDING" end' <<<"$s"
 }
 
