@@ -1,0 +1,27 @@
+# Apply factory.yml's board config to a Project. The dispatcher also runs this every sweep.
+name: Factory provision
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Project number (blank = factory.yml)
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    environment:
+      name: factory
+      deployment: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/factory
+      - run: bash .github/factory/provision.sh
+        env:
+          GH_TOKEN: ${{ secrets.FACTORY_TOKEN }}
+          FACTORY_PROJECT: ${{ inputs.project }}

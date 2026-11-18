@@ -14,15 +14,25 @@ Nobody will answer questions mid-task, and your PR auto-merges once CI is green.
 3. `SKIP_ENV_VALIDATION=1 npm run build` (in the agent sandbox these env vars are preset; locally use
    `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_Y2xlcmsuZXhhbXBsZS5jb20k CLERK_SECRET_KEY=sk_test_ci_dummy`)
 
-All three must pass. CI runs the same steps and is the only merge gate.
+All three must pass. Required checks before merge: CI, Factory checks (agent scope, criterion
+evidence, dependency review), and six Expert reviews (`expert-review/*`). Only major expert findings
+fail; if one does, the Expert review comment on the PR says what to fix.
 
 ## Rules
 - PR description must contain `Fixes #<issue number>` so the card closes on merge.
+- PR description must have an `## Evidence` table: one row per line of the issue's **Done when**,
+  last column = the command, test, or check that proved it (not TBD). The `criteria` check fails
+  without it.
+
+  | Criterion | Evidence |
+  |---|---|
+  | Landing CTA goes to /app | `npm run build` green; `src/pages/index.tsx` links `/app` |
 - Keep the diff scoped to the issue. No drive-by refactors or dependency upgrades unless asked.
 - If the issue is ambiguous, pick the simplest reasonable interpretation, do it, and list the
   assumption under an **Assumptions** heading in the PR description. Do not stop to ask.
 - Only stop without code if the task is impossible or unsafe; explain why in the PR description.
-- Never commit secrets or `.env` files. Do not edit `.github/workflows/` or `.github/factory/`.
+- Never commit secrets or `.env` files. Do not edit `.github/workflows/`, `.github/factory/`, `.github/agents/`, or this file
+  (the `agent-scope` check fails the PR).
   (Coding-agent rule. PRs authored by the repo owner, jgreazel, may change these paths; code
   review should not flag that.)
 - Prisma schema changes need a migration under `prisma/migrations/`.
