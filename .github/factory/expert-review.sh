@@ -50,11 +50,12 @@ copilot -p "$prompt" -s --model="$MODEL" --available-tools=view --allow-tool=rea
   --no-ask-user --no-custom-instructions --disable-builtin-mcps --stream=off \
   > raw.txt 2> err.txt || unavailable "copilot exit $? $(tail -c 300 err.txt)"
 
-# model may wrap the object in prose or fences
+# model may wrap the object in prose, fences or trailing stats
 resp=$(python3 -c '
-import json, sys
-t = open("raw.txt").read(); i, j = t.find("{"), t.rfind("}")
-print(json.dumps(json.loads(t[i:j + 1])))' 2>/dev/null) || unavailable "unparseable reply: $(head -c 200 raw.txt)"
+import json
+t = open("raw.txt").read()
+obj, _ = json.JSONDecoder().raw_decode(t[t.find("{"):])
+print(json.dumps(obj))' 2>parse.txt) || unavailable "unparseable reply ($(tail -1 parse.txt)): $(head -c 200 raw.txt)"
 jq -e '.findings | type == "array"' <<<"$resp" >/dev/null || unavailable "no findings array"
 
 majors=$(jq '[.findings[] | select(.severity == "major")] | length' <<<"$resp")
